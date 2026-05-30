@@ -78,6 +78,12 @@ python scripts/check-omnivoice-runtime.py
 python scripts/setup-omnivoice-python-env.py --check-only
 ```
 
+Print shell exports for the prepared Python adapter backend:
+
+```bash
+python scripts/setup-omnivoice-python-env.py --check-only --shell
+```
+
 Check or start a local loopback-only Studio container:
 
 ```bash
@@ -117,12 +123,15 @@ Use exactly one of these local backend paths:
 - `HERMES_OMNIVOICE_AUTO_CLI=1` with `omnivoice-infer` on `PATH`
 
 Prefer `HERMES_OMNIVOICE_COMMAND_JSON` for custom adapters because it avoids
-shell quoting hazards. The auto CLI path is opt-in because the first
+shell quoting hazards. Use `scripts/setup-omnivoice-python-env.py --shell` to
+print safely quoted exports for the packaged Python adapter. The auto CLI path
+is opt-in because the first
 `omnivoice-infer` run may download model files.
 
 ## Current Limits
 
-- Real model-backed synthesis has not been run in this checkout.
+- Real model-backed synthesis works through the prepared local Python adapter
+  when its shell exports are applied and a consented local voice profile exists.
 - Native Hermes provider wiring is deferred until the real Hermes Agent source
   and TTS schema are available.
 - The fake backend in `tests/fixtures` verifies wrapper I/O only. It is not a

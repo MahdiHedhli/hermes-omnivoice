@@ -144,6 +144,7 @@ Plan or create the isolated adapter environment:
 ```bash
 python scripts/setup-omnivoice-python-env.py --dry-run
 python scripts/setup-omnivoice-python-env.py
+python scripts/setup-omnivoice-python-env.py --check-only --shell
 ```
 
 The helper chooses Python 3.10 through 3.13 when available. On this machine,

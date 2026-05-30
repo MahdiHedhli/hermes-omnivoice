@@ -102,6 +102,7 @@ Prepare or inspect the adapter environment outside the repo with:
 ```bash
 python scripts/setup-omnivoice-python-env.py --dry-run
 python scripts/setup-omnivoice-python-env.py --check-only
+python scripts/setup-omnivoice-python-env.py --check-only --shell
 ```
 
 Use `--python` with a Python 3.10 through 3.13 interpreter if the default

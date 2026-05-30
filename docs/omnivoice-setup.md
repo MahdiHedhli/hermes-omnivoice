@@ -160,6 +160,12 @@ python scripts/setup-omnivoice-python-env.py
 python scripts/setup-omnivoice-python-env.py --check-only --require-ready
 ```
 
+Print safely quoted shell exports for the prepared adapter:
+
+```bash
+python scripts/setup-omnivoice-python-env.py --check-only --shell
+```
+
 The default venv path is `~/.cache/hermes/omnivoice-python`. Model caches remain
 under the normal Hugging Face cache unless separately configured; do not add
 them to this repo.

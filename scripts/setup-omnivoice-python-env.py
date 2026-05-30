@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -194,6 +195,12 @@ def print_human(report: dict) -> None:
         print(f"  export HERMES_OMNIVOICE_MODEL={report['env']['HERMES_OMNIVOICE_MODEL']}")
 
 
+def print_shell_exports(report: dict) -> None:
+    for key in ("HERMES_OMNIVOICE_COMMAND_JSON", "HERMES_OMNIVOICE_MODEL"):
+        value = report["env"][key]
+        print(f"export {key}={shlex.quote(value)}")
+
+
 def run(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Create or inspect an isolated OmniVoice Python environment"
@@ -211,7 +218,13 @@ def run(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--require-ready", action="store_true")
-    parser.add_argument("--json", action="store_true")
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument("--json", action="store_true")
+    output.add_argument(
+        "--shell",
+        action="store_true",
+        help="Print shell exports for the wrapper backend environment",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -231,6 +244,8 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
+    elif args.shell:
+        print_shell_exports(report)
     else:
         print_human(report)
     if args.require_ready and not report.get("ready", False):

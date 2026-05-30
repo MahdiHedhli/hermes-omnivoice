@@ -52,6 +52,8 @@ runtime.
 A local designed profile named `heartbeat_narrator` now exists under
 `~/.hermes/voices/omnivoice`, and strict real-backend acceptance passes when the
 prepared Python adapter command is exported.
+The Python environment helper can now print shell-safe exports for the prepared
+adapter command with `--check-only --shell`.
 
 ## Previous heartbeat
 
@@ -1831,7 +1833,7 @@ prepared Python adapter command is exported.
     for a strict real-backend run or wait for the actual Hermes Agent source for
     final schema wiring.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 14:30 America/New_York
 - Completed:
@@ -1900,6 +1902,61 @@ prepared Python adapter command is exported.
   - Commit the strict-backend-readiness handoff update, then focus remaining
     work on locating the actual Hermes Agent source or packaging a final branch
     summary.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 15:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `c1ff2a7`.
+  - Added `--shell` output mode to `scripts/setup-omnivoice-python-env.py`.
+    It prints shell-safe exports for `HERMES_OMNIVOICE_COMMAND_JSON` and
+    `HERMES_OMNIVOICE_MODEL` from the prepared adapter plan.
+  - Added unit coverage proving the shell output parses back into the expected
+    command JSON.
+  - Updated README, setup, acceptance, handoff, and custom-voices docs to point
+    operators at `python scripts/setup-omnivoice-python-env.py --check-only --shell`.
+  - Verified the generated shell exports drive strict real-backend acceptance
+    through the prepared Python adapter and the local `heartbeat_narrator`
+    profile.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `rg --files | sort`
+  - `sed -n ... scripts/setup-omnivoice-python-env.py`
+  - `rg -n "setup_env|setup-omnivoice|print_human|PythonEnvSetup" tests/test_omnivoice_tts.py scripts/setup-omnivoice-python-env.py docs README.md`
+  - `sed -n ... tests/test_omnivoice_tts.py`
+  - `sed -n ... README.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.PythonEnvSetupTests -v`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --shell`
+  - `python3 -m py_compile scripts/setup-omnivoice-python-env.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+- Tests:
+  - `python3 -m unittest tests.test_omnivoice_tts.PythonEnvSetupTests -v`:
+    PASS, 6 tests.
+  - `python3 -m py_compile scripts/setup-omnivoice-python-env.py tests/test_omnivoice_tts.py`:
+    PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 77 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under `/Users/mhedhli/Documents/Coding/hermes`.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Printing exports from the setup helper is safer than asking operators to
+    manually copy a long JSON command from docs.
+  - The prepared Python adapter path is the primary reproducible local backend
+    path until a compatible Studio runtime or actual Hermes Agent source is
+    available.
+- Next action:
+  - Commit the shell-export helper, then prepare a final branch summary or keep
+    searching for the actual Hermes Agent source if more local hints appear.
 
 ## Decision log
 
@@ -1975,6 +2032,8 @@ prepared Python adapter command is exported.
   local voice profile are configured.
 - Use a designed `heartbeat_narrator` profile for local real-backend acceptance
   instead of cloning any voice sample.
+- Print adapter backend exports through the setup helper so real-backend
+  acceptance can be reproduced without hand-copying long JSON.
 
 ## Open follow-ups
 

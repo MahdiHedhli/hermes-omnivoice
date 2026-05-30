@@ -7,6 +7,7 @@ import io
 import json
 import os
 from pathlib import Path
+import shlex
 import sys
 import tempfile
 import threading
@@ -777,6 +778,34 @@ class PythonEnvSetupTests(unittest.TestCase):
             self.assertTrue(command[1].endswith("hermes-omnivoice-python-adapter.py"))
             self.assertIn("{ref_audio}", command)
             self.assertIn("{instruct}", command)
+
+    def test_setup_env_shell_prints_exportable_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            venv_dir = Path(tmp) / "omnivoice-env"
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                result = setup_env.run(
+                    [
+                        "--venv-dir",
+                        str(venv_dir),
+                        "--dry-run",
+                        "--shell",
+                    ]
+                )
+
+            exports: dict[str, str] = {}
+            for line in output.getvalue().strip().splitlines():
+                self.assertTrue(line.startswith("export "))
+                assignment = shlex.split(line.removeprefix("export "))[0]
+                key, value = assignment.split("=", 1)
+                exports[key] = value
+
+            self.assertEqual(result, 0)
+            self.assertEqual(exports["HERMES_OMNIVOICE_MODEL"], "k2-fsa/OmniVoice")
+            command = json.loads(exports["HERMES_OMNIVOICE_COMMAND_JSON"])
+            self.assertEqual(command[0], str(setup_env.venv_python(venv_dir.resolve())))
+            self.assertTrue(command[1].endswith("hermes-omnivoice-python-adapter.py"))
 
     def test_setup_env_prefers_supported_python_candidate(self) -> None:
         def fake_which(name: str) -> str | None:

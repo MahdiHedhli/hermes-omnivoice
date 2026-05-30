@@ -63,7 +63,8 @@ Use `python scripts/setup-omnivoice-python-env.py --dry-run` before creating
 the local Python backend environment. Use `--check-only --require-ready` after
 installation when the Python API path should be considered ready. If the dry-run
 selects an unsupported Python, rerun it with `--python` pointing at Python 3.10
-through 3.13.
+through 3.13. Use `--check-only --shell` to print safely quoted exports for the
+prepared adapter command.
 
 On the current Mac, the isolated Python backend venv is ready under
 `~/.cache/hermes/omnivoice-python` and a consented designed profile exists under
