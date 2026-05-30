@@ -167,6 +167,16 @@ Docker Compose profile: cpu
 
 First startup can pull the Studio image and download model files. Keep those
 artifacts in Docker volumes or local caches; do not add them to this repo.
+For a local-only startup probe that does not pull or build images, use:
+
+```bash
+python scripts/omnivoice-studio-local.py start --no-fetch --no-build --pull never
+```
+
+That command succeeds only when the Studio image is already available locally.
+Failed startup attempts run `docker compose down` by default. Add
+`--remove-volumes-on-fail` only when you are sure no existing Studio volume data
+should be preserved.
 
 ## Install Into Hermes
 

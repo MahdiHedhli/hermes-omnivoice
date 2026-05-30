@@ -790,6 +790,38 @@ class StudioLocalTests(unittest.TestCase):
         with self.assertRaisesRegex(studio_local.StudioLocalError, "published port"):
             studio_local.validate_loopback_ports(config, "cpu", 3900)
 
+    def test_start_args_can_be_local_only(self) -> None:
+        args = unittest.mock.Mock()
+        args.studio_dir = Path("/tmp/omnivoice-studio-src")
+        args.profile = "cpu"
+        args.no_build = True
+        args.pull = "never"
+
+        with unittest.mock.patch.object(
+            studio_local,
+            "compose_file",
+            return_value=Path("/tmp/omnivoice-studio-src/deploy/docker-compose.yml"),
+        ):
+            command = studio_local.compose_up_args(args)
+
+        self.assertIn("--no-build", command)
+        self.assertIn("--pull", command)
+        self.assertIn("never", command)
+
+    def test_down_args_can_remove_volumes(self) -> None:
+        args = unittest.mock.Mock()
+        args.studio_dir = Path("/tmp/omnivoice-studio-src")
+        args.profile = "cpu"
+
+        with unittest.mock.patch.object(
+            studio_local,
+            "compose_file",
+            return_value=Path("/tmp/omnivoice-studio-src/deploy/docker-compose.yml"),
+        ):
+            command = studio_local.compose_down_args(args, remove_volumes=True)
+
+        self.assertEqual(command[-2:], ["down", "-v"])
+
 
 class AcceptanceTests(unittest.TestCase):
     def test_acceptance_required_files_are_present(self) -> None:

@@ -106,6 +106,22 @@ def compose_args(args: argparse.Namespace) -> list[str]:
     ]
 
 
+def compose_up_args(args: argparse.Namespace) -> list[str]:
+    command = compose_args(args) + ["up", "-d"]
+    if args.no_build:
+        command.append("--no-build")
+    if args.pull:
+        command.extend(["--pull", args.pull])
+    return command
+
+
+def compose_down_args(args: argparse.Namespace, remove_volumes: bool = False) -> list[str]:
+    command = compose_args(args) + ["down"]
+    if remove_volumes:
+        command.append("-v")
+    return command
+
+
 def studio_health(url: str, timeout: int) -> dict:
     try:
         with urllib.request.urlopen(f"{url.rstrip('/')}/health", timeout=timeout) as response:
@@ -171,14 +187,22 @@ def command_start(args: argparse.Namespace) -> int:
     path = compose_file(args.studio_dir)
     config = compose_config(path, args.profile)
     validate_loopback_ports(config, args.profile, args.port)
-    run_command(compose_args(args) + ["up", "-d"])
+    try:
+        run_command(compose_up_args(args))
+    except StudioLocalError:
+        if args.cleanup_on_fail:
+            try:
+                run_command(compose_down_args(args, args.remove_volumes_on_fail))
+            except StudioLocalError:
+                pass
+        raise
     print(f"Studio started at {args.studio_url}")
     return 0
 
 
 def command_stop(args: argparse.Namespace) -> int:
     require_binary("docker")
-    run_command(compose_args(args) + ["down"])
+    run_command(compose_down_args(args))
     return 0
 
 
@@ -227,6 +251,29 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--fetch", action="store_true", default=True)
     start.add_argument("--no-fetch", action="store_false", dest="fetch")
     start.add_argument("--update", action="store_true")
+    start.add_argument(
+        "--no-build",
+        action="store_true",
+        help="Do not build the Studio image during startup",
+    )
+    start.add_argument(
+        "--pull",
+        choices=["always", "missing", "never"],
+        default="missing",
+        help="Docker Compose pull policy for startup",
+    )
+    start.add_argument(
+        "--keep-failed",
+        action="store_false",
+        dest="cleanup_on_fail",
+        default=True,
+        help="Leave failed Compose startup resources for debugging",
+    )
+    start.add_argument(
+        "--remove-volumes-on-fail",
+        action="store_true",
+        help="Also remove Compose volumes when startup fails",
+    )
     start.set_defaults(func=command_start)
 
     stop = subparsers.add_parser("stop", help="Stop local Studio")

@@ -625,7 +625,7 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the installer checkpoint, then continue toward either a bounded live
     Studio run or a final package summary if no backend appears.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 04:30 America/New_York
 - Completed:
@@ -673,6 +673,69 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the voice-selection helper checkpoint, then continue with final
     package polish or a bounded live Studio/backend attempt.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 05:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `379efc7`.
+  - Confirmed acceptance still reports static MVP readiness PASS and live
+    backend readiness BLOCKED.
+  - Checked Docker for local Studio runtime availability: no
+    `ghcr.io/debpalash/omnivoice-studio:latest` image and no existing Studio
+    container were present.
+  - Ran `scripts/omnivoice-studio-local.py check` against
+    `/tmp/omnivoice-studio-src`; Compose remains loopback-ok and health is
+    unreachable because Studio is not running.
+  - Added `--no-build`, `--pull`, `--keep-failed`, and
+    `--remove-volumes-on-fail` options to the local Studio helper.
+  - Ran a local-only Studio startup probe with `--no-fetch --no-build --pull
+    never`; it failed quickly because the Studio image is not present locally.
+  - Removed the transient Compose network and volume created by the failed
+    local-only startup probe, then verified no Studio containers, volumes, or
+    networks remained.
+  - Added tests for local-only startup args and volume-removing down args.
+  - Updated setup and Studio bridge docs with local-only startup and cleanup
+    behavior.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -14`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `docker image inspect ghcr.io/debpalash/omnivoice-studio:latest --format ...`
+  - `docker ps -a --filter name=omnivoice-studio --format ...`
+  - `python3 scripts/omnivoice-studio-local.py check --studio-dir /tmp/omnivoice-studio-src --json`
+  - `command -v timeout || command -v gtimeout || true`
+  - `sed -n ... scripts/omnivoice-studio-local.py`
+  - `python3 scripts/omnivoice-studio-local.py start --studio-dir /tmp/omnivoice-studio-src --no-fetch --no-build --pull never`
+  - `docker compose -f /tmp/omnivoice-studio-src/deploy/docker-compose.yml --profile cpu down -v`
+  - `docker ps -a --filter name=omnivoice-studio --format ...`
+  - `docker volume ls --format ...`
+  - `docker network ls --format ...`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `find . -type d -name __pycache__ -print`
+  - `find . -type f \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.onnx' -o -name '*.pt' -o -name '*.pth' -o -name '*.safetensors' -o -name '.env' -o -name '.env.*' -o -name 'omnivoice-selection.json' \) -print`
+- Tests:
+  - Local-only Studio startup probe: expected BLOCKED, no local image present.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation now includes 51 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - Studio image is not present locally, and no Studio container is running on
+    `127.0.0.1:3900`.
+  - No real OmniVoice backend command or `omnivoice` CLI is configured.
+  - No local voice profiles exist under `~/.hermes/voices/omnivoice`.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - A local-only startup probe should avoid pulling/building large model
+    artifacts unless a later heartbeat explicitly chooses the heavier path.
+- Next action:
+  - Commit the local-only Studio startup hardening checkpoint, then decide
+    whether to start the full Studio image pull/build or keep polishing final
+    handoff docs.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -708,6 +771,8 @@ path. Top-level handoff docs and example configs are now present.
   real Hermes checkout.
 - Keep selected voice state outside the repo and validate profiles before
   writing selection metadata.
+- Use local-only Studio startup probes before downloading or building large
+  model-backed containers.
 
 ## Open follow-ups
 
