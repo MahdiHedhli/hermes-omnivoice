@@ -95,6 +95,9 @@ python scripts/install-hermes-omnivoice-bridge.py \
 Then rerun without `--dry-run`. Existing files are not overwritten unless
 `--force` is passed. Add `--with-examples` to copy the sample config and safe
 voice templates.
+Review the `.gitignore` status in the installer report. Add
+`--update-gitignore` when you want the installer to append the managed
+OmniVoice local-artifact block to the target checkout.
 
 ## Configure A Real Backend
 

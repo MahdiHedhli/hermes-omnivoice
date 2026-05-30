@@ -36,6 +36,31 @@ EXAMPLE_MANIFEST = [
     "examples/voices/marvin/voice.yaml",
     "examples/voices/narrator/voice.yaml",
 ]
+GITIGNORE_START = "# BEGIN Hermes OmniVoice local artifacts"
+GITIGNORE_END = "# END Hermes OmniVoice local artifacts"
+GITIGNORE_PATTERNS = [
+    ".hermes/",
+    "omnivoice-output/",
+    "omnivoice-cache/",
+    "/voices/",
+    "*.wav",
+    "*.mp3",
+    "*.flac",
+    "*.ogg",
+    "*.m4a",
+    "models/",
+    "checkpoints/",
+    "cache/",
+    ".cache/",
+    "*.ckpt",
+    "*.pt",
+    "*.pth",
+    "*.onnx",
+    "*.safetensors",
+    ".env",
+    ".env.local",
+    "*.local",
+]
 
 
 class InstallError(RuntimeError):
@@ -78,10 +103,61 @@ def install_manifest(
     return actions
 
 
+def read_gitignore(path: Path) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
+
+
+def build_gitignore_block() -> str:
+    lines = [
+        GITIGNORE_START,
+        "# Generated audio, local voices, model files, caches, and local config.",
+        *GITIGNORE_PATTERNS,
+        GITIGNORE_END,
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def update_gitignore(*, target_root: Path, dry_run: bool, requested: bool) -> dict:
+    target = resolve_target(target_root, ".gitignore")
+    existing = read_gitignore(target)
+    existing_lines = set(existing.splitlines())
+    missing = [pattern for pattern in GITIGNORE_PATTERNS if pattern not in existing_lines]
+    report = {
+        "target": str(target),
+        "update_requested": requested,
+        "missing_patterns": missing,
+        "action": "none",
+        "status": "covered" if not missing else "missing_patterns",
+    }
+    if GITIGNORE_START in existing and GITIGNORE_END in existing:
+        report["status"] = "managed"
+        report["missing_patterns"] = []
+        return report
+    if not requested:
+        report["action"] = "review"
+        return report
+
+    report["action"] = "would_append" if dry_run else "append"
+    if dry_run:
+        return report
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    prefix = "" if not existing or existing.endswith("\n") else "\n"
+    separator = "" if not existing else "\n"
+    with target.open("a", encoding="utf-8") as handle:
+        handle.write(prefix)
+        handle.write(separator)
+        handle.write(build_gitignore_block())
+    return report
+
+
 def run(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Install Hermes OmniVoice bridge files")
     parser.add_argument("--target-root", required=True, type=Path)
     parser.add_argument("--with-examples", action="store_true")
+    parser.add_argument("--update-gitignore", action="store_true")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--json", action="store_true")
@@ -98,6 +174,11 @@ def run(argv: list[str] | None = None) -> int:
             force=args.force,
             dry_run=args.dry_run,
         )
+        gitignore = update_gitignore(
+            target_root=args.target_root,
+            dry_run=args.dry_run,
+            requested=args.update_gitignore,
+        )
     except (OSError, InstallError) as exc:
         print(f"install-hermes-omnivoice-bridge: {exc}", file=sys.stderr)
         return 1
@@ -107,12 +188,17 @@ def run(argv: list[str] | None = None) -> int:
         "dry_run": args.dry_run,
         "files": len(actions),
         "actions": actions,
+        "gitignore": gitignore,
     }
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
         mode = "Would install" if args.dry_run else "Installed"
         print(f"{mode} {len(actions)} Hermes OmniVoice bridge files into {report['target_root']}")
+        if gitignore["status"] != "covered" and not args.update_gitignore:
+            print("Review target .gitignore for OmniVoice local artifact patterns.")
+        elif gitignore["action"] in {"append", "would_append"}:
+            print(f"{gitignore['action']} target .gitignore OmniVoice safety block.")
     return 0
 
 

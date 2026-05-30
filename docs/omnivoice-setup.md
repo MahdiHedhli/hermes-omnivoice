@@ -299,6 +299,10 @@ of a Hermes Agent checkout.
 Then install without `--dry-run`. Existing files are not overwritten unless
 `--force` is passed. Add `--with-examples` when you want the sample Hermes
 config and safe voice templates copied too.
+The installer reports missing target `.gitignore` coverage for local voice
+material, generated audio, model weights, caches, and local config. Add
+`--update-gitignore` only after reviewing the dry-run output; it appends a
+managed block and is idempotent.
 
 Run the smoke test only after configuring a real backend command, Studio URL,
 or opt-in CLI backend:

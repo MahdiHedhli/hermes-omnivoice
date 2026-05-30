@@ -74,6 +74,8 @@ sample and contains explicit confirmed consent metadata.
    `tts` create noisy false positives in unrelated repositories.
 2. Dry-run the bridge installer against that checkout:
    `python scripts/install-hermes-omnivoice-bridge.py --target-root /path/to/hermes --dry-run`.
+   Review the reported `.gitignore` coverage before adding
+   `--update-gitignore` to append the managed local-artifact ignore block.
 3. Wire Hermes to the command-provider config first; defer a native provider
    until the real TTS schema is inspected.
 4. If Studio integration is still required, run a longer supervised source

@@ -99,6 +99,10 @@ python scripts/install-hermes-omnivoice-bridge.py \
   --dry-run
 ```
 
+Add `--update-gitignore` after reviewing the dry-run output when you want the
+installer to append the OmniVoice local-artifact ignore block to the target
+checkout.
+
 Generate a preview:
 
 ```bash

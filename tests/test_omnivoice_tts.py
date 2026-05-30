@@ -1831,7 +1831,10 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertTrue(report["dry_run"])
             self.assertEqual(report["files"], len(installer.BASE_MANIFEST))
+            self.assertEqual(report["gitignore"]["status"], "missing_patterns")
+            self.assertEqual(report["gitignore"]["action"], "review")
             self.assertFalse((target / "scripts" / "hermes-omnivoice-tts.py").exists())
+            self.assertFalse((target / ".gitignore").exists())
 
     def test_installer_copies_files_and_refuses_overwrite(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1857,6 +1860,54 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertTrue((target / "examples" / "hermes-tts-omnivoice.yaml").is_file())
             self.assertTrue((target / "examples" / "voices" / "narrator" / "voice.yaml").is_file())
+
+    def test_installer_can_append_gitignore_safety_block(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            target.mkdir()
+            (target / ".gitignore").write_text("node_modules/\n", encoding="utf-8")
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                result = installer.run(["--target-root", str(target), "--update-gitignore", "--json"])
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertEqual(report["gitignore"]["action"], "append")
+            gitignore = (target / ".gitignore").read_text(encoding="utf-8")
+            self.assertIn(installer.GITIGNORE_START, gitignore)
+            self.assertIn("*.wav", gitignore)
+            self.assertIn("*.safetensors", gitignore)
+            self.assertIn(".env.local", gitignore)
+
+            second = io.StringIO()
+            with contextlib.redirect_stdout(second):
+                rerun = installer.run(
+                    ["--target-root", str(target), "--update-gitignore", "--force", "--json"]
+                )
+
+            second_report = json.loads(second.getvalue())
+            self.assertEqual(rerun, 0)
+            self.assertEqual(second_report["gitignore"]["status"], "managed")
+            self.assertEqual(
+                (target / ".gitignore").read_text(encoding="utf-8").count(installer.GITIGNORE_START),
+                1,
+            )
+
+    def test_installer_dry_run_reports_gitignore_append_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                result = installer.run(
+                    ["--target-root", str(target), "--update-gitignore", "--dry-run", "--json"]
+                )
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertEqual(report["gitignore"]["action"], "would_append")
+            self.assertFalse((target / ".gitignore").exists())
 
     def test_installer_rejects_target_escape(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
