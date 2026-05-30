@@ -204,23 +204,26 @@ def fake_omnivoice_python_modules():
     FakeOmniVoiceModel.captured_generate = {}
 
     omnivoice_module = types.ModuleType("omnivoice")
-    omnivoice_module.OmniVoice = FakeOmniVoiceModel
-    utils_module = types.ModuleType("omnivoice.utils")
-    common_module = types.ModuleType("omnivoice.utils.common")
-    common_module.get_best_device = lambda: "cpu"
+    models_module = types.ModuleType("omnivoice.models")
+    model_module = types.ModuleType("omnivoice.models.omnivoice")
+    model_module.OmniVoice = FakeOmniVoiceModel
     soundfile_module = types.ModuleType("soundfile")
     soundfile_module.write = lambda path, _audio, _sr: write_wav(Path(path))
     torch_module = types.ModuleType("torch")
     torch_module.float16 = "float16"
     torch_module.bfloat16 = "bfloat16"
     torch_module.float32 = "float32"
+    torch_module.cuda = types.SimpleNamespace(is_available=lambda: False)
+    torch_module.backends = types.SimpleNamespace(
+        mps=types.SimpleNamespace(is_available=lambda: False)
+    )
 
     with unittest.mock.patch.dict(
         sys.modules,
         {
             "omnivoice": omnivoice_module,
-            "omnivoice.utils": utils_module,
-            "omnivoice.utils.common": common_module,
+            "omnivoice.models": models_module,
+            "omnivoice.models.omnivoice": model_module,
             "soundfile": soundfile_module,
             "torch": torch_module,
         },

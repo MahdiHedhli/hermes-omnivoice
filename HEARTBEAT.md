@@ -21,6 +21,9 @@ defaults, and has been used successfully with `/opt/homebrew/bin/python3.11`.
 The real upstream `omnivoice-infer` path has now generated a valid temporary
 WAV through `scripts/test-omnivoice-tts.sh`. English designed voices are also
 validated against OmniVoice's supported design tag set before model startup.
+The packaged Python API adapter now imports the installed package's actual
+`omnivoice.models.omnivoice.OmniVoice` class and has generated a valid
+temporary WAV through the same command-provider wrapper path.
 
 ## Previous heartbeat
 
@@ -1093,7 +1096,7 @@ validated against OmniVoice's supported design tag set before model startup.
     Python environment with Python 3.11 or start the loopback Studio image
     pull/build for the first real synthesis smoke.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 08:00 America/New_York
 - Completed:
@@ -1171,6 +1174,67 @@ validated against OmniVoice's supported design tag set before model startup.
     a loopback Studio service or locate the real Hermes Agent source for schema
     verification.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 08:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `bb3aade`.
+  - Reconfirmed the isolated OmniVoice Python environment is ready at
+    `~/.cache/hermes/omnivoice-python`.
+  - Attempted a real command-provider smoke using
+    `HERMES_OMNIVOICE_COMMAND_JSON` and `scripts/hermes-omnivoice-python-adapter.py`.
+  - Found the adapter's import contract did not match the installed upstream
+    package: `OmniVoice` is available from
+    `omnivoice.models.omnivoice`, and `get_best_device` is a CLI-local helper.
+  - Updated the Python adapter to import `OmniVoice` from the real package path
+    and perform local CUDA/MPS/CPU device detection.
+  - Updated fake-module tests to mirror the installed package layout.
+  - Retried the real Python-adapter smoke successfully through
+    `scripts/hermes-omnivoice-tts.py`; it generated a valid temporary WAV at
+    24 kHz with 48,480 frames.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `sed -n '1,180p' scripts/hermes-omnivoice-python-adapter.py`
+  - `tail -n 140 HEARTBEAT.md`
+  - `HERMES_OMNIVOICE_COMMAND_JSON=... HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice python3 scripts/hermes-omnivoice-tts.py --voices-dir /tmp/.../voices --text-file /tmp/.../input.txt --out /tmp/.../out.wav --voice pyadapter --speed 1.0`
+  - `/Users/mhedhli/.cache/hermes/omnivoice-python/bin/python - <<'PY' ...`
+  - `rg -n "from omnivoice import|get_best_device|python adapter|Python adapter|omnivoice.models.omnivoice" README.md docs scripts tests`
+  - `python3 -m unittest tests.test_omnivoice_tts.PythonAdapterTests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-python-adapter.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - First real Python-adapter smoke: expected FAIL; exposed incorrect adapter
+    import assumptions against the installed upstream package.
+  - Direct installed-package inspection: PASS; confirmed
+    `omnivoice.models.omnivoice.OmniVoice` and CLI-local `get_best_device`.
+  - `python3 -m unittest tests.test_omnivoice_tts.PythonAdapterTests -v`: PASS,
+    3 tests.
+  - `python3 -m py_compile ...`: PASS.
+  - Corrected real Python-adapter smoke through the wrapper: PASS, generated a
+    valid temporary WAV.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 63 tests with 1
+    expected real-backend integration skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+- Blockers:
+  - No running OmniVoice-Studio service on `127.0.0.1:3900`, so Studio import
+    and Studio `/generate` smoke remain unverified against a live service.
+  - No persistent local voice profiles exist under
+    `~/.hermes/voices/omnivoice`; real smokes continue to use temporary
+    consented design profiles.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - Keeping the Python API adapter's imports pinned to the installed package
+    layout is better than wrapping the CLI when users choose command JSON mode.
+  - Temporary smoke outputs should remain under `/tmp` or the macOS temporary
+    directory and must not be committed.
+- Next action:
+  - Commit the Python-adapter real-runtime fix, then focus the next heartbeat
+    on a loopback OmniVoice-Studio live smoke or actual Hermes Agent source
+    discovery.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -1220,15 +1284,14 @@ validated against OmniVoice's supported design tag set before model startup.
   interpreters by default because model runtime wheels may not be available.
 - Validate English OmniVoice design prompts against the upstream supported tag
   vocabulary before model startup to avoid expensive late failures.
+- Import the Python API adapter from `omnivoice.models.omnivoice` and keep
+  device detection local, matching the installed upstream package layout.
 
 ## Open follow-ups
 
 - Locate or clone the actual Hermes Agent source and verify the TTS schema.
 - Start a local loopback Studio container and run the Studio importer against a
   live local Studio service.
-- Smoke-test the Python adapter path with the installed isolated OmniVoice
-  package if direct Python API coverage is still needed beyond the proven CLI
-  path.
 - Locate the actual Hermes Agent source before wiring native `/voice` commands.
 - Consider a native Hermes provider only after the actual Hermes Agent source
   and provider schema are available.

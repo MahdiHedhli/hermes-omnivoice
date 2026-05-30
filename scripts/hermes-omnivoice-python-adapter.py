@@ -24,14 +24,21 @@ def _load_backend():
     try:
         import soundfile as sf  # type: ignore
         import torch  # type: ignore
-        from omnivoice import OmniVoice  # type: ignore
-        from omnivoice.utils.common import get_best_device  # type: ignore
+        from omnivoice.models.omnivoice import OmniVoice  # type: ignore
     except ImportError as exc:
         raise PythonAdapterError(
             "OmniVoice Python API is not installed; install omnivoice in this "
             "environment or use Studio/CLI command mode"
         ) from exc
-    return OmniVoice, get_best_device, sf, torch
+    return OmniVoice, sf, torch
+
+
+def _get_best_device(torch_module) -> str:
+    if torch_module.cuda.is_available():
+        return "cuda"
+    if torch_module.backends.mps.is_available():
+        return "mps"
+    return "cpu"
 
 
 def _resolve_dtype(torch_module, dtype_name: str):
@@ -70,10 +77,10 @@ def synthesize(args: argparse.Namespace) -> None:
     if not ref_audio and not instruct:
         raise PythonAdapterError("provide ref_audio/ref_text for clone mode or instruct for design mode")
 
-    OmniVoice, get_best_device, soundfile, torch_module = _load_backend()
+    OmniVoice, soundfile, torch_module = _load_backend()
     device = args.device
     if device == "auto":
-        device = get_best_device()
+        device = _get_best_device(torch_module)
     dtype = _resolve_dtype(torch_module, args.dtype)
 
     model = OmniVoice.from_pretrained(args.model, device_map=device, dtype=dtype)
