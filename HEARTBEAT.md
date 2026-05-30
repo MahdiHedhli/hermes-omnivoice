@@ -8,7 +8,8 @@ a Studio profile importer, and deterministic tests proving the command wrapper
 writes valid WAV output through a local backend contract. It also includes a
 standalone voice helper for listing, inspecting, previewing, and printing Hermes
 command-provider config for local voices. A single validation script now reruns
-the full local bridge contract.
+the full local bridge contract, including a mocked localhost Studio `/generate`
+path.
 
 ## Previous heartbeat
 
@@ -207,7 +208,7 @@ the full local bridge contract.
   - Run final checks and commit the helper CLI checkpoint, then continue toward
     either real-backend smoke validation or locating the real Hermes source.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 00:00 America/New_York
 - Completed:
@@ -252,6 +253,41 @@ the full local bridge contract.
     OmniVoice-Studio smoke attempt or prepare a packaging/readme handoff for the
     command-provider MVP.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 00:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `e3c4bbc`.
+  - Added a localhost mock OmniVoice-Studio `/generate` API test.
+  - Verified the wrapper sends multipart form data including `profile_id` and
+    text when `HERMES_OMNIVOICE_STUDIO_URL` is configured.
+  - Verified the mocked Studio API path writes a valid WAV output.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -7`
+  - `sed -n '1,380p' tests/test_omnivoice_tts.py`
+  - `sed -n '1,20p' /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation script now includes 17 unit tests PASS with 1 real-backend
+    integration skip, py_compile PASS, fake-backend smoke PASS, unconfigured
+    smoke SKIP as expected, secret-pattern scan PASS, and `git diff --check`
+    PASS.
+- Blockers:
+  - No live OmniVoice-Studio service or real OmniVoice backend is configured, so
+    real synthesis quality is still unverified.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - Mock Studio API coverage is valuable for request/response contract safety,
+    but it does not replace a real model-backed Studio smoke test.
+- Next action:
+  - Commit the Studio API contract test, then prepare a concise README/package
+    handoff or attempt a real loopback Studio startup if runtime cost looks
+    acceptable.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -271,6 +307,8 @@ the full local bridge contract.
   layer can be inspected.
 - Keep future validation centered on `scripts/validate-omnivoice-bridge.sh` so
   every heartbeat has the same deterministic local evidence.
+- Cover both backend-command mode and Studio API mode in local tests before
+  attempting heavier real-model smoke validation.
 
 ## Open follow-ups
 

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import contextlib
+import http.server
 import importlib.util
 import io
 import json
 from pathlib import Path
 import sys
 import tempfile
+import threading
 import unittest
 import unittest.mock
 import wave
@@ -49,6 +51,16 @@ def write_wav(path: Path) -> None:
         wav.writeframes(b"\x00\x00" * 160)
 
 
+def wav_bytes() -> bytes:
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        wav.writeframes(b"\x00\x00" * 160)
+    return buffer.getvalue()
+
+
 def write_voice(root: Path, voice_id: str = "marvin", **overrides: str) -> Path:
     voice_dir = root / voice_id
     voice_dir.mkdir(parents=True)
@@ -72,6 +84,70 @@ consent:
 """
     (voice_dir / "voice.yaml").write_text(body, encoding="utf-8")
     return voice_dir
+
+
+def write_design_voice(root: Path, voice_id: str = "narrator", studio_profile_id: str = "") -> Path:
+    voice_dir = root / voice_id
+    voice_dir.mkdir(parents=True)
+    studio_line = f"studio_profile_id: {studio_profile_id}\n" if studio_profile_id else ""
+    body = f"""id: {voice_id}
+name: Narrator
+engine: omnivoice
+mode: design
+instruct: "calm local assistant, clear delivery"
+language: en
+speed: 1.0
+{studio_line}consent:
+  status: confirmed
+  source: user_created
+  allowed_uses:
+    - personal_assistant
+    - local_generation
+"""
+    (voice_dir / "voice.yaml").write_text(body, encoding="utf-8")
+    return voice_dir
+
+
+class MockStudioHandler(http.server.BaseHTTPRequestHandler):
+    requests: list[dict] = []
+
+    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+        content_length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(content_length)
+        type(self).requests.append(
+            {
+                "path": self.path,
+                "content_type": self.headers.get("Content-Type", ""),
+                "body": body,
+            }
+        )
+        if self.path != "/generate":
+            self.send_response(404)
+            self.end_headers()
+            return
+        payload = wav_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "audio/wav")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def log_message(self, format: str, *args) -> None:  # noqa: A002
+        return None
+
+
+@contextlib.contextmanager
+def mock_studio_server():
+    MockStudioHandler.requests = []
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), MockStudioHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}", MockStudioHandler.requests
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
 
 
 class OmniVoiceRegistryTests(unittest.TestCase):
@@ -196,6 +272,40 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             ),
             "http://10.0.0.5:3900",
         )
+
+    def test_studio_api_success_writes_valid_wav_and_sends_profile_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_design_voice(voices_root, "narrator", studio_profile_id="studio-123")
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+
+            with mock_studio_server() as (studio_url, requests):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "narrator",
+                    ],
+                    env={"HERMES_OMNIVOICE_STUDIO_URL": studio_url},
+                )
+
+            self.assertEqual(result, 0)
+            self.assertEqual(len(requests), 1)
+            self.assertEqual(requests[0]["path"], "/generate")
+            self.assertIn("multipart/form-data", requests[0]["content_type"])
+            self.assertIn(b'name="profile_id"', requests[0]["body"])
+            self.assertIn(b"studio-123", requests[0]["body"])
+            self.assertIn(b"Hermes custom voice synthesis test.", requests[0]["body"])
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertGreater(wav.getnframes(), 0)
 
 
 class OmniVoiceIntegrationTests(unittest.TestCase):
