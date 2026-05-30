@@ -20,24 +20,30 @@ The bridge is ready as a command-provider MVP package. It includes:
   dry-run-first installer for a real Hermes checkout.
 
 Static MVP acceptance currently passes without a real model backend. Live
-backend acceptance is still blocked until this machine has a local Studio
-service, an OmniVoice command adapter, or the OmniVoice CLI plus at least one
-consented voice profile.
+backend acceptance now passes on this machine when the prepared OmniVoice
+Python adapter command is exported; the default shell remains unconfigured so
+it does not claim backend readiness by accident.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-30 14:00 America/New_York on branch
+As of 2026-05-30 14:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
 - `scripts/validate-omnivoice-bridge.sh` passes with 76 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
-  shell environment.
+  shell environment because no backend command is exported there.
+- `scripts/omnivoice-acceptance.py --require-real-backend` passes when
+  `HERMES_OMNIVOICE_COMMAND_JSON` is set to the prepared Python adapter command
+  and `HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice`.
+- `scripts/test-omnivoice-tts.sh` generated a valid temporary WAV through that
+  adapter path using the required smoke text.
 - `scripts/find-hermes-source.py` still finds only this bridge repo under the
   searched Hermes/Coding roots, so native-provider work remains deferred.
 - `scripts/check-omnivoice-runtime.py` reports no default Studio URL, backend
-  command, auto CLI, or local voice profiles.
+  command, or auto CLI; it now sees one local designed profile under
+  `~/.hermes/voices/omnivoice`.
 - `scripts/setup-omnivoice-python-env.py --check-only --json` reports the
   isolated venv at `~/.cache/hermes/omnivoice-python` is ready, including
   `omnivoice`, `torch`, `soundfile`, and `omnivoice-infer`.
@@ -202,10 +208,9 @@ python scripts/hermes-omnivoice-voices.py preview narrator --out /tmp/narrator.w
   the Docker image.
 - No real OmniVoice backend command is exported in the default shell, and
   `omnivoice-infer` is not enabled through `HERMES_OMNIVOICE_AUTO_CLI=1`.
-- The isolated OmniVoice venv is ready, but its adapter command still needs to
-  be exported for a real backend acceptance run.
-- No local consented voice profiles exist under
-  `~/.hermes/voices/omnivoice`.
+- The isolated OmniVoice venv and local `heartbeat_narrator` designed profile
+  are ready, but the adapter command still needs to be exported for backend
+  readiness in any new shell.
 - The real Hermes Agent source is not present in this checkout, so native
   provider wiring and in-app `/voice` commands are deferred.
 

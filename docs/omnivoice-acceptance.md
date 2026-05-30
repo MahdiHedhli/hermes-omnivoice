@@ -65,11 +65,15 @@ installation when the Python API path should be considered ready. If the dry-run
 selects an unsupported Python, rerun it with `--python` pointing at Python 3.10
 through 3.13.
 
-On the current Mac, the isolated Python backend venv is already ready under
-`~/.cache/hermes/omnivoice-python`, but the default shell still has no exported
-backend command and no persistent local voices. The Studio Docker path remains
-blocked by the published image's missing arm64 manifest and by a source build
-that exceeded the heartbeat timeout before image export completed.
+On the current Mac, the isolated Python backend venv is ready under
+`~/.cache/hermes/omnivoice-python` and a consented designed profile exists under
+`~/.hermes/voices/omnivoice/heartbeat_narrator`. Strict real-backend acceptance
+passes when the prepared adapter command is exported, and the smoke test has
+generated a valid temporary WAV through that path. The default shell still has
+no exported backend command, so default acceptance does not claim live backend
+readiness. The Studio Docker path remains blocked by the published image's
+missing arm64 manifest and by a source build that exceeded the heartbeat
+timeout before image export completed.
 
 Do not treat fake-backend tests as real synthesis acceptance. They only prove
 wrapper I/O and WAV validation.

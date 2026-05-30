@@ -49,6 +49,9 @@ networks, or images left behind.
 The MVP handoff now records the current acceptance snapshot and distinguishes
 the prepared isolated OmniVoice Python venv from the unconfigured default shell
 runtime.
+A local designed profile named `heartbeat_narrator` now exists under
+`~/.hermes/voices/omnivoice`, and strict real-backend acceptance passes when the
+prepared Python adapter command is exported.
 
 ## Previous heartbeat
 
@@ -1770,7 +1773,7 @@ runtime.
     for the actual Hermes Agent source and a compatible live Studio/runtime
     path before more native-provider work.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 14:00 America/New_York
 - Completed:
@@ -1827,6 +1830,76 @@ runtime.
   - Commit the handoff refresh, then either create a consented local test voice
     for a strict real-backend run or wait for the actual Hermes Agent source for
     final schema wiring.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 14:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `95e6332`.
+  - Verified the default shell still had no Studio URL, backend command, enabled
+    CLI backend, or persistent local voices at the start of the heartbeat.
+  - Verified the isolated OmniVoice Python venv under
+    `~/.cache/hermes/omnivoice-python` is ready.
+  - Created a non-cloned local designed voice profile named
+    `heartbeat_narrator` with explicit confirmed consent metadata under
+    `~/.hermes/voices/omnivoice`.
+  - Confirmed the default runtime now sees one local voice profile while still
+    requiring an explicit backend command export.
+  - Exported the prepared Python adapter command for command-scoped checks and
+    confirmed strict real-backend acceptance now passes.
+  - Ran `scripts/test-omnivoice-tts.sh` through the prepared adapter; it
+    generated a valid temporary WAV from "Hermes custom voice synthesis test."
+  - Generated and then removed a temporary preview WAV for the persistent
+    `heartbeat_narrator` profile.
+  - Updated acceptance and MVP handoff docs with the new strict backend
+    readiness path.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `tail -n 210 HEARTBEAT.md`
+  - `find ~/.hermes/voices/omnivoice -maxdepth 3 -type f -name voice.yaml -print`
+  - `python3 scripts/hermes-omnivoice-voices.py list`
+  - `python3 scripts/create-omnivoice-voice.py design heartbeat_narrator --name "Heartbeat Narrator" --instruct "male, american accent, moderate pitch" --confirm-consent`
+  - `python3 scripts/hermes-omnivoice-voices.py info heartbeat_narrator`
+  - `HERMES_OMNIVOICE_COMMAND_JSON=... HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice python3 scripts/check-omnivoice-runtime.py --json`
+  - `HERMES_OMNIVOICE_COMMAND_JSON=... HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `HERMES_OMNIVOICE_COMMAND_JSON=... HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice scripts/test-omnivoice-tts.sh`
+  - `HERMES_OMNIVOICE_COMMAND_JSON=... HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice python3 scripts/hermes-omnivoice-voices.py preview heartbeat_narrator --out /tmp/hermes-heartbeat-narrator.wav`
+  - `rm -f /tmp/hermes-heartbeat-narrator.wav /private/tmp/hermes-heartbeat-narrator.wav`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `git diff --check`
+  - `find . -type f (...) -print`
+- Tests:
+  - Strict real-backend acceptance with exported Python adapter: PASS;
+    `real_backend_ready: true`.
+  - `scripts/test-omnivoice-tts.sh` with exported Python adapter: PASS; valid
+    temporary WAV generated from the required smoke text.
+  - Persistent profile preview: PASS; valid temporary WAV generated and removed.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 76 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+  - Repo artifact scan: PASS; no generated audio, model weights, env files, or
+    local voice selection state found in the repo.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under `/Users/mhedhli/Documents/Coding/hermes`.
+  - Default shell runtime remains unconfigured: no Studio URL, backend command,
+    or enabled CLI backend unless the adapter command is explicitly exported.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - A designed local profile with confirmed consent metadata is acceptable
+    heartbeat test state because it contains no cloned user voice sample and is
+    stored outside the repo.
+  - The Python adapter path is the fastest usable local MVP path until the real
+    Hermes Agent source is available for final command-provider or native
+    provider wiring.
+- Next action:
+  - Commit the strict-backend-readiness handoff update, then focus remaining
+    work on locating the actual Hermes Agent source or packaging a final branch
+    summary.
 
 ## Decision log
 
@@ -1900,6 +1973,8 @@ runtime.
 - Treat the isolated OmniVoice Python venv as prepared runtime capacity, not as
   default runtime readiness until an adapter command or CLI gate and a consented
   local voice profile are configured.
+- Use a designed `heartbeat_narrator` profile for local real-backend acceptance
+  instead of cloning any voice sample.
 
 ## Open follow-ups
 
