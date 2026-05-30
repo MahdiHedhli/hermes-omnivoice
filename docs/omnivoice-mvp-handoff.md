@@ -24,6 +24,27 @@ backend acceptance is still blocked until this machine has a local Studio
 service, an OmniVoice command adapter, or the OmniVoice CLI plus at least one
 consented voice profile.
 
+## Current Acceptance Snapshot
+
+As of 2026-05-30 14:00 America/New_York on branch
+`feature/omnivoice-custom-voices`:
+
+- `scripts/validate-omnivoice-bridge.sh` passes with 76 tests and 1 expected
+  opt-in real-backend skip.
+- `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
+  `real_backend_ready: false`, and `hermes_source_ready: false` in the default
+  shell environment.
+- `scripts/find-hermes-source.py` still finds only this bridge repo under the
+  searched Hermes/Coding roots, so native-provider work remains deferred.
+- `scripts/check-omnivoice-runtime.py` reports no default Studio URL, backend
+  command, auto CLI, or local voice profiles.
+- `scripts/setup-omnivoice-python-env.py --check-only --json` reports the
+  isolated venv at `~/.cache/hermes/omnivoice-python` is ready, including
+  `omnivoice`, `torch`, `soundfile`, and `omnivoice-infer`.
+- The fastest proven real-synthesis path is still the isolated Python
+  adapter or explicit CLI path plus a consented local voice profile, not a
+  running Studio container.
+
 ## Validate
 
 Run the full deterministic contract suite:
@@ -176,10 +197,13 @@ python scripts/hermes-omnivoice-voices.py preview narrator --out /tmp/narrator.w
 ## Remaining Live Blockers
 
 - No local Studio service is running on `127.0.0.1:3900`.
-- No local Studio image is present for a no-pull startup probe.
-- No real OmniVoice backend command is configured and `omnivoice-infer` is not
-  available as an enabled local CLI backend.
-- The `omnivoice` Python package is not installed in this repo environment.
+- The published Studio image has no `linux/arm64/v8` manifest on this Mac, and
+  a source-build attempt exceeded a 300 second heartbeat window while exporting
+  the Docker image.
+- No real OmniVoice backend command is exported in the default shell, and
+  `omnivoice-infer` is not enabled through `HERMES_OMNIVOICE_AUTO_CLI=1`.
+- The isolated OmniVoice venv is ready, but its adapter command still needs to
+  be exported for a real backend acceptance run.
 - No local consented voice profiles exist under
   `~/.hermes/voices/omnivoice`.
 - The real Hermes Agent source is not present in this checkout, so native

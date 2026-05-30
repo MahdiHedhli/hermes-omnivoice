@@ -46,6 +46,9 @@ The source-build fallback for OmniVoice-Studio reached Docker image export after
 large runtime dependency downloads, but exceeded a 300 second heartbeat window;
 post-timeout Docker checks showed no matching Studio containers, volumes,
 networks, or images left behind.
+The MVP handoff now records the current acceptance snapshot and distinguishes
+the prepared isolated OmniVoice Python venv from the unconfigured default shell
+runtime.
 
 ## Previous heartbeat
 
@@ -1709,7 +1712,7 @@ networks, or images left behind.
     source build or prepare final handoff notes around the remaining external
     blockers.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 13:30 America/New_York
 - Completed:
@@ -1766,6 +1769,64 @@ networks, or images left behind.
   - Commit the source-build platform notes, then prepare final handoff or wait
     for the actual Hermes Agent source and a compatible live Studio/runtime
     path before more native-provider work.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 14:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `821b948`.
+  - Re-ran acceptance and source discovery. Static MVP remains ready, while
+    real backend readiness and Hermes source readiness remain blocked in the
+    default shell environment.
+  - Re-ran runtime checks. The default shell still has no Studio URL, backend
+    command, auto CLI backend, or persistent local voices.
+  - Verified the isolated OmniVoice Python environment under
+    `~/.cache/hermes/omnivoice-python` is still ready with `omnivoice`, `torch`,
+    `soundfile`, and `omnivoice-infer`.
+  - Updated `docs/omnivoice-mvp-handoff.md` and
+    `docs/omnivoice-acceptance.md` so the handoff does not confuse the ready
+    isolated venv with the unconfigured default runtime.
+  - Corrected a local source-discovery command typo from `--timeout` to the
+    actual `--scan-timeout` flag and confirmed discovery still finds only this
+    bridge repo.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `rg --files docs examples scripts tests | sort`
+  - `sed -n '1,260p' docs/omnivoice-mvp-handoff.md`
+  - `sed -n '1,240p' docs/omnivoice-acceptance.md`
+  - `tail -n 190 HEARTBEAT.md`
+  - `python3 scripts/omnivoice-acceptance.py --source-root /Users/mhedhli/Documents/Coding/hermes --source-root /Users/mhedhli/Documents/Coding --source-scan-timeout 5 --source-max-candidates 20 --json`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `python3 scripts/find-hermes-source.py --root /Users/mhedhli/Documents/Coding/hermes --root /Users/mhedhli/Documents/Coding --timeout 5 --max-candidates 20 --json`
+  - `python3 scripts/find-hermes-source.py --root /Users/mhedhli/Documents/Coding/hermes --root /Users/mhedhli/Documents/Coding --scan-timeout 5 --max-candidates 20 --json`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 76 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+  - Acceptance snapshot: PASS for static MVP; BLOCKED for real backend and
+    Hermes source readiness.
+  - Python environment check: PASS; isolated OmniVoice venv is ready.
+  - Source discovery: BLOCKED; no likely Hermes Agent checkout found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under `/Users/mhedhli/Documents/Coding/hermes`.
+  - Default shell runtime remains unconfigured: no Studio URL, backend command,
+    enabled CLI backend, or persistent local voices.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in the previous heartbeat.
+- Assumptions:
+  - A prepared venv is useful handoff evidence, but it should not be counted as
+    default real-backend readiness until the adapter command or CLI gate is
+    explicitly exported and a consented voice exists.
+  - Handoff docs should now be the primary entrypoint for the next operator
+    instead of requiring them to reconstruct state from the full heartbeat log.
+- Next action:
+  - Commit the handoff refresh, then either create a consented local test voice
+    for a strict real-backend run or wait for the actual Hermes Agent source for
+    final schema wiring.
 
 ## Decision log
 
@@ -1836,6 +1897,9 @@ networks, or images left behind.
 - Keep Studio source builds bounded during heartbeat automation; on this Mac
   they can consume multi-GB Docker/PyTorch layers and exceed short heartbeat
   windows before producing a runnable container.
+- Treat the isolated OmniVoice Python venv as prepared runtime capacity, not as
+  default runtime readiness until an adapter command or CLI gate and a consented
+  local voice profile are configured.
 
 ## Open follow-ups
 
