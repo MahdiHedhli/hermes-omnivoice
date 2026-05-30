@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
-if [[ -z "${HERMES_OMNIVOICE_COMMAND_JSON:-}${HERMES_OMNIVOICE_COMMAND:-}" ]]; then
-  echo "SKIP: set HERMES_OMNIVOICE_COMMAND_JSON or HERMES_OMNIVOICE_COMMAND to run the OmniVoice smoke test" >&2
+if [[ -z "${HERMES_OMNIVOICE_COMMAND_JSON:-}${HERMES_OMNIVOICE_COMMAND:-}${HERMES_OMNIVOICE_STUDIO_URL:-}" ]]; then
+  echo "SKIP: set HERMES_OMNIVOICE_STUDIO_URL, HERMES_OMNIVOICE_COMMAND_JSON, or HERMES_OMNIVOICE_COMMAND to run the OmniVoice smoke test" >&2
   exit 77
 fi
 
@@ -14,16 +14,12 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 VOICE_DIR="$TMP_DIR/voices/smoke"
 mkdir -p "$VOICE_DIR"
-cat >"$VOICE_DIR/ref.wav" <<'WAV'
-placeholder
-WAV
 cat >"$VOICE_DIR/voice.yaml" <<'YAML'
 id: smoke
 name: Smoke Test Voice
 engine: omnivoice
-mode: clone
-ref_audio: ref.wav
-ref_text: "Reference transcript for the smoke test voice."
+mode: design
+instruct: "calm local assistant, clear delivery, neutral accent"
 language: en
 speed: 1.0
 consent:

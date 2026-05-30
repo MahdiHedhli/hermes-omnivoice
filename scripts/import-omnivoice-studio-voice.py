@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""Import an OmniVoice-Studio profile into the Hermes local voice registry."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+
+VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
+
+class ImportErrorWithContext(RuntimeError):
+    pass
+
+
+def validate_studio_url(url: str, allow_remote: bool = False) -> str:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ImportErrorWithContext("Studio URL must be an absolute http(s) URL")
+    host = parsed.hostname or ""
+    if host not in LOOPBACK_HOSTS and not host.endswith(".localhost") and not allow_remote:
+        raise ImportErrorWithContext(
+            "refusing non-loopback Studio URL; expose OmniVoice-Studio only behind auth"
+        )
+    return url.rstrip("/")
+
+
+def request_json(url: str, timeout: int) -> dict:
+    request = urllib.request.Request(
+        url,
+        headers={"Accept": "application/json", "User-Agent": "hermes-omnivoice-import/0.1"},
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def request_bytes(url: str, timeout: int) -> bytes:
+    request = urllib.request.Request(
+        url,
+        headers={"Accept": "audio/wav", "User-Agent": "hermes-omnivoice-import/0.1"},
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read()
+
+
+def yaml_scalar(value: object) -> str:
+    return json.dumps("" if value is None else str(value))
+
+
+def write_voice_yaml(path: Path, profile: dict, voice_id: str, mode: str, allowed_uses: list[str]) -> None:
+    lines = [
+        f"id: {voice_id}",
+        f"name: {yaml_scalar(profile.get('name') or voice_id)}",
+        "engine: omnivoice",
+        f"mode: {mode}",
+    ]
+    if mode == "clone":
+        lines.extend(
+            [
+                "ref_audio: ref.wav",
+                f"ref_text: {yaml_scalar(profile.get('ref_text') or '')}",
+            ]
+        )
+        if profile.get("instruct"):
+            lines.append(f"instruct: {yaml_scalar(profile.get('instruct'))}")
+    else:
+        lines.append(f"instruct: {yaml_scalar(profile.get('instruct') or '')}")
+    lines.extend(
+        [
+            f"language: {yaml_scalar(profile.get('language') or 'Auto')}",
+            "speed: 1.0",
+            f"studio_profile_id: {yaml_scalar(profile.get('id') or '')}",
+            "consent:",
+            "  status: confirmed",
+            "  source: user_confirmed_studio_import",
+            "  allowed_uses:",
+        ]
+    )
+    for use in allowed_uses:
+        lines.append(f"    - {use}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def run(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Import an OmniVoice-Studio voice profile")
+    parser.add_argument("--studio-url", default="http://127.0.0.1:3900")
+    parser.add_argument("--profile-id", required=True)
+    parser.add_argument("--voice-id", default=None)
+    parser.add_argument("--voices-dir", type=Path, default=Path("~/.hermes/voices/omnivoice"))
+    parser.add_argument("--timeout", type=int, default=30)
+    parser.add_argument(
+        "--allowed-use",
+        action="append",
+        default=None,
+        help="Consent allowed use to write; may be repeated",
+    )
+    parser.add_argument(
+        "--confirm-consent",
+        action="store_true",
+        help="Confirm that you may use this voice for local Hermes generation",
+    )
+    parser.add_argument(
+        "--allow-remote-studio",
+        action="store_true",
+        help="Allow a non-loopback Studio URL only when it is protected by auth",
+    )
+    args = parser.parse_args(argv)
+
+    try:
+        if not args.confirm_consent:
+            raise ImportErrorWithContext("refusing import without --confirm-consent")
+        voice_id = args.voice_id or args.profile_id
+        if not VOICE_ID_RE.fullmatch(voice_id):
+            raise ImportErrorWithContext("voice id contains unsupported characters")
+
+        base_url = validate_studio_url(args.studio_url, args.allow_remote_studio)
+        profile = request_json(f"{base_url}/profiles/{urllib.parse.quote(args.profile_id)}", args.timeout)
+
+        voice_dir = (args.voices_dir.expanduser() / voice_id).resolve()
+        voice_dir.mkdir(parents=True, exist_ok=True)
+
+        audio_bytes = b""
+        try:
+            audio_bytes = request_bytes(
+                f"{base_url}/profiles/{urllib.parse.quote(args.profile_id)}/audio",
+                args.timeout,
+            )
+        except urllib.error.HTTPError as exc:
+            if exc.code != 404:
+                raise
+
+        has_instruct = bool(str(profile.get("instruct") or "").strip())
+        mode = "clone" if audio_bytes else "design"
+        if mode == "clone":
+            (voice_dir / "ref.wav").write_bytes(audio_bytes)
+        elif not has_instruct:
+            raise ImportErrorWithContext(
+                "Studio profile has no downloadable audio and no design instruction"
+            )
+
+        write_voice_yaml(
+            voice_dir / "voice.yaml",
+            profile,
+            voice_id,
+            mode,
+            args.allowed_use or ["personal_assistant", "local_generation"],
+        )
+        print(f"Imported Studio profile {args.profile_id} as {voice_id} in {voice_dir}")
+    except (OSError, urllib.error.URLError, json.JSONDecodeError, ImportErrorWithContext) as exc:
+        print(f"import-omnivoice-studio-voice: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(run())

@@ -114,6 +114,25 @@ class OmniVoiceRegistryTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
 
+    def test_studio_url_must_be_loopback_by_default(self) -> None:
+        with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "non-loopback"):
+            omnivoice.validate_studio_url("http://10.0.0.5:3900", {})
+
+    def test_studio_url_accepts_loopback(self) -> None:
+        self.assertEqual(
+            omnivoice.validate_studio_url("http://127.0.0.1:3900/", {}),
+            "http://127.0.0.1:3900",
+        )
+
+    def test_studio_url_allows_remote_with_explicit_override(self) -> None:
+        self.assertEqual(
+            omnivoice.validate_studio_url(
+                "http://10.0.0.5:3900",
+                {"HERMES_OMNIVOICE_ALLOW_REMOTE_STUDIO": "1"},
+            ),
+            "http://10.0.0.5:3900",
+        )
+
 
 class OmniVoiceIntegrationTests(unittest.TestCase):
     def test_real_omnivoice_backend_is_configured(self) -> None:

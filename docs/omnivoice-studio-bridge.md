@@ -24,8 +24,13 @@ Hermes to unstable internal storage.
 
 ## Current Bridge Shape
 
-The wrapper consumes a stable local registry and delegates synthesis to an
-explicit command configured by the operator. That command can point to:
+The wrapper consumes a stable local registry and can synthesize through either:
+
+- `HERMES_OMNIVOICE_STUDIO_URL=http://127.0.0.1:3900`
+- `HERMES_OMNIVOICE_COMMAND_JSON`
+- `HERMES_OMNIVOICE_COMMAND`
+
+The command path can point to:
 
 - an OmniVoice CLI adapter
 - a Python module importing OmniVoice
@@ -34,14 +39,28 @@ explicit command configured by the operator. That command can point to:
 This avoids taking a dependency on Studio's database layout before its backend
 API is inspected.
 
-## Follow-Up
+## API Evidence
 
-Inspect `debpalash/OmniVoice-Studio` backend routes and storage model, then add
-a small importer such as:
+Current OmniVoice-Studio source exposes:
+
+- `POST /generate` for direct Studio synthesis from text and profile or
+  reference-audio form fields.
+- `GET /profiles` and `GET /profiles/{profile_id}` for saved profile metadata.
+- `GET /profiles/{profile_id}/audio` for profile audio.
+- `GET /v1/audio/voices` and `POST /v1/audio/speech` for OpenAI-compatible
+  clients.
+
+Studio stores profile metadata in SQLite, but the HTTP API is the safer bridge
+contract.
+
+## Importer
+
+Use:
 
 ```text
-scripts/import-omnivoice-studio-voice.py --studio-url http://127.0.0.1:PORT --voice <id>
+scripts/import-omnivoice-studio-voice.py --studio-url http://127.0.0.1:3900 --profile-id <id> --voice-id <voice> --confirm-consent
 ```
 
-The importer should write only metadata and user-approved reference audio into
-`~/.hermes/voices/omnivoice/<voice_id>/`.
+The importer writes only metadata and user-confirmed reference audio into
+`~/.hermes/voices/omnivoice/<voice_id>/`. It refuses non-loopback Studio URLs
+unless explicitly overridden.

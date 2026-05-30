@@ -29,6 +29,32 @@ schema while preserving:
 - timeout
 - output format
 
+## Studio API Example
+
+If Hermes can pass environment variables to command providers, Studio can be the
+backend without a custom command adapter:
+
+```bash
+export HERMES_OMNIVOICE_STUDIO_URL=http://127.0.0.1:3900
+```
+
+Then use the same command provider invocation:
+
+```yaml
+tts:
+  provider: omnivoice
+  providers:
+    omnivoice:
+      type: command
+      command: "python scripts/hermes-omnivoice-tts.py --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
+      voice: marvin
+      output_format: wav
+      timeout: 180
+```
+
+For Studio-created voices, import the profile first with
+`scripts/import-omnivoice-studio-voice.py`.
+
 ## Operational Notes
 
 - Store voice profiles outside the repo under `~/.hermes/voices/omnivoice`.

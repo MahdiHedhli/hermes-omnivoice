@@ -12,10 +12,15 @@ import shlex
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
 import wave
 
 
 VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
 class OmniVoiceConfigError(RuntimeError):
@@ -250,6 +255,108 @@ def validate_audio_file(path: Path) -> None:
             raise OmniVoiceConfigError(f"output is not a valid WAV file: {path}") from exc
 
 
+def validate_studio_url(url: str, env: dict[str, str]) -> str:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise OmniVoiceConfigError("Studio URL must be an absolute http(s) URL")
+    host = parsed.hostname or ""
+    allow_remote = env.get("HERMES_OMNIVOICE_ALLOW_REMOTE_STUDIO") == "1"
+    if host not in LOOPBACK_HOSTS and not host.endswith(".localhost") and not allow_remote:
+        raise OmniVoiceConfigError(
+            "refusing non-loopback OmniVoice-Studio URL; set "
+            "HERMES_OMNIVOICE_ALLOW_REMOTE_STUDIO=1 only after adding auth"
+        )
+    return url.rstrip("/")
+
+
+def _multipart_form(
+    fields: dict[str, str],
+    files: dict[str, tuple[str, bytes, str]],
+) -> tuple[bytes, str]:
+    boundary = f"----hermes-omnivoice-{uuid.uuid4().hex}"
+    chunks: list[bytes] = []
+    for name, value in fields.items():
+        chunks.append(f"--{boundary}\r\n".encode("ascii"))
+        chunks.append(
+            f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode("ascii")
+        )
+        chunks.append(str(value).encode("utf-8"))
+        chunks.append(b"\r\n")
+    for name, (filename, content, content_type) in files.items():
+        safe_name = os.path.basename(filename) or "audio.wav"
+        chunks.append(f"--{boundary}\r\n".encode("ascii"))
+        chunks.append(
+            (
+                f'Content-Disposition: form-data; name="{name}"; '
+                f'filename="{safe_name}"\r\n'
+            ).encode("ascii")
+        )
+        chunks.append(f"Content-Type: {content_type}\r\n\r\n".encode("ascii"))
+        chunks.append(content)
+        chunks.append(b"\r\n")
+    chunks.append(f"--{boundary}--\r\n".encode("ascii"))
+    return b"".join(chunks), f"multipart/form-data; boundary={boundary}"
+
+
+def synthesize_with_studio_api(
+    *,
+    studio_url: str,
+    profile: dict,
+    voice_dir: Path,
+    text_file: Path,
+    output_path: Path,
+    speed: str,
+    env: dict[str, str],
+    timeout: int,
+) -> None:
+    base_url = validate_studio_url(studio_url, env)
+    endpoint = f"{base_url}/generate"
+    text = text_file.read_text(encoding="utf-8")
+    fields = {
+        "text": text,
+        "speed": speed,
+        "language": str(profile.get("language", "Auto") or "Auto"),
+    }
+    files: dict[str, tuple[str, bytes, str]] = {}
+
+    studio_profile_id = str(profile.get("studio_profile_id", "")).strip()
+    if studio_profile_id:
+        fields["profile_id"] = studio_profile_id
+    elif profile.get("mode") == "clone":
+        ref_audio = Path(str(profile["ref_audio_path"]))
+        fields["ref_text"] = str(profile.get("ref_text", ""))
+        if profile.get("instruct"):
+            fields["instruct"] = str(profile["instruct"])
+        files["ref_audio"] = (ref_audio.name, ref_audio.read_bytes(), "audio/wav")
+    else:
+        fields["instruct"] = str(profile.get("instruct", ""))
+
+    body, content_type = _multipart_form(fields, files)
+    request = urllib.request.Request(
+        endpoint,
+        data=body,
+        headers={
+            "Content-Type": content_type,
+            "Accept": "audio/wav",
+            "User-Agent": "hermes-omnivoice-tts/0.1",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            payload = response.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise OmniVoiceConfigError(
+            f"OmniVoice-Studio API failed with HTTP {exc.code}: {detail}"
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise OmniVoiceConfigError(f"OmniVoice-Studio API is unreachable: {exc}") from exc
+
+    output_path.write_bytes(payload)
+    validate_audio_file(output_path)
+
+
 def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Synthesize Hermes TTS with OmniVoice")
     parser.add_argument("--text-file", required=True, type=Path)
@@ -278,29 +385,48 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
         speed = str(args.speed if args.speed is not None else profile.get("speed", "1.0"))
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        command = build_backend_command(
-            env=runtime_env,
-            profile=profile,
-            voice_id=args.voice,
-            voice_dir=voice_dir,
-            text_file=text_file,
-            output_path=output_path,
-            speed=speed,
+        studio_url = str(
+            profile.get("studio_url") or runtime_env.get("HERMES_OMNIVOICE_STUDIO_URL") or ""
+        ).strip()
+        has_explicit_command = bool(
+            runtime_env.get("HERMES_OMNIVOICE_COMMAND_JSON")
+            or runtime_env.get("HERMES_OMNIVOICE_COMMAND")
         )
-        completed = subprocess.run(
-            command,
-            check=False,
-            text=True,
-            capture_output=True,
-            timeout=args.timeout,
-        )
-        if completed.returncode != 0:
-            if completed.stderr:
-                print(completed.stderr.strip(), file=sys.stderr)
-            raise OmniVoiceConfigError(
-                f"OmniVoice backend failed with exit code {completed.returncode}"
+        if studio_url and not has_explicit_command:
+            synthesize_with_studio_api(
+                studio_url=studio_url,
+                profile=profile,
+                voice_dir=voice_dir,
+                text_file=text_file,
+                output_path=output_path,
+                speed=speed,
+                env=runtime_env,
+                timeout=args.timeout,
             )
-        validate_audio_file(output_path)
+        else:
+            command = build_backend_command(
+                env=runtime_env,
+                profile=profile,
+                voice_id=args.voice,
+                voice_dir=voice_dir,
+                text_file=text_file,
+                output_path=output_path,
+                speed=speed,
+            )
+            completed = subprocess.run(
+                command,
+                check=False,
+                text=True,
+                capture_output=True,
+                timeout=args.timeout,
+            )
+            if completed.returncode != 0:
+                if completed.stderr:
+                    print(completed.stderr.strip(), file=sys.stderr)
+                raise OmniVoiceConfigError(
+                    f"OmniVoice backend failed with exit code {completed.returncode}"
+                )
+            validate_audio_file(output_path)
     except (OSError, subprocess.SubprocessError, OmniVoiceConfigError) as exc:
         print(f"hermes-omnivoice-tts: {exc}", file=sys.stderr)
         return 1

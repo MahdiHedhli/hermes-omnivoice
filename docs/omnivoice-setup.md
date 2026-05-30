@@ -49,7 +49,17 @@ consent:
 
 ## Configure A Backend
 
-Set a backend command before using the wrapper. JSON is recommended:
+Option A: point the wrapper at a local OmniVoice-Studio backend:
+
+```bash
+export HERMES_OMNIVOICE_STUDIO_URL=http://127.0.0.1:3900
+```
+
+The wrapper refuses non-loopback Studio URLs by default. Only set
+`HERMES_OMNIVOICE_ALLOW_REMOTE_STUDIO=1` after Studio is protected by
+authentication.
+
+Option B: set a backend command. JSON is recommended:
 
 ```bash
 export HERMES_OMNIVOICE_COMMAND_JSON='[
@@ -91,3 +101,20 @@ HERMES_OMNIVOICE_COMMAND_JSON='[...]' scripts/test-omnivoice-tts.sh
 
 Without a backend command, the smoke test exits `77` to mark the integration as
 skipped rather than failed.
+
+## Import A Studio Voice
+
+After creating a profile in OmniVoice-Studio, import it into the Hermes registry:
+
+```bash
+python scripts/import-omnivoice-studio-voice.py \
+  --studio-url http://127.0.0.1:3900 \
+  --profile-id <studio-profile-id> \
+  --voice-id marvin \
+  --confirm-consent
+```
+
+The importer reads Studio through `GET /profiles/{id}` and
+`GET /profiles/{id}/audio`, then writes
+`~/.hermes/voices/omnivoice/<voice_id>/voice.yaml` and `ref.wav` when reference
+audio is available.

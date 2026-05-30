@@ -30,9 +30,9 @@ Hermes Agent
   -> output WAV returned to Hermes
 ```
 
-This keeps Hermes behavior unchanged, avoids binding any Studio service to the
-LAN, and lets the real OmniVoice invocation be swapped once the backend API is
-verified.
+This keeps Hermes behavior unchanged and avoids binding any Studio service to
+the LAN. After inspecting OmniVoice-Studio, the wrapper now also supports a
+localhost-only Studio API mode through `HERMES_OMNIVOICE_STUDIO_URL`.
 
 ## Registry Contract
 
@@ -87,3 +87,28 @@ Available placeholders:
 
 `HERMES_OMNIVOICE_COMMAND` is also supported for a shell-style string, but the
 wrapper still executes without `shell=True`.
+
+## OmniVoice-Studio API Findings
+
+The current OmniVoice-Studio source exposes a FastAPI backend on port `3900`.
+Relevant routes:
+
+- `GET /profiles`: list saved voice profiles.
+- `GET /profiles/{profile_id}`: read a full voice profile row.
+- `GET /profiles/{profile_id}/audio`: download the profile reference or locked
+  audio.
+- `POST /generate`: synthesize WAV audio from text, `profile_id`, `ref_audio`,
+  `ref_text`, `instruct`, language, and speed form fields.
+- `GET /v1/audio/voices`: OpenAI-compatible extension listing available voices.
+- `POST /v1/audio/speech`: OpenAI-compatible speech synthesis.
+
+The Studio SQLite table is named `voice_profiles`, with fields including `id`,
+`name`, `ref_audio_path`, `ref_text`, `instruct`, `language`,
+`locked_audio_path`, `seed`, and `is_locked`. The bridge should use the HTTP
+API before reading this database directly.
+
+Security note: the Docker Compose file binds host port `3900` to
+`127.0.0.1:3900` by default and explicitly states that Studio has no built-in
+authentication. The package `dev:api` script uses `--host 0.0.0.0`; for Hermes
+integration, run Studio on loopback unless a separate authenticated reverse
+proxy is deliberately configured.
