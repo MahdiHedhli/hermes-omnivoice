@@ -104,6 +104,35 @@ export HERMES_OMNIVOICE_COMMAND_JSON='[
 ]'
 ```
 
+For direct OmniVoice Python API usage, point the command at the packaged
+adapter:
+
+```bash
+export HERMES_OMNIVOICE_COMMAND_JSON='[
+  "python3",
+  "scripts/hermes-omnivoice-python-adapter.py",
+  "--text-file",
+  "{text_file}",
+  "--out",
+  "{out}",
+  "--ref-audio",
+  "{ref_audio}",
+  "--ref-text",
+  "{ref_text}",
+  "--instruct",
+  "{instruct}",
+  "--language",
+  "{language}",
+  "--speed",
+  "{speed}"
+]'
+```
+
+The adapter imports `omnivoice`, loads `HERMES_OMNIVOICE_MODEL` or
+`k2-fsa/OmniVoice`, and writes the WAV through `soundfile`. Set
+`HERMES_OMNIVOICE_DEVICE` and `HERMES_OMNIVOICE_DTYPE` if the defaults do not
+match the local runtime.
+
 Option C: use the official OmniVoice CLI directly. Install OmniVoice so
 `omnivoice-infer` is on `PATH`, then opt in:
 

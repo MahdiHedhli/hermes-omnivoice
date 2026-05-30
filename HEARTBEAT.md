@@ -12,7 +12,9 @@ the full local bridge contract, including a mocked localhost Studio `/generate`
 path. Top-level handoff docs, an MVP package handoff, and example configs are
 now present. The optional direct OmniVoice CLI path targets the upstream
 `omnivoice-infer` executable and is gated behind `HERMES_OMNIVOICE_AUTO_CLI=1`
-to avoid surprise model downloads.
+to avoid surprise model downloads. A packaged Python API adapter can also call
+`OmniVoice.from_pretrained` through `HERMES_OMNIVOICE_COMMAND_JSON` when the
+local `omnivoice` package is installed.
 
 ## Previous heartbeat
 
@@ -800,7 +802,7 @@ to avoid surprise model downloads.
   - Commit the MVP handoff checkpoint, then decide whether to start a full
     Studio image pull/build or wait for a real Hermes Agent source/backend path.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 06:00 America/New_York
 - Completed:
@@ -874,6 +876,72 @@ to avoid surprise model downloads.
     environment for a real smoke test or start the loopback Studio image
     pull/build.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 06:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `994f3c1`.
+  - Added `scripts/hermes-omnivoice-python-adapter.py`, an optional command
+    adapter that imports the OmniVoice Python API, calls
+    `OmniVoice.from_pretrained`, supports clone and design fields, and writes a
+    WAV through `soundfile`.
+  - Added the Python adapter to static acceptance, validation py_compile, and
+    the dry-run-first install manifest.
+  - Documented the `HERMES_OMNIVOICE_COMMAND_JSON` wiring for the Python API
+    adapter in README, setup, handoff, Studio bridge, integration notes,
+    acceptance, and custom voice docs.
+  - Added unit tests with fake `omnivoice`, `torch`, and `soundfile` modules
+    covering clone generation, design generation, and missing clone transcript
+    failure.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat|OmniVoice-Studio" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `sed -n ... scripts/install-hermes-omnivoice-bridge.py`
+  - `sed -n ... scripts/omnivoice-acceptance.py`
+  - `sed -n ... scripts/validate-omnivoice-bridge.sh`
+  - `chmod +x scripts/hermes-omnivoice-python-adapter.py`
+  - `sed -n ... docs/tts-custom-voices.md`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.PythonAdapterTests -v`
+  - `git diff --stat`
+  - `git diff -- scripts/hermes-omnivoice-python-adapter.py tests/test_omnivoice_tts.py scripts/validate-omnivoice-bridge.sh scripts/omnivoice-acceptance.py scripts/install-hermes-omnivoice-bridge.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `find . -type d -name __pycache__ -print`
+  - `find . -type f \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.onnx' -o -name '*.pt' -o -name '*.pth' -o -name '*.safetensors' -o -name '.env' -o -name '.env.*' -o -name 'omnivoice-selection.json' \) -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `git diff --check`
+  - `git add .`
+  - `git diff --cached --stat`
+  - `git diff --cached --check`
+  - `git commit -m "feat: add OmniVoice Python API adapter"`
+- Tests:
+  - `python3 scripts/omnivoice-acceptance.py --json`: PASS; static MVP ready
+    with 20 required files, real backend not ready.
+  - `python3 -m unittest tests.test_omnivoice_tts.PythonAdapterTests -v`: PASS,
+    3 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation includes 57 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - Studio image is not present locally, and no Studio container is running on
+    `127.0.0.1:3900`.
+  - No real OmniVoice backend command is configured.
+  - `omnivoice-infer` is not installed on `PATH`.
+  - The `omnivoice` Python package is not installed in this repo environment.
+  - No local voice profiles exist under `~/.hermes/voices/omnivoice`.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - Keeping direct Python API support as an explicit command adapter preserves
+    the lightweight wrapper while giving operators a concrete no-Studio path
+    when `omnivoice` is installed.
+- Next action:
+  - Commit the Python adapter checkpoint, then either install OmniVoice in an
+    isolated local environment for a real smoke test or start the loopback
+    Studio image pull/build.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -915,6 +983,8 @@ to avoid surprise model downloads.
   work does not depend on reading the full heartbeat history.
 - Use upstream `omnivoice-infer` for direct CLI synthesis and require explicit
   `HERMES_OMNIVOICE_AUTO_CLI=1` opt-in before the wrapper invokes it.
+- Keep direct Python API usage behind an explicit command adapter so the main
+  wrapper does not import or initialize model dependencies unless configured.
 
 ## Open follow-ups
 
@@ -923,5 +993,7 @@ to avoid surprise model downloads.
   live local Studio service.
 - Configure a real OmniVoice backend command or install `omnivoice-infer`, then
   run `scripts/test-omnivoice-tts.sh`.
+- Install `omnivoice` in an isolated local environment and smoke-test the
+  Python adapter with a consented designed or cloned voice profile.
 - Locate the actual Hermes Agent source before wiring native `/voice` commands.
 - Consider a native Hermes provider only after command-provider synthesis works.

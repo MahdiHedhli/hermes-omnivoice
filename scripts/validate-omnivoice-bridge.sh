@@ -13,6 +13,7 @@ cd "$ROOT_DIR"
   scripts/omnivoice-acceptance.py \
   scripts/omnivoice-studio-local.py \
   scripts/hermes-omnivoice-tts.py \
+  scripts/hermes-omnivoice-python-adapter.py \
   scripts/create-omnivoice-voice.py \
   scripts/import-omnivoice-studio-voice.py \
   scripts/hermes-omnivoice-voices.py \

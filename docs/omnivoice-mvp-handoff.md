@@ -5,6 +5,8 @@
 The bridge is ready as a command-provider MVP package. It includes:
 
 - A Hermes-facing wrapper at `scripts/hermes-omnivoice-tts.py`.
+- A Python API adapter at `scripts/hermes-omnivoice-python-adapter.py` for
+  environments where the `omnivoice` package is installed.
 - Local voice registry tools for creating, importing, listing, selecting, and
   previewing voice profiles.
 - Consent and reference-audio validation for cloned voices.
@@ -84,6 +86,29 @@ export HERMES_OMNIVOICE_COMMAND_JSON='[
 ]'
 ```
 
+For the packaged Python API adapter:
+
+```bash
+export HERMES_OMNIVOICE_COMMAND_JSON='[
+  "python3",
+  "scripts/hermes-omnivoice-python-adapter.py",
+  "--text-file",
+  "{text_file}",
+  "--out",
+  "{out}",
+  "--ref-audio",
+  "{ref_audio}",
+  "--ref-text",
+  "{ref_text}",
+  "--instruct",
+  "{instruct}",
+  "--language",
+  "{language}",
+  "--speed",
+  "{speed}"
+]'
+```
+
 For the official OmniVoice CLI:
 
 ```bash
@@ -140,6 +165,7 @@ python scripts/hermes-omnivoice-voices.py preview narrator --out /tmp/narrator.w
 - No local Studio image is present for a no-pull startup probe.
 - No real OmniVoice backend command is configured and `omnivoice-infer` is not
   available as an enabled local CLI backend.
+- The `omnivoice` Python package is not installed in this repo environment.
 - No local consented voice profiles exist under
   `~/.hermes/voices/omnivoice`.
 - The real Hermes Agent source is not present in this checkout, so native

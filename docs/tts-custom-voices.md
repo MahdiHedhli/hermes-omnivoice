@@ -68,6 +68,35 @@ python scripts/create-omnivoice-voice.py clone marvin \
   --confirm-consent
 ```
 
+## Python API Backend Example
+
+If the Hermes runtime has `omnivoice` installed, use the packaged Python adapter
+as a backend command:
+
+```bash
+export HERMES_OMNIVOICE_COMMAND_JSON='[
+  "python3",
+  "scripts/hermes-omnivoice-python-adapter.py",
+  "--text-file",
+  "{text_file}",
+  "--out",
+  "{out}",
+  "--ref-audio",
+  "{ref_audio}",
+  "--ref-text",
+  "{ref_text}",
+  "--instruct",
+  "{instruct}",
+  "--language",
+  "{language}",
+  "--speed",
+  "{speed}"
+]'
+```
+
+The wrapper validates the voice profile first, then passes clone or design
+fields to the adapter.
+
 ## Operational Notes
 
 - Store voice profiles outside the repo under `~/.hermes/voices/omnivoice`.

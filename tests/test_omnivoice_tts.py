@@ -9,12 +9,16 @@ from pathlib import Path
 import sys
 import tempfile
 import threading
+import types
 import unittest
 import unittest.mock
 import wave
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-tts.py"
+PYTHON_ADAPTER_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-python-adapter.py"
+)
 IMPORT_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "import-omnivoice-studio-voice.py"
 )
@@ -43,6 +47,14 @@ assert SPEC is not None and SPEC.loader is not None
 omnivoice = importlib.util.module_from_spec(SPEC)
 sys.modules["hermes_omnivoice_tts"] = omnivoice
 SPEC.loader.exec_module(omnivoice)
+
+PYTHON_ADAPTER_SPEC = importlib.util.spec_from_file_location(
+    "hermes_omnivoice_python_adapter", PYTHON_ADAPTER_SCRIPT_PATH
+)
+assert PYTHON_ADAPTER_SPEC is not None and PYTHON_ADAPTER_SPEC.loader is not None
+python_adapter = importlib.util.module_from_spec(PYTHON_ADAPTER_SPEC)
+sys.modules["hermes_omnivoice_python_adapter"] = python_adapter
+PYTHON_ADAPTER_SPEC.loader.exec_module(python_adapter)
 
 IMPORT_SPEC = importlib.util.spec_from_file_location(
     "import_omnivoice_studio_voice", IMPORT_SCRIPT_PATH
@@ -158,6 +170,51 @@ speed: 1.0
 """
     (voice_dir / "voice.yaml").write_text(body, encoding="utf-8")
     return voice_dir
+
+
+class FakeOmniVoiceModel:
+    captured_load: dict = {}
+    captured_generate: dict = {}
+    sampling_rate = 24000
+
+    @classmethod
+    def from_pretrained(cls, model: str, **kwargs):
+        cls.captured_load = {"model": model, **kwargs}
+        return cls()
+
+    def generate(self, **kwargs):
+        type(self).captured_generate = kwargs
+        return [[0.0, 0.0, 0.0]]
+
+
+@contextlib.contextmanager
+def fake_omnivoice_python_modules():
+    FakeOmniVoiceModel.captured_load = {}
+    FakeOmniVoiceModel.captured_generate = {}
+
+    omnivoice_module = types.ModuleType("omnivoice")
+    omnivoice_module.OmniVoice = FakeOmniVoiceModel
+    utils_module = types.ModuleType("omnivoice.utils")
+    common_module = types.ModuleType("omnivoice.utils.common")
+    common_module.get_best_device = lambda: "cpu"
+    soundfile_module = types.ModuleType("soundfile")
+    soundfile_module.write = lambda path, _audio, _sr: write_wav(Path(path))
+    torch_module = types.ModuleType("torch")
+    torch_module.float16 = "float16"
+    torch_module.bfloat16 = "bfloat16"
+    torch_module.float32 = "float32"
+
+    with unittest.mock.patch.dict(
+        sys.modules,
+        {
+            "omnivoice": omnivoice_module,
+            "omnivoice.utils": utils_module,
+            "omnivoice.utils.common": common_module,
+            "soundfile": soundfile_module,
+            "torch": torch_module,
+        },
+    ):
+        yield FakeOmniVoiceModel
 
 
 class MockStudioHandler(http.server.BaseHTTPRequestHandler):
@@ -488,6 +545,106 @@ class OmniVoiceIntegrationTests(unittest.TestCase):
             "or HERMES_OMNIVOICE_AUTO_CLI=1 with a real OmniVoice backend to run "
             "integration synthesis."
         )
+
+
+class PythonAdapterTests(unittest.TestCase):
+    def test_python_adapter_generates_clone_audio_with_fake_api(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            ref_audio = root / "ref.wav"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            write_wav(ref_audio)
+
+            with fake_omnivoice_python_modules() as fake_model:
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--ref-audio",
+                        str(ref_audio),
+                        "--ref-text",
+                        "Reference transcript.",
+                        "--language",
+                        "en",
+                        "--speed",
+                        "1.2",
+                        "--model",
+                        "local-model",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            self.assertEqual(fake_model.captured_load["model"], "local-model")
+            self.assertEqual(fake_model.captured_load["device_map"], "cpu")
+            self.assertEqual(fake_model.captured_load["dtype"], "float16")
+            self.assertEqual(
+                fake_model.captured_generate["text"],
+                "Hermes custom voice synthesis test.",
+            )
+            self.assertEqual(fake_model.captured_generate["ref_audio"], str(ref_audio.resolve()))
+            self.assertEqual(fake_model.captured_generate["ref_text"], "Reference transcript.")
+            self.assertEqual(fake_model.captured_generate["language"], "en")
+            self.assertEqual(fake_model.captured_generate["speed"], 1.2)
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertGreater(wav.getnframes(), 0)
+
+    def test_python_adapter_generates_design_audio_with_fake_api(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+
+            with fake_omnivoice_python_modules() as fake_model:
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--instruct",
+                        "calm local assistant voice",
+                        "--device",
+                        "mps",
+                        "--dtype",
+                        "float32",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            self.assertEqual(fake_model.captured_load["device_map"], "mps")
+            self.assertEqual(fake_model.captured_load["dtype"], "float32")
+            self.assertEqual(
+                fake_model.captured_generate["instruct"],
+                "calm local assistant voice",
+            )
+            self.assertNotIn("ref_audio", fake_model.captured_generate)
+
+    def test_python_adapter_requires_clone_text_when_ref_audio_is_set(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            ref_audio = root / "ref.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            write_wav(ref_audio)
+
+            with fake_omnivoice_python_modules():
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--ref-audio",
+                        str(ref_audio),
+                    ]
+                )
+
+            self.assertEqual(result, 1)
 
 
 class StudioImportTests(unittest.TestCase):

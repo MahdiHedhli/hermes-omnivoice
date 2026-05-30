@@ -38,6 +38,10 @@ The command path can point to:
 - a local OmniVoice-Studio FastAPI endpoint adapter
 - the official `omnivoice-infer` CLI when auto CLI mode is explicitly enabled
 
+This repo ships `scripts/hermes-omnivoice-python-adapter.py` as the concrete
+Python API adapter. Use it through `HERMES_OMNIVOICE_COMMAND_JSON` when the
+local Python environment has `omnivoice`, `torch`, and `soundfile` installed.
+
 This avoids taking a dependency on Studio's database layout before its backend
 API is inspected.
 

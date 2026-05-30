@@ -17,6 +17,8 @@ This repo is intentionally conservative:
 ## What Is Included
 
 - `scripts/hermes-omnivoice-tts.py`: Hermes TTS command-provider wrapper.
+- `scripts/hermes-omnivoice-python-adapter.py`: optional command adapter for
+  calling the OmniVoice Python API directly.
 - `scripts/create-omnivoice-voice.py`: creates local design or clone voice
   registry profiles with explicit consent metadata.
 - `scripts/import-omnivoice-studio-voice.py`: imports a Studio profile into the

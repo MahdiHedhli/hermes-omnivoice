@@ -35,6 +35,9 @@ Hermes Agent
 This keeps Hermes behavior unchanged and avoids binding any Studio service to
 the LAN. After inspecting OmniVoice-Studio, the wrapper now also supports a
 localhost-only Studio API mode through `HERMES_OMNIVOICE_STUDIO_URL`.
+The package also includes `scripts/hermes-omnivoice-python-adapter.py` for
+using the OmniVoice Python API through the same command-provider contract when
+`omnivoice` is installed locally.
 
 ## Registry Contract
 
@@ -120,6 +123,11 @@ inference CLI. The wrapper's `HERMES_OMNIVOICE_AUTO_CLI=1` path is opt-in and
 uses that executable with `--text`, `--output`, `--speed`, optional
 `--language`, `--device`, and either `--ref_audio`/`--ref_text` for clone
 profiles or `--instruct` for designed profiles.
+
+For Python API mode, use `HERMES_OMNIVOICE_COMMAND_JSON` to call
+`scripts/hermes-omnivoice-python-adapter.py`. That adapter imports
+`OmniVoice.from_pretrained`, reads Hermes' text file, passes clone or design
+fields from the registry placeholders, and writes WAV output with `soundfile`.
 
 ## OmniVoice-Studio API Findings
 
