@@ -7,7 +7,8 @@ a command-provider MVP foundation, a localhost-only OmniVoice-Studio API bridge,
 a Studio profile importer, and deterministic tests proving the command wrapper
 writes valid WAV output through a local backend contract. It also includes a
 standalone voice helper for listing, inspecting, previewing, and printing Hermes
-command-provider config for local voices.
+command-provider config for local voices. A single validation script now reruns
+the full local bridge contract.
 
 ## Previous heartbeat
 
@@ -167,7 +168,7 @@ command-provider config for local voices.
     safe local Hermes Agent source/config path or build a first-class config
     handoff package around the command-provider MVP.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-29 23:30 America/New_York
 - Completed:
@@ -206,6 +207,51 @@ command-provider config for local voices.
   - Run final checks and commit the helper CLI checkpoint, then continue toward
     either real-backend smoke validation or locating the real Hermes source.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 00:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `5ec67c7`.
+  - Confirmed `/opt/hermes-agent/source` is not present on this Mac.
+  - Confirmed no readable `~/.hermes` config files were present.
+  - Searched local Hermes paths under `/Users/mhedhli/Documents/Coding/hermes`
+    and found only this bridge repo.
+  - Added `scripts/validate-omnivoice-bridge.sh` to rerun unit tests,
+    compilation checks, fake-backend smoke, unconfigured smoke-skip behavior,
+    secret-pattern scan, and `git diff --check`.
+  - Updated setup and integration notes with the validation command and local
+    source-discovery result.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `rg -n "Hermes Agent|Hermes dashboard|Hermes Memory|hermes-agent|/opt/hermes|~/.hermes|omnivoice" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `ls -la /opt /opt/hermes-agent /opt/hermes-agent/source`
+  - `find "$HOME" -maxdepth 4 ... -iname '*hermes*'`
+  - `find "$HOME/.hermes" -maxdepth 3 -type f -print`
+  - `find /Users/mhedhli/Documents/Coding -maxdepth 4 -type d ...`
+  - `rg -n "tts|text[-_ ]to[-_ ]speech|speech synthesis|voice_compatible|output_format|input_path|output_path|provider:.*command|type: command|Hermes" /Users/mhedhli/Documents/Coding/hermes /Users/mhedhli/.hermes`
+  - `chmod +x scripts/validate-omnivoice-bridge.sh`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `git diff --check`
+- Tests:
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation script includes: 16 unit tests PASS with 1 real-backend
+    integration skip, py_compile PASS, fake-backend smoke PASS, unconfigured
+    smoke SKIP as expected, secret-pattern scan PASS, and `git diff --check`
+    PASS.
+- Blockers:
+  - No live OmniVoice-Studio service or real OmniVoice backend is configured, so
+    real synthesis quality is still unverified.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - Until real Hermes source appears, a deterministic validation script is the
+    highest-value way to keep the bridge shippable and regression-safe.
+- Next action:
+  - Commit the validation-script checkpoint, then either start a loopback
+    OmniVoice-Studio smoke attempt or prepare a packaging/readme handoff for the
+    command-provider MVP.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -223,6 +269,8 @@ command-provider config for local voices.
   never present it as a real TTS engine.
 - Provide voice UX through a standalone helper until the real Hermes command
   layer can be inspected.
+- Keep future validation centered on `scripts/validate-omnivoice-bridge.sh` so
+  every heartbeat has the same deterministic local evidence.
 
 ## Open follow-ups
 

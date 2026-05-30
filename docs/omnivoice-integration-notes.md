@@ -11,6 +11,8 @@ Findings:
 - The current directory had no `.git` directory, source tree, docs, tests, or
   Hermes TTS implementation to inspect.
 - No local Hermes Agent source was present under the scheduled workspace.
+- Follow-up local checks also found no `/opt/hermes-agent/source` and no readable
+  `~/.hermes` config files in this environment.
 - The least invasive path is a command-provider MVP: Hermes writes input text to
   a file, calls `scripts/hermes-omnivoice-tts.py`, and consumes the generated
   audio file.

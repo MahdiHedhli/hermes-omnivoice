@@ -93,6 +93,12 @@ valid.
 
 ## Smoke Test
 
+Run all local bridge checks:
+
+```bash
+scripts/validate-omnivoice-bridge.sh
+```
+
 Run the smoke test only after configuring a real backend command:
 
 ```bash
