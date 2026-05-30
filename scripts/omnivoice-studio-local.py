@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+"""Manage a local loopback-only OmniVoice-Studio Docker Compose runtime."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+
+
+DEFAULT_REPO_URL = "https://github.com/debpalash/OmniVoice-Studio.git"
+DEFAULT_STUDIO_DIR = Path("~/.cache/hermes/OmniVoice-Studio")
+SERVICE_BY_PROFILE = {"cpu": "omnivoice", "gpu": "omnivoice-gpu"}
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+class StudioLocalError(RuntimeError):
+    pass
+
+
+def run_command(argv: list[str], *, cwd: Path | None = None, capture: bool = False) -> str:
+    completed = subprocess.run(
+        argv,
+        cwd=str(cwd) if cwd else None,
+        check=False,
+        text=True,
+        capture_output=capture,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() if capture and completed.stderr else "command failed"
+        raise StudioLocalError(f"{argv[0]} exited {completed.returncode}: {detail}")
+    return completed.stdout if capture else ""
+
+
+def require_binary(name: str) -> str:
+    path = shutil.which(name)
+    if not path:
+        raise StudioLocalError(f"required command not found: {name}")
+    return path
+
+
+def fetch_source(studio_dir: Path, repo_url: str, update: bool) -> None:
+    target = studio_dir.expanduser()
+    if target.exists():
+        if not (target / ".git").is_dir():
+            raise StudioLocalError(f"Studio directory exists but is not a git repo: {target}")
+        if update:
+            run_command(["git", "-C", str(target), "pull", "--ff-only"])
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    run_command(["git", "clone", "--depth", "1", repo_url, str(target)])
+
+
+def compose_file(studio_dir: Path) -> Path:
+    path = studio_dir.expanduser() / "deploy" / "docker-compose.yml"
+    if not path.is_file():
+        raise StudioLocalError(f"Compose file not found: {path}")
+    return path
+
+
+def compose_config(path: Path, profile: str) -> dict:
+    output = run_command(
+        ["docker", "compose", "-f", str(path), "--profile", profile, "config", "--format", "json"],
+        capture=True,
+    )
+    return json.loads(output)
+
+
+def validate_loopback_ports(config: dict, profile: str, published_port: int) -> None:
+    service_name = SERVICE_BY_PROFILE[profile]
+    services = config.get("services")
+    if not isinstance(services, dict) or service_name not in services:
+        raise StudioLocalError(f"Compose service missing for profile {profile}: {service_name}")
+    ports = services[service_name].get("ports", [])
+    if not isinstance(ports, list):
+        raise StudioLocalError(f"Compose service has invalid ports for {service_name}")
+    for port in ports:
+        if not isinstance(port, dict):
+            continue
+        if int(port.get("target", 0)) != 3900:
+            continue
+        host_ip = str(port.get("host_ip") or "")
+        published = str(port.get("published") or "")
+        if host_ip not in LOOPBACK_HOSTS:
+            raise StudioLocalError(f"Studio port is not loopback-only: {host_ip or '<all>'}")
+        if published != str(published_port):
+            raise StudioLocalError(f"Studio published port is {published}, expected {published_port}")
+        return
+    raise StudioLocalError(f"Studio port 3900 is not published on loopback port {published_port}")
+
+
+def compose_args(args: argparse.Namespace) -> list[str]:
+    return [
+        "docker",
+        "compose",
+        "-f",
+        str(compose_file(args.studio_dir)),
+        "--profile",
+        args.profile,
+    ]
+
+
+def studio_health(url: str, timeout: int) -> dict:
+    try:
+        with urllib.request.urlopen(f"{url.rstrip('/')}/health", timeout=timeout) as response:
+            body = response.read().decode("utf-8", errors="replace")[:200]
+    except (OSError, urllib.error.URLError) as exc:
+        return {"status": "unreachable", "error": str(exc)}
+    return {"status": "reachable", "body": body}
+
+
+def command_check(args: argparse.Namespace) -> int:
+    report: dict[str, object] = {
+        "docker": bool(shutil.which("docker")),
+        "git": bool(shutil.which("git")),
+        "studio_dir": str(args.studio_dir.expanduser()),
+        "profile": args.profile,
+        "studio_url": args.studio_url,
+    }
+    try:
+        path = compose_file(args.studio_dir)
+        config = compose_config(path, args.profile)
+        validate_loopback_ports(config, args.profile, args.port)
+        report["compose"] = "loopback-ok"
+    except (OSError, json.JSONDecodeError, StudioLocalError) as exc:
+        report["compose"] = "not-ready"
+        report["compose_error"] = str(exc)
+    report["health"] = studio_health(args.studio_url, args.timeout)
+    print(json.dumps(report, indent=2, sort_keys=True) if args.json else human_report(report))
+    return 0
+
+
+def human_report(report: dict[str, object]) -> str:
+    lines = [
+        "OmniVoice-Studio local runtime",
+        f"- Docker available: {report['docker']}",
+        f"- Git available: {report['git']}",
+        f"- Studio dir: {report['studio_dir']}",
+        f"- Profile: {report['profile']}",
+        f"- Compose: {report['compose']}",
+        f"- Studio URL: {report['studio_url']}",
+    ]
+    if report.get("compose_error"):
+        lines.append(f"  Compose error: {report['compose_error']}")
+    health = report["health"]
+    if isinstance(health, dict):
+        lines.append(f"- Health: {health['status']}")
+        if health.get("error"):
+            lines.append(f"  Error: {health['error']}")
+    return "\n".join(lines)
+
+
+def command_fetch(args: argparse.Namespace) -> int:
+    require_binary("git")
+    fetch_source(args.studio_dir, args.repo_url, args.update)
+    print(f"Studio source ready: {args.studio_dir.expanduser()}")
+    return 0
+
+
+def command_start(args: argparse.Namespace) -> int:
+    require_binary("docker")
+    require_binary("git")
+    if args.fetch:
+        fetch_source(args.studio_dir, args.repo_url, args.update)
+    path = compose_file(args.studio_dir)
+    config = compose_config(path, args.profile)
+    validate_loopback_ports(config, args.profile, args.port)
+    run_command(compose_args(args) + ["up", "-d"])
+    print(f"Studio started at {args.studio_url}")
+    return 0
+
+
+def command_stop(args: argparse.Namespace) -> int:
+    require_binary("docker")
+    run_command(compose_args(args) + ["down"])
+    return 0
+
+
+def command_status(args: argparse.Namespace) -> int:
+    require_binary("docker")
+    run_command(compose_args(args) + ["ps"])
+    return 0
+
+
+def command_logs(args: argparse.Namespace) -> int:
+    require_binary("docker")
+    run_command(compose_args(args) + ["logs", "--tail", str(args.tail)])
+    return 0
+
+
+def add_common(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--studio-dir",
+        default=Path(os.environ.get("OMNIVOICE_STUDIO_DIR", str(DEFAULT_STUDIO_DIR))),
+        type=Path,
+    )
+    parser.add_argument("--profile", choices=sorted(SERVICE_BY_PROFILE), default="cpu")
+    parser.add_argument("--port", type=int, default=3900)
+    parser.add_argument("--studio-url", default="http://127.0.0.1:3900")
+    parser.add_argument("--timeout", type=int, default=3)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Manage local OmniVoice-Studio on loopback")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    check = subparsers.add_parser("check", help="Check Docker, Compose, and Studio health")
+    add_common(check)
+    check.add_argument("--json", action="store_true")
+    check.set_defaults(func=command_check)
+
+    fetch = subparsers.add_parser("fetch", help="Clone or update OmniVoice-Studio source")
+    add_common(fetch)
+    fetch.add_argument("--repo-url", default=DEFAULT_REPO_URL)
+    fetch.add_argument("--update", action="store_true")
+    fetch.set_defaults(func=command_fetch)
+
+    start = subparsers.add_parser("start", help="Start loopback-only Studio with Docker Compose")
+    add_common(start)
+    start.add_argument("--repo-url", default=DEFAULT_REPO_URL)
+    start.add_argument("--fetch", action="store_true", default=True)
+    start.add_argument("--no-fetch", action="store_false", dest="fetch")
+    start.add_argument("--update", action="store_true")
+    start.set_defaults(func=command_start)
+
+    stop = subparsers.add_parser("stop", help="Stop local Studio")
+    add_common(stop)
+    stop.set_defaults(func=command_stop)
+
+    status = subparsers.add_parser("status", help="Show local Studio containers")
+    add_common(status)
+    status.set_defaults(func=command_status)
+
+    logs = subparsers.add_parser("logs", help="Show recent local Studio logs")
+    add_common(logs)
+    logs.add_argument("--tail", type=int, default=120)
+    logs.set_defaults(func=command_logs)
+
+    return parser
+
+
+def run(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    try:
+        return args.func(args)
+    except (OSError, json.JSONDecodeError, StudioLocalError) as exc:
+        print(f"omnivoice-studio-local: {exc}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(run())

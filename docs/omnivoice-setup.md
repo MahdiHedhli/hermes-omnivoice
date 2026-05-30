@@ -137,6 +137,31 @@ print command arguments. It only reports whether a backend command is configured
 whether a loopback Studio `/profiles` endpoint is reachable, whether an
 `omnivoice` CLI is on `PATH`, and how many local registry profiles exist.
 
+## Local Studio With Docker
+
+This repo includes a helper for OmniVoice-Studio's Docker Compose runtime:
+
+```bash
+python scripts/omnivoice-studio-local.py check
+python scripts/omnivoice-studio-local.py fetch
+python scripts/omnivoice-studio-local.py start
+python scripts/omnivoice-studio-local.py status
+python scripts/omnivoice-studio-local.py logs
+python scripts/omnivoice-studio-local.py stop
+```
+
+The helper validates that Studio's published API port is bound to loopback
+before `start` runs. By default it uses:
+
+```text
+~/.cache/hermes/OmniVoice-Studio
+http://127.0.0.1:3900
+Docker Compose profile: cpu
+```
+
+First startup can pull the Studio image and download model files. Keep those
+artifacts in Docker volumes or local caches; do not add them to this repo.
+
 Run the smoke test only after configuring a real backend command:
 
 ```bash

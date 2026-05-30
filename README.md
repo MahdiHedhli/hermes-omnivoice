@@ -25,6 +25,8 @@ This repo is intentionally conservative:
   config for local voices.
 - `scripts/check-omnivoice-runtime.py`: read-only diagnostics for local backend,
   Studio, CLI, and voice registry availability.
+- `scripts/omnivoice-studio-local.py`: helper for checking, fetching, starting,
+  stopping, and inspecting loopback-only OmniVoice-Studio with Docker Compose.
 - `scripts/validate-omnivoice-bridge.sh`: deterministic local validation.
 - `docs/`: setup, Studio bridge notes, integration findings, and custom voice
   usage.
@@ -62,6 +64,13 @@ Check the local runtime without generating audio:
 
 ```bash
 python scripts/check-omnivoice-runtime.py
+```
+
+Check or start a local loopback-only Studio container:
+
+```bash
+python scripts/omnivoice-studio-local.py check
+python scripts/omnivoice-studio-local.py start
 ```
 
 Generate a preview:

@@ -431,7 +431,7 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the reference-audio hardening checkpoint, then attempt a bounded
     runtime probe for local Studio dependencies or add an install helper.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 02:30 America/New_York
 - Completed:
@@ -479,6 +479,56 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the runtime diagnostic checkpoint, then add a bounded install/start
     guide or probe Docker availability for a local loopback Studio run.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 03:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `46cdcaf`.
+  - Confirmed Docker and Docker Compose are available locally.
+  - Confirmed the checked-out OmniVoice-Studio Compose config publishes port
+    `3900` on `127.0.0.1` for the CPU profile.
+  - Added `scripts/omnivoice-studio-local.py` to check, fetch, start, stop,
+    show status, and inspect logs for a loopback-only Studio Docker Compose
+    runtime.
+  - Added tests that accept loopback Compose port mappings and reject broad
+    `0.0.0.0` exposure or unexpected published ports.
+  - Updated README and Studio/setup docs with the local Studio helper.
+  - Ran the helper against `/tmp/omnivoice-studio-src`; Compose validation
+    passed and Studio health is currently unreachable because the container is
+    not running.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -10`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `docker --version`
+  - `docker compose version`
+  - `git -C /tmp/omnivoice-studio-src rev-parse --short HEAD`
+  - `git -C /tmp/omnivoice-studio-src status --short --branch`
+  - `sed -n ... /tmp/omnivoice-studio-src/deploy/docker-compose.yml`
+  - `docker compose -f /tmp/omnivoice-studio-src/deploy/docker-compose.yml --profile cpu config --format json`
+  - `chmod +x scripts/omnivoice-studio-local.py`
+  - `python3 scripts/omnivoice-studio-local.py check --studio-dir /tmp/omnivoice-studio-src --json`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation now includes 40 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - Studio is not currently running on `127.0.0.1:3900`.
+  - No real OmniVoice backend command or `omnivoice` CLI is configured, so real
+    synthesis quality is still unverified.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - Starting Studio should stay operator-explicit because first startup can pull
+    images and download large model files.
+- Next action:
+  - Commit the local Studio helper checkpoint, then either run a bounded Studio
+    container startup or improve packaging around the command-provider bridge.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -506,11 +556,14 @@ path. Top-level handoff docs and example configs are now present.
   overwriting existing local profile directories without `--force`.
 - Prefer read-only runtime checks before synthesis attempts so setup blockers
   are explicit without touching generated media or user voice samples.
+- Validate Docker Compose loopback bindings before any local Studio startup
+  helper runs.
 
 ## Open follow-ups
 
 - Locate or clone the actual Hermes Agent source and verify the TTS schema.
-- Run the Studio importer against a live local Studio service.
+- Start a local loopback Studio container and run the Studio importer against a
+  live local Studio service.
 - Configure a real OmniVoice backend command and run `scripts/test-omnivoice-tts.sh`.
 - Locate the actual Hermes Agent source before wiring native `/voice` commands.
 - Consider a native Hermes provider only after command-provider synthesis works.

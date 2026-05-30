@@ -27,6 +27,9 @@ CREATE_SCRIPT_PATH = (
 CHECK_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "check-omnivoice-runtime.py"
 )
+STUDIO_LOCAL_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "omnivoice-studio-local.py"
+)
 FAKE_BACKEND_PATH = Path(__file__).resolve().parent / "fixtures" / "fake_omnivoice_backend.py"
 EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
 SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_tts", SCRIPT_PATH)
@@ -60,6 +63,14 @@ assert CHECK_SPEC is not None and CHECK_SPEC.loader is not None
 runtime_check = importlib.util.module_from_spec(CHECK_SPEC)
 sys.modules["check_omnivoice_runtime"] = runtime_check
 CHECK_SPEC.loader.exec_module(runtime_check)
+
+STUDIO_LOCAL_SPEC = importlib.util.spec_from_file_location(
+    "omnivoice_studio_local", STUDIO_LOCAL_SCRIPT_PATH
+)
+assert STUDIO_LOCAL_SPEC is not None and STUDIO_LOCAL_SPEC.loader is not None
+studio_local = importlib.util.module_from_spec(STUDIO_LOCAL_SPEC)
+sys.modules["omnivoice_studio_local"] = studio_local
+STUDIO_LOCAL_SPEC.loader.exec_module(studio_local)
 
 
 def write_wav(path: Path) -> None:
@@ -701,6 +712,61 @@ class RuntimeCheckTests(unittest.TestCase):
         self.assertEqual(report["status"], "reachable")
         self.assertEqual(report["profile_count"], 1)
         self.assertEqual(requests[0]["path"], "/profiles")
+
+
+class StudioLocalTests(unittest.TestCase):
+    def test_loopback_compose_ports_validate(self) -> None:
+        config = {
+            "services": {
+                "omnivoice": {
+                    "ports": [
+                        {
+                            "host_ip": "127.0.0.1",
+                            "target": 3900,
+                            "published": "3900",
+                        }
+                    ]
+                }
+            }
+        }
+
+        studio_local.validate_loopback_ports(config, "cpu", 3900)
+
+    def test_broad_compose_ports_fail(self) -> None:
+        config = {
+            "services": {
+                "omnivoice": {
+                    "ports": [
+                        {
+                            "host_ip": "0.0.0.0",
+                            "target": 3900,
+                            "published": "3900",
+                        }
+                    ]
+                }
+            }
+        }
+
+        with self.assertRaisesRegex(studio_local.StudioLocalError, "not loopback"):
+            studio_local.validate_loopback_ports(config, "cpu", 3900)
+
+    def test_wrong_published_port_fails(self) -> None:
+        config = {
+            "services": {
+                "omnivoice": {
+                    "ports": [
+                        {
+                            "host_ip": "127.0.0.1",
+                            "target": 3900,
+                            "published": "3901",
+                        }
+                    ]
+                }
+            }
+        }
+
+        with self.assertRaisesRegex(studio_local.StudioLocalError, "published port"):
+            studio_local.validate_loopback_ports(config, "cpu", 3900)
 
 
 class VoiceCliTests(unittest.TestCase):

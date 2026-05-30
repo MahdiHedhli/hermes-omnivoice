@@ -77,3 +77,13 @@ still required before claiming synthesis quality.
 Use `scripts/check-omnivoice-runtime.py --studio-url http://127.0.0.1:3900` as
 a read-only probe before a real smoke test. It checks Studio `/profiles`
 reachability and keeps the same loopback-only default as the synthesis wrapper.
+
+For Docker-based local Studio runs, use:
+
+```bash
+python scripts/omnivoice-studio-local.py check
+python scripts/omnivoice-studio-local.py start
+```
+
+The helper validates the Compose port mapping before startup and rejects a
+configuration that publishes Studio beyond loopback.
