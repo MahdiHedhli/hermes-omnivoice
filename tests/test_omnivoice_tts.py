@@ -1909,7 +1909,10 @@ class InstallerTests(unittest.TestCase):
                     "",
                 ]
             )
-            (target / ".gitignore").write_text(f"node_modules/\n\n{old_block}", encoding="utf-8")
+            (target / ".gitignore").write_text(
+                f"node_modules/\n\n{old_block}dist/\n",
+                encoding="utf-8",
+            )
             output = io.StringIO()
 
             with contextlib.redirect_stdout(output):
@@ -1922,6 +1925,8 @@ class InstallerTests(unittest.TestCase):
             gitignore = (target / ".gitignore").read_text(encoding="utf-8")
             self.assertIn(".env.*", gitignore)
             self.assertIn("*.safetensors", gitignore)
+            self.assertIn("node_modules/", gitignore)
+            self.assertIn("dist/", gitignore)
             self.assertEqual(gitignore.count(installer.GITIGNORE_START), 1)
 
             second = io.StringIO()

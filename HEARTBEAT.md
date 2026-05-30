@@ -2332,7 +2332,7 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Commit the `.env.*` installer ignore hardening, then keep the branch clean
     for handoff or install into the real Hermes Agent checkout once found.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 18:30 America/New_York
 - Completed:
@@ -2392,6 +2392,59 @@ local backend path, validation state, blockers, security notes, and next steps.
 - Next action:
   - Commit the managed `.gitignore` refresh fix, then keep the branch clean for
     handoff or install into the real Hermes Agent checkout once found.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 19:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `6e8b526`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready and can provide
+    shell exports for the real OmniVoice adapter command.
+  - Added installer regression coverage proving a managed target `.gitignore`
+    refresh preserves user-owned rules before and after the managed Hermes
+    OmniVoice block.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -10`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `sed -n ... tests/test_omnivoice_tts.py scripts/install-hermes-omnivoice-bridge.py HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.InstallerTests -v`
+  - `python3 -m py_compile scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `git diff -- tests/test_omnivoice_tts.py`
+  - `git diff --check`
+  - `find . -type f (...) -print`
+  - `find . -type d -name __pycache__ -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - Targeted installer tests: PASS, 7 tests.
+  - Python py_compile for installer and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 81 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`.
+  - Repo artifact scan: PASS; no generated audio, model weights, env files, or
+    local voice selection state found in the repo.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Target repositories may have user-owned ignore rules before and after the
+    Hermes managed block; installer safety depends on preserving that context.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Keep the branch clean for handoff, or install the bridge into the real
+    Hermes Agent checkout once the source path is available.
 
 ## Decision log
 
