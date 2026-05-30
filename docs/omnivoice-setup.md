@@ -252,9 +252,11 @@ python scripts/omnivoice-studio-local.py start --no-fetch --no-build --pull neve
 ```
 
 That command succeeds only when the Studio image is already available locally.
-Failed startup attempts run `docker compose down` by default. Add
-`--remove-volumes-on-fail` only when you are sure no existing Studio volume data
-should be preserved.
+When the local image is missing, the helper exits before `docker compose up` so
+it does not create transient Compose containers, networks, or volumes. Other
+failed startup attempts run `docker compose down` by default. Add
+`--remove-volumes-on-fail` only when you are sure no existing Studio volume
+data should be preserved.
 
 ## Install Into Hermes
 

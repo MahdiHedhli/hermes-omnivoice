@@ -1282,6 +1282,99 @@ class StudioLocalTests(unittest.TestCase):
         self.assertIn("--pull", command)
         self.assertIn("never", command)
 
+    def test_start_no_fetch_does_not_require_git(self) -> None:
+        args = unittest.mock.Mock()
+        args.studio_dir = Path("/tmp/omnivoice-studio-src")
+        args.profile = "cpu"
+        args.fetch = False
+        args.repo_url = "https://example.invalid/repo.git"
+        args.update = False
+        args.port = 3900
+        args.command_timeout = 10
+        args.no_build = False
+        args.pull = "missing"
+        args.cleanup_on_fail = True
+        args.remove_volumes_on_fail = False
+        args.studio_url = "http://127.0.0.1:3900"
+        required: list[str] = []
+
+        def fake_require_binary(name: str) -> str:
+            required.append(name)
+            if name == "git":
+                raise studio_local.StudioLocalError("git should not be required")
+            return f"/usr/bin/{name}"
+
+        with unittest.mock.patch.object(studio_local, "require_binary", fake_require_binary), \
+            unittest.mock.patch.object(
+                studio_local,
+                "compose_file",
+                return_value=Path("/tmp/omnivoice-studio-src/deploy/docker-compose.yml"),
+            ), unittest.mock.patch.object(
+                studio_local,
+                "compose_config",
+                return_value={
+                    "services": {
+                        "omnivoice": {
+                            "ports": [
+                                {
+                                    "host_ip": "127.0.0.1",
+                                    "target": 3900,
+                                    "published": "3900",
+                                }
+                            ],
+                        }
+                    }
+                },
+            ), unittest.mock.patch.object(studio_local, "run_command", return_value=""):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    result = studio_local.command_start(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(required, ["docker"])
+
+    def test_no_pull_no_build_start_requires_local_image_before_compose_up(self) -> None:
+        args = unittest.mock.Mock()
+        args.studio_dir = Path("/tmp/omnivoice-studio-src")
+        args.profile = "cpu"
+        args.fetch = False
+        args.port = 3900
+        args.command_timeout = 10
+        args.no_build = True
+        args.pull = "never"
+        config = {
+            "services": {
+                "omnivoice": {
+                    "image": "ghcr.io/debpalash/omnivoice-studio:latest",
+                    "ports": [
+                        {
+                            "host_ip": "127.0.0.1",
+                            "target": 3900,
+                            "published": "3900",
+                        }
+                    ],
+                }
+            }
+        }
+
+        with unittest.mock.patch.object(studio_local, "require_binary", return_value="/usr/bin/docker"), \
+            unittest.mock.patch.object(
+                studio_local,
+                "compose_file",
+                return_value=Path("/tmp/omnivoice-studio-src/deploy/docker-compose.yml"),
+            ), unittest.mock.patch.object(
+                studio_local,
+                "compose_config",
+                return_value=config,
+            ), unittest.mock.patch.object(
+                studio_local,
+                "local_image_exists",
+                return_value=False,
+            ), unittest.mock.patch.object(studio_local, "run_command") as run_command:
+                with self.assertRaisesRegex(studio_local.StudioLocalError, "not available locally"):
+                    studio_local.command_start(args)
+
+        run_command.assert_not_called()
+
     def test_run_command_timeout_fails_cleanly(self) -> None:
         with self.assertRaisesRegex(studio_local.StudioLocalError, "timed out"):
             studio_local.run_command(

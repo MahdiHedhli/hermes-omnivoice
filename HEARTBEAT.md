@@ -37,7 +37,9 @@ separate gates, with opt-in strict flags for the runtime and source checks.
 Source discovery now retains already-discovered candidates through a small
 bounded inspection grace window when a later broad root consumes the scan
 timeout, so acceptance evidence stays useful without unbounded filesystem
-traversal.
+traversal. The local Studio helper now preflights no-pull/no-build startup
+against local Docker image availability and fails before creating Compose
+resources when the image is missing.
 
 ## Previous heartbeat
 
@@ -1508,7 +1510,7 @@ traversal.
     Studio startup retry or prepare final handoff notes around the remaining
     external blockers.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 12:00 America/New_York
 - Completed:
@@ -1564,6 +1566,79 @@ traversal.
   - Commit the source-discovery timeout stability fix, then either retry
     loopback Studio startup with the bounded helper or prepare final handoff
     notes around the remaining external blockers.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 12:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `fe93b85`.
+  - Re-ran acceptance and runtime checks. Static MVP remains ready, real backend
+    remains blocked, and source readiness remains blocked because only this
+    bridge repo is found locally.
+  - Verified Docker `29.4.1` and Docker Compose `v5.1.3` are available.
+  - Verified the cached OmniVoice-Studio checkout at `/tmp/omnivoice-studio-src`
+    still has loopback-only Compose config for the CPU profile.
+  - Confirmed no local OmniVoice/Studio image or container was present.
+  - Ran a no-fetch/no-build/no-pull Studio startup probe. Before code changes it
+    reached `docker compose up`, failed on missing
+    `ghcr.io/debpalash/omnivoice-studio:latest`, and cleaned the transient
+    network and volume.
+  - Hardened `scripts/omnivoice-studio-local.py` so that no-build/no-pull start
+    checks local image availability before invoking Compose.
+  - Removed the unnecessary `git` requirement when `start --no-fetch` is used
+    with an already-present Studio checkout.
+  - Added tests for no-fetch startup and missing-image preflight behavior.
+  - Re-ran the no-fetch/no-build/no-pull probe; it now exits immediately with a
+    clear missing-image message and creates no Studio containers, networks, or
+    volumes.
+  - Updated setup and Studio bridge docs with the improved no-pull/no-build
+    preflight behavior.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `sed -n ... scripts/omnivoice-studio-local.py`
+  - `python3 scripts/omnivoice-acceptance.py --source-root /Users/mhedhli/Documents/Coding/hermes --source-root /Users/mhedhli/Documents/Coding --source-scan-timeout 5 --source-max-candidates 20 --json`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `tail -n 190 HEARTBEAT.md`
+  - `docker --version`
+  - `docker compose version`
+  - `ls -la /tmp/omnivoice-studio-src /tmp/omnivoice-studio-src/deploy /tmp/omnivoice-studio-src/deploy/docker-compose.yml`
+  - `python3 scripts/omnivoice-studio-local.py check --studio-dir /tmp/omnivoice-studio-src --profile cpu --command-timeout 30 --json`
+  - `docker compose -f /tmp/omnivoice-studio-src/deploy/docker-compose.yml --profile cpu config --format json`
+  - `sed -n ... /tmp/omnivoice-studio-src/deploy/docker-compose.yml`
+  - `rg -n "image:|build:|ports:|3900|omnivoice" /tmp/omnivoice-studio-src/deploy/docker-compose.yml /tmp/omnivoice-studio-src/deploy/Dockerfile`
+  - `python3 scripts/omnivoice-studio-local.py start --studio-dir /tmp/omnivoice-studio-src --profile cpu --no-fetch --no-build --pull never --command-timeout 60 --remove-volumes-on-fail`
+  - `docker ps -a --format ... | rg -i 'omnivoice|studio|hermes'`
+  - `docker volume ls --format ... | rg -i 'omnivoice|studio|deploy'`
+  - `docker network ls --format ... | rg -i 'omnivoice|studio|deploy'`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioLocalTests -v`
+  - `python3 -m py_compile scripts/omnivoice-studio-local.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioLocalTests -v`: PASS,
+    8 tests.
+  - `python3 -m py_compile scripts/omnivoice-studio-local.py tests/test_omnivoice_tts.py`:
+    PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 74 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under `/Users/mhedhli/Documents/Coding/hermes`.
+  - No local `ghcr.io/debpalash/omnivoice-studio:latest` image is available, so
+    the no-pull/no-build Studio startup path cannot launch Studio.
+  - No persistent local voice profiles exist under
+    `~/.hermes/voices/omnivoice`; real smokes continue to use temporary
+    consented profiles.
+- Assumptions:
+  - A no-pull/no-build Studio probe should not create Docker resources when it
+    can prove the required local image is absent.
+  - `git` should only be required for Studio source fetch/update, not for
+    starting from an existing checkout with `--no-fetch`.
+- Next action:
+  - Commit the Studio preflight hardening, then decide whether to attempt a
+    bounded image pull/build window or prepare final handoff notes around the
+    external blockers.
 
 ## Decision log
 
@@ -1626,6 +1701,8 @@ traversal.
   readiness; both are external to the standalone bridge repo.
 - Preserve already-discovered Hermes source candidates when a later broad scan
   hits its timeout; a truncated search should degrade the report, not erase it.
+- Preflight local Studio no-pull/no-build startup against Docker image
+  availability before invoking Compose.
 
 ## Open follow-ups
 

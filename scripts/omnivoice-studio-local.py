@@ -119,6 +119,41 @@ def validate_loopback_ports(config: dict, profile: str, published_port: int) -> 
     raise StudioLocalError(f"Studio port 3900 is not published on loopback port {published_port}")
 
 
+def service_image(config: dict, profile: str) -> str:
+    services = config.get("services")
+    if not isinstance(services, dict):
+        return ""
+    service = services.get(SERVICE_BY_PROFILE[profile], {})
+    if not isinstance(service, dict):
+        return ""
+    image = service.get("image", "")
+    return str(image) if image else ""
+
+
+def local_image_exists(image: str, command_timeout: int | None = None) -> bool:
+    try:
+        run_command(
+            ["docker", "image", "inspect", image],
+            capture=True,
+            timeout=command_timeout,
+        )
+    except StudioLocalError:
+        return False
+    return True
+
+
+def preflight_start(args: argparse.Namespace, config: dict) -> None:
+    image = service_image(config, args.profile)
+    if args.no_build and args.pull == "never" and image and not local_image_exists(
+        image,
+        args.command_timeout,
+    ):
+        raise StudioLocalError(
+            f"Studio image is not available locally: {image}; "
+            "allow a pull or build before using --pull never --no-build"
+        )
+
+
 def compose_args(args: argparse.Namespace) -> list[str]:
     return [
         "docker",
@@ -205,12 +240,13 @@ def command_fetch(args: argparse.Namespace) -> int:
 
 def command_start(args: argparse.Namespace) -> int:
     require_binary("docker")
-    require_binary("git")
     if args.fetch:
+        require_binary("git")
         fetch_source(args.studio_dir, args.repo_url, args.update, args.command_timeout)
     path = compose_file(args.studio_dir)
     config = compose_config(path, args.profile, args.command_timeout)
     validate_loopback_ports(config, args.profile, args.port)
+    preflight_start(args, config)
     try:
         run_command(compose_up_args(args), timeout=args.command_timeout)
     except StudioLocalError:
