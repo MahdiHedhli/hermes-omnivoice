@@ -20,6 +20,7 @@ REQUIRED_FILES = [
     "scripts/create-omnivoice-voice.py",
     "scripts/import-omnivoice-studio-voice.py",
     "scripts/hermes-omnivoice-voices.py",
+    "scripts/find-hermes-source.py",
     "scripts/check-omnivoice-runtime.py",
     "scripts/install-hermes-omnivoice-bridge.py",
     "scripts/omnivoice-studio-local.py",

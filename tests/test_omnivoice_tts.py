@@ -41,6 +41,9 @@ INSTALL_SCRIPT_PATH = (
 STUDIO_LOCAL_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "omnivoice-studio-local.py"
 )
+FIND_SOURCE_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "find-hermes-source.py"
+)
 ACCEPTANCE_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "omnivoice-acceptance.py"
 )
@@ -109,6 +112,14 @@ assert STUDIO_LOCAL_SPEC is not None and STUDIO_LOCAL_SPEC.loader is not None
 studio_local = importlib.util.module_from_spec(STUDIO_LOCAL_SPEC)
 sys.modules["omnivoice_studio_local"] = studio_local
 STUDIO_LOCAL_SPEC.loader.exec_module(studio_local)
+
+FIND_SOURCE_SPEC = importlib.util.spec_from_file_location(
+    "find_hermes_source", FIND_SOURCE_SCRIPT_PATH
+)
+assert FIND_SOURCE_SPEC is not None and FIND_SOURCE_SPEC.loader is not None
+source_finder = importlib.util.module_from_spec(FIND_SOURCE_SPEC)
+sys.modules["find_hermes_source"] = source_finder
+FIND_SOURCE_SPEC.loader.exec_module(source_finder)
 
 ACCEPTANCE_SPEC = importlib.util.spec_from_file_location(
     "omnivoice_acceptance", ACCEPTANCE_SCRIPT_PATH
@@ -1291,6 +1302,90 @@ class StudioLocalTests(unittest.TestCase):
             command = studio_local.compose_down_args(args, remove_volumes=True)
 
         self.assertEqual(command[-2:], ["down", "-v"])
+
+
+class HermesSourceFinderTests(unittest.TestCase):
+    def test_scores_likely_hermes_source_with_tts_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "hermes-agent"
+            (repo / ".git").mkdir(parents=True)
+            (repo / "docs").mkdir()
+            (repo / "docs" / "tts.md").write_text(
+                "Hermes TTS provider configuration for voice synthesis.",
+                encoding="utf-8",
+            )
+            (repo / "pyproject.toml").write_text("[project]\nname='hermes-agent'\n", encoding="utf-8")
+
+            report = source_finder.discover(
+                argparse_namespace(
+                    root=[root],
+                    max_depth=3,
+                    max_candidates=50,
+                    max_files=100,
+                    max_file_bytes=2048,
+                    scan_timeout=20,
+                )
+            )
+
+            self.assertEqual(report["likely_count"], 1)
+            candidate = report["candidates"][0]
+            self.assertTrue(candidate["likely_hermes_agent"])
+            self.assertIn("docs/tts.md", candidate["tts_files"])
+
+    def test_marks_this_bridge_repo_as_not_actual_agent_source(self) -> None:
+        report = source_finder.discover(
+            argparse_namespace(
+                root=[Path(__file__).resolve().parents[1]],
+                max_depth=1,
+                max_candidates=50,
+                max_files=500,
+                max_file_bytes=2048,
+                scan_timeout=20,
+            )
+        )
+
+        self.assertEqual(report["likely_count"], 0)
+        self.assertTrue(report["candidates"][0]["is_bridge_repo"])
+
+    def test_discovery_skips_secret_named_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "hermes-agent"
+            (repo / ".git").mkdir(parents=True)
+            (repo / ".env").write_text("HERMES_TTS_PROVIDER=secret\n", encoding="utf-8")
+            (repo / "pyproject.toml").write_text("[project]\nname='hermes-agent'\n", encoding="utf-8")
+
+            candidate = source_finder.inspect_candidate(repo, max_files=100, max_file_bytes=2048)
+
+            self.assertNotIn(".env", candidate["tts_files"])
+
+    def test_discovery_can_limit_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for index in range(3):
+                repo = root / f"hermes-agent-{index}"
+                (repo / ".git").mkdir(parents=True)
+                (repo / "docs").mkdir()
+                (repo / "docs" / "tts.md").write_text("Hermes TTS provider", encoding="utf-8")
+
+            report = source_finder.discover(
+                argparse_namespace(
+                    root=[root],
+                    max_depth=2,
+                    max_candidates=1,
+                    max_files=100,
+                    max_file_bytes=2048,
+                    scan_timeout=20,
+                )
+            )
+
+            self.assertEqual(report["candidate_count"], 1)
+            self.assertTrue(report["truncated"])
+
+
+def argparse_namespace(**kwargs):
+    return types.SimpleNamespace(**kwargs)
 
 
 class AcceptanceTests(unittest.TestCase):

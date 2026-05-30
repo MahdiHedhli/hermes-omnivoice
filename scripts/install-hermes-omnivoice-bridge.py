@@ -18,6 +18,7 @@ BASE_MANIFEST = [
     "scripts/create-omnivoice-voice.py",
     "scripts/import-omnivoice-studio-voice.py",
     "scripts/hermes-omnivoice-voices.py",
+    "scripts/find-hermes-source.py",
     "scripts/check-omnivoice-runtime.py",
     "scripts/omnivoice-studio-local.py",
     "scripts/omnivoice-acceptance.py",

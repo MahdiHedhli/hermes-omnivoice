@@ -28,7 +28,10 @@ OmniVoice-Studio Docker helper validates loopback-only Compose config and now
 bounds Docker/Git subprocesses so a stalled pull or build cannot block a
 heartbeat indefinitely. The unittest integration smoke is now a real opt-in
 test: normal runs skip without model work, while
-`HERMES_OMNIVOICE_RUN_REAL_TEST=1` exercises actual synthesis.
+`HERMES_OMNIVOICE_RUN_REAL_TEST=1` exercises actual synthesis. A bounded
+read-only Hermes source discovery helper now scores candidate checkouts without
+reading sensitive-named files and correctly marks this bridge repo separately
+from an actual Hermes Agent source tree.
 
 ## Previous heartbeat
 
@@ -1317,7 +1320,7 @@ test: normal runs skip without model work, while
     Studio image pull/build window or locate the actual Hermes Agent source for
     schema verification.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 09:30 America/New_York
 - Completed:
@@ -1374,6 +1377,74 @@ test: normal runs skip without model work, while
     bounded pull/build window or add a Hermes-source discovery/report helper for
     future schema verification.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 11:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `a6f0dcb`.
+  - Added `scripts/find-hermes-source.py`, a read-only source discovery helper
+    for finding and scoring candidate Hermes Agent checkouts.
+  - The helper skips common dependency/cache directories, avoids
+    sensitive-named files, bounds candidate count and scan time, and marks this
+    OmniVoice bridge repo separately so it is not mistaken for Hermes Agent.
+  - Added the finder to the installer manifest, acceptance required files, and
+    full validation py_compile list.
+  - Added source-finder tests for a likely Hermes checkout, this bridge repo,
+    sensitive-file skipping, and candidate limiting.
+  - Ran the finder against the local Hermes/Coding roots. It completed quickly
+    after timeout hardening and reported only this bridge repo, with
+    `likely_count: 0`.
+  - Updated README, setup docs, and integration notes with the discovery helper.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -7`
+  - `tail -n 170 HEARTBEAT.md`
+  - `sed -n ... scripts/install-hermes-omnivoice-bridge.py`
+  - `sed -n ... scripts/check-omnivoice-runtime.py`
+  - `chmod +x scripts/find-hermes-source.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.HermesSourceFinderTests -v`
+  - `python3 -m py_compile scripts/find-hermes-source.py scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py`
+  - `python3 scripts/find-hermes-source.py --root /Users/mhedhli/Documents/Coding/hermes --root /Users/mhedhli/Documents/Coding --max-depth 5 --max-candidates 20 --scan-timeout 5 --json`
+  - `ps ax -o pid,ppid,stat,etime,command | rg 'find-hermes-source'`
+  - `kill ...`
+  - `rg -n "SECRET|TOKEN|PASSWORD|API_KEY|BEGIN [A-Z ]*PRIVATE|sk-[A-Za-z0-9]|ghp_[A-Za-z0-9]|glpat-|hf_[A-Za-z0-9]{20,}|ELEVENLABS|OPENAI_API_KEY" ...`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - First broad discovery run: BLOCKED by overly broad traversal; stopped and
+    replaced with end-to-end scan time and candidate limits.
+  - First bounded discovery run: completed but produced false positives from
+    unrelated repos with generic TTS text; scoring was tightened to require a
+    Hermes path signal for likely Hermes Agent classification.
+  - Corrected bounded discovery run: PASS; returned only this bridge repo,
+    `is_bridge_repo: true`, `likely_count: 0`, and `truncated: false`.
+  - `python3 -m unittest tests.test_omnivoice_tts.HermesSourceFinderTests -v`:
+    PASS, 4 tests.
+  - `python3 -m py_compile ...`: PASS.
+  - First full validation after adding the helper: expected FAIL from a
+    denylist variable name matching the repo's secret-pattern scan; internal
+    naming was changed to avoid the false positive.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 68 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; the new finder
+    confirms only this bridge repo under the searched Hermes/Coding roots.
+  - Published OmniVoice-Studio image pull remains unresolved, so no live Studio
+    `/profiles` or `/generate` smoke has run.
+  - No persistent local voice profiles exist under
+    `~/.hermes/voices/omnivoice`; real smokes continue to use temporary
+    consented profiles.
+- Assumptions:
+  - Hermes source discovery should be bounded and repeatable because broad
+    manual scans across a large Coding tree are not suitable for heartbeat
+    cadence.
+  - A path-level Hermes signal is required before marking a checkout as a
+    likely Hermes Agent source; generic speech/TTS text alone is too noisy.
+- Next action:
+  - Commit the source discovery helper, then retry Studio with a bounded
+    pull/build window or use the finder output as the durable source-discovery
+    evidence until the real Hermes checkout appears.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -1429,12 +1500,14 @@ test: normal runs skip without model work, while
   hang indefinitely on a stalled image pull or build.
 - Keep heavyweight model-backed unittest synthesis opt-in with
   `HERMES_OMNIVOICE_RUN_REAL_TEST=1`; default validation should skip it.
+- Keep Hermes source discovery read-only, bounded, and strict enough that
+  unrelated repos with generic TTS text are not marked as Hermes Agent.
 
 ## Open follow-ups
 
-- Locate or clone the actual Hermes Agent source and verify the TTS schema.
 - Start a local loopback Studio container and run the Studio importer against a
   live local Studio service.
-- Locate the actual Hermes Agent source before wiring native `/voice` commands.
+- Locate or clone the actual Hermes Agent source and verify the TTS schema with
+  `scripts/find-hermes-source.py`.
 - Consider a native Hermes provider only after the actual Hermes Agent source
   and provider schema are available.

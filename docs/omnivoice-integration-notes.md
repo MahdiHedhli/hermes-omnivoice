@@ -13,6 +13,10 @@ Findings:
 - No local Hermes Agent source was present under the scheduled workspace.
 - Follow-up local checks also found no `/opt/hermes-agent/source` and no readable
   `~/.hermes` config files in this environment.
+- `scripts/find-hermes-source.py` now captures that search as a repeatable
+  read-only helper. It scores candidate source trees by Hermes/TTS indicators,
+  skips secret-named files, and marks this bridge repo separately so it is not
+  mistaken for Hermes Agent.
 - The least invasive path is a command-provider MVP: Hermes writes input text to
   a file, calls `scripts/hermes-omnivoice-tts.py`, and consumes the generated
   audio file.

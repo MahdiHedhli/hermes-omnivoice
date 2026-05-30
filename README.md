@@ -27,6 +27,8 @@ This repo is intentionally conservative:
   Hermes local registry after explicit consent confirmation.
 - `scripts/hermes-omnivoice-voices.py`: list, inspect, preview, and print sample
   config for local voices.
+- `scripts/find-hermes-source.py`: read-only helper for finding and scoring
+  candidate Hermes Agent source trees before native-provider work.
 - `scripts/check-omnivoice-runtime.py`: read-only diagnostics for local backend,
   Studio, CLI, and voice registry availability.
 - `scripts/install-hermes-omnivoice-bridge.py`: copies bridge files into a real

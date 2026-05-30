@@ -261,10 +261,16 @@ should be preserved.
 When the real Hermes checkout is available, stage the bridge files first:
 
 ```bash
+python scripts/find-hermes-source.py --json
+
 python scripts/install-hermes-omnivoice-bridge.py \
   --target-root /path/to/hermes-agent \
   --dry-run
 ```
+
+`find-hermes-source.py` is read-only. It reports candidate source trees and TTS
+indicators, skips secret-named files, and marks this bridge repo separately
+from a real Hermes Agent checkout.
 
 Then install without `--dry-run`. Existing files are not overwritten unless
 `--force` is passed. Add `--with-examples` when you want the sample Hermes
