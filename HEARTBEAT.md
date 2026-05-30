@@ -42,6 +42,10 @@ against local Docker image availability and fails before creating Compose
 resources when the image is missing. It also performs bounded image pulls
 before Compose startup for no-build pull-enabled runs, so registry or platform
 failures do not create transient Compose resources.
+The source-build fallback for OmniVoice-Studio reached Docker image export after
+large runtime dependency downloads, but exceeded a 300 second heartbeat window;
+post-timeout Docker checks showed no matching Studio containers, volumes,
+networks, or images left behind.
 
 ## Previous heartbeat
 
@@ -1642,7 +1646,7 @@ failures do not create transient Compose resources.
     bounded image pull/build window or prepare final handoff notes around the
     external blockers.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 13:00 America/New_York
 - Completed:
@@ -1704,6 +1708,64 @@ failures do not create transient Compose resources.
   - Commit the pull-before-Compose hardening, then either attempt a bounded
     source build or prepare final handoff notes around the remaining external
     blockers.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 13:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `94f423a`.
+  - Re-ran acceptance, runtime, and Studio local checks. Static MVP remains
+    ready; real backend and Hermes source readiness remain blocked in the
+    default environment.
+  - Attempted a bounded source build/start from the cached
+    `/tmp/omnivoice-studio-src` checkout with loopback-only Compose config.
+  - The source build downloaded and extracted large PyTorch runtime layers,
+    progressed through dependency install, and timed out after 300 seconds while
+    exporting the Docker image.
+  - Confirmed no matching Studio containers, volumes, networks, or images were
+    left after the timed-out source-build attempt.
+  - Updated setup and Studio bridge docs to describe the Apple Silicon
+    source-build limitation and keep long source builds operator-supervised.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/omnivoice-acceptance.py --source-root /Users/mhedhli/Documents/Coding/hermes --source-root /Users/mhedhli/Documents/Coding --source-scan-timeout 5 --source-max-candidates 20 --json`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/omnivoice-studio-local.py check --studio-dir /tmp/omnivoice-studio-src --profile cpu --command-timeout 30 --json`
+  - `python3 scripts/omnivoice-studio-local.py start --studio-dir /tmp/omnivoice-studio-src --profile cpu --no-fetch --pull never --command-timeout 300 --remove-volumes-on-fail`
+  - `docker ps -a --format ... | rg -i 'omnivoice|studio|hermes'`
+  - `docker volume ls --format ... | rg -i 'omnivoice|studio|deploy'`
+  - `docker network ls --format ... | rg -i 'omnivoice|studio|deploy'`
+  - `docker images --format ... | rg -i 'omnivoice|studio|deploy|ghcr.io/debpalash'`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - Source-build probe: BLOCKED; timed out at Docker image export after 300
+    seconds.
+  - Post-timeout Docker resource checks: PASS; no matching Studio containers,
+    volumes, networks, or images found.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 76 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under `/Users/mhedhli/Documents/Coding/hermes`.
+  - The published OmniVoice-Studio image does not provide a `linux/arm64/v8`
+    manifest, so image-pull startup is blocked on this Mac.
+  - Building Studio from source on this host exceeds the 300 second heartbeat
+    window and pulls a large PyTorch runtime before image export completes.
+  - No persistent local voice profiles exist under
+    `~/.hermes/voices/omnivoice`; real smokes continue to use temporary
+    consented profiles.
+- Assumptions:
+  - Longer Studio source builds should be operator-supervised because they can
+    consume significant local disk and Docker cache.
+  - The already-proven direct OmniVoice CLI/Python adapter path remains the
+    simplest local MVP path until a compatible Studio image or longer build
+    window is available.
+- Next action:
+  - Commit the source-build platform notes, then prepare final handoff or wait
+    for the actual Hermes Agent source and a compatible live Studio/runtime
+    path before more native-provider work.
 
 ## Decision log
 
@@ -1771,11 +1833,15 @@ failures do not create transient Compose resources.
 - Pull Studio images explicitly before Compose startup for no-build pull-enabled
   runs, so registry and platform failures happen before Compose resources are
   created.
+- Keep Studio source builds bounded during heartbeat automation; on this Mac
+  they can consume multi-GB Docker/PyTorch layers and exceed short heartbeat
+  windows before producing a runnable container.
 
 ## Open follow-ups
 
-- Start a local loopback Studio container and run the Studio importer against a
-  live local Studio service.
+- Start a local loopback Studio container with a compatible image or a longer
+  supervised source build, then run the Studio importer against that live local
+  service.
 - Locate or clone the actual Hermes Agent source and verify the TTS schema with
   `scripts/find-hermes-source.py`.
 - Consider a native Hermes provider only after the actual Hermes Agent source

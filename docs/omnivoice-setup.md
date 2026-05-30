@@ -263,6 +263,13 @@ performs the bounded image pull before `docker compose up`. This keeps registry
 or platform failures out of Compose startup; for example, a missing image
 manifest fails before Compose creates containers, networks, or volumes.
 
+If the published image is unavailable for the local platform, remove
+`--no-build` and let Compose build from the checked-out Studio source. On Apple
+Silicon this path can download multi-GB PyTorch runtime layers and may exceed a
+short `--command-timeout` while exporting the image. Keep automated runs bounded
+and use a longer timeout only when an operator is watching local disk and Docker
+state.
+
 ## Install Into Hermes
 
 When the real Hermes checkout is available, stage the bridge files first:

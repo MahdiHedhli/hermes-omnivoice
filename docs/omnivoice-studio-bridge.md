@@ -107,3 +107,8 @@ the bounded image pull before Compose startup. Registry or platform failures
 therefore fail before Compose creates transient resources.
 Docker/Git commands are bounded by `--command-timeout` seconds, defaulting to
 900, so a stalled image pull or build does not block a heartbeat indefinitely.
+On Apple Silicon, the published image may be unavailable for the local platform.
+Building from source is possible but can pull multi-GB PyTorch runtime layers
+and may exceed short automation windows before the image export finishes. Keep
+source builds bounded in automation and reserve longer or unbounded timeouts for
+operator-supervised runs.
