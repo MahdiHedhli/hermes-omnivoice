@@ -1400,7 +1400,13 @@ class AcceptanceTests(unittest.TestCase):
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
                 result = acceptance.run(
-                    ["--voices-dir", str(Path(tmp) / "missing"), "--json"],
+                    [
+                        "--voices-dir",
+                        str(Path(tmp) / "missing"),
+                        "--source-root",
+                        str(Path(tmp) / "source"),
+                        "--json",
+                    ],
                     env={},
                 )
 
@@ -1408,6 +1414,7 @@ class AcceptanceTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertTrue(report["mvp_static_ready"])
             self.assertFalse(report["real_backend_ready"])
+            self.assertFalse(report["hermes_source_ready"])
 
     def test_acceptance_can_require_real_backend(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1417,6 +1424,8 @@ class AcceptanceTests(unittest.TestCase):
                     [
                         "--voices-dir",
                         str(Path(tmp) / "missing"),
+                        "--source-root",
+                        str(Path(tmp) / "source"),
                         "--require-real-backend",
                     ],
                     env={},
@@ -1424,6 +1433,78 @@ class AcceptanceTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
             self.assertIn("Real backend ready: BLOCKED", output.getvalue())
+
+    def test_acceptance_reports_missing_hermes_source_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            empty_source = Path(tmp) / "source"
+            with contextlib.redirect_stdout(output):
+                result = acceptance.run(
+                    [
+                        "--voices-dir",
+                        str(Path(tmp) / "missing"),
+                        "--source-root",
+                        str(empty_source),
+                        "--json",
+                    ],
+                    env={},
+                )
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertFalse(report["hermes_source_ready"])
+            self.assertEqual(report["source_discovery"]["status"], "no_likely_hermes_agent")
+
+    def test_acceptance_can_require_hermes_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = acceptance.run(
+                    [
+                        "--voices-dir",
+                        str(Path(tmp) / "missing"),
+                        "--source-root",
+                        str(Path(tmp) / "source"),
+                        "--require-hermes-source",
+                    ],
+                    env={},
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("Hermes source ready: BLOCKED", output.getvalue())
+
+    def test_acceptance_reports_likely_hermes_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "hermes-agent"
+            (repo / ".git").mkdir(parents=True)
+            (repo / "docs").mkdir()
+            (repo / "docs" / "tts.md").write_text(
+                "Hermes TTS provider configuration.",
+                encoding="utf-8",
+            )
+            (repo / "pyproject.toml").write_text(
+                "[project]\nname='hermes-agent'\n",
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                result = acceptance.run(
+                    [
+                        "--voices-dir",
+                        str(root / "missing"),
+                        "--source-root",
+                        str(root),
+                        "--json",
+                    ],
+                    env={},
+                )
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertTrue(report["hermes_source_ready"])
+            self.assertEqual(report["source_discovery"]["likely_count"], 1)
 
 
 class InstallerTests(unittest.TestCase):

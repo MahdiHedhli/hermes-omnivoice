@@ -31,7 +31,9 @@ test: normal runs skip without model work, while
 `HERMES_OMNIVOICE_RUN_REAL_TEST=1` exercises actual synthesis. A bounded
 read-only Hermes source discovery helper now scores candidate checkouts without
 reading sensitive-named files and correctly marks this bridge repo separately
-from an actual Hermes Agent source tree.
+from an actual Hermes Agent source tree. The acceptance summary now reports
+static MVP readiness, real backend readiness, and Hermes source readiness as
+separate gates, with opt-in strict flags for the runtime and source checks.
 
 ## Previous heartbeat
 
@@ -1377,7 +1379,7 @@ from an actual Hermes Agent source tree.
     bounded pull/build window or add a Hermes-source discovery/report helper for
     future schema verification.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 11:00 America/New_York
 - Completed:
@@ -1445,6 +1447,63 @@ from an actual Hermes Agent source tree.
     pull/build window or use the finder output as the durable source-discovery
     evidence until the real Hermes checkout appears.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 11:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `b3da646`.
+  - Promoted Hermes source discovery into `scripts/omnivoice-acceptance.py` so
+    acceptance JSON and human output now include `hermes_source_ready` and the
+    full bounded discovery report.
+  - Added `--require-hermes-source` for strict handoff checks while preserving
+    the default zero-exit static MVP acceptance when the real Hermes checkout is
+    absent.
+  - Added explicit source-root and source-budget options to the acceptance
+    command so heartbeat checks stay bounded.
+  - Added acceptance tests for missing source by default, strict source failure,
+    and a likely Hermes source checkout.
+  - Updated `docs/omnivoice-acceptance.md` to document the three acceptance
+    gates and the strict Hermes-source check.
+  - Ran acceptance against `/Users/mhedhli/Documents/Coding/hermes` and
+    `/Users/mhedhli/Documents/Coding`; it found only this bridge repo and
+    reported `hermes_source_ready: false`, `mvp_static_ready: true`, and
+    `real_backend_ready: false`.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -7`
+  - `sed -n ... scripts/omnivoice-acceptance.py`
+  - `sed -n ... tests/test_omnivoice_tts.py`
+  - `sed -n ... docs/omnivoice-acceptance.md`
+  - `sed -n ... scripts/find-hermes-source.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.AcceptanceTests tests.test_omnivoice_tts.HermesSourceFinderTests -v`
+  - `python3 -m py_compile scripts/omnivoice-acceptance.py tests/test_omnivoice_tts.py`
+  - `python3 scripts/omnivoice-acceptance.py --source-root /Users/mhedhli/Documents/Coding/hermes --source-root /Users/mhedhli/Documents/Coding --source-scan-timeout 5 --source-max-candidates 20 --json`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - Focused acceptance/source tests: PASS, 10 tests.
+  - `python3 -m py_compile scripts/omnivoice-acceptance.py tests/test_omnivoice_tts.py`:
+    PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 71 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; acceptance now
+    exposes that as a distinct source-readiness blocker.
+  - Published OmniVoice-Studio image pull remains unresolved, so no live Studio
+    `/profiles` or `/generate` smoke has run.
+  - No persistent local voice profiles exist under
+    `~/.hermes/voices/omnivoice`; real smokes continue to use temporary
+    consented profiles.
+- Assumptions:
+  - Static MVP acceptance should remain useful in this bridge repo, but strict
+    handoff or final wiring should require a real Hermes source checkout.
+  - Source readiness and backend readiness need separate gates so progress is
+    not overstated.
+- Next action:
+  - Commit the acceptance-source gate checkpoint, then continue with a bounded
+    Studio startup retry or prepare final handoff notes around the remaining
+    external blockers.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -1502,6 +1561,8 @@ from an actual Hermes Agent source tree.
   `HERMES_OMNIVOICE_RUN_REAL_TEST=1`; default validation should skip it.
 - Keep Hermes source discovery read-only, bounded, and strict enough that
   unrelated repos with generic TTS text are not marked as Hermes Agent.
+- Track Hermes source readiness as a separate acceptance gate from real backend
+  readiness; both are external to the standalone bridge repo.
 
 ## Open follow-ups
 

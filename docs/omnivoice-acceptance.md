@@ -1,12 +1,15 @@
 # OmniVoice Acceptance Checklist
 
-This repo separates two gates:
+This repo separates three gates:
 
 1. Static MVP readiness: the command bridge, registry tools, Studio bridge,
    docs, examples, tests, and heartbeat record are present.
 2. Real backend readiness: a live local Studio service, configured backend
    command, or OmniVoice CLI is available, and at least one local voice profile
    exists.
+3. Hermes source readiness: a bounded read-only discovery pass has found a
+   likely Hermes Agent checkout for final command-provider or native-provider
+   wiring.
 
 Run:
 
@@ -27,19 +30,34 @@ Use `docs/omnivoice-mvp-handoff.md` for the current package state, live
 blockers, install path, and the commands needed to move from static acceptance
 to real synthesis acceptance.
 
+The acceptance command runs source discovery by default with a short timeout.
+To point it at an explicit checkout root:
+
+```bash
+python scripts/omnivoice-acceptance.py \
+  --source-root /path/to/search
+```
+
+For a strict Hermes-source check:
+
+```bash
+python scripts/omnivoice-acceptance.py --require-hermes-source
+```
+
 For a strict live-runtime check:
 
 ```bash
 python scripts/omnivoice-acceptance.py --require-real-backend
 ```
 
-Current expected blocker on a fresh machine is real backend readiness. That is
-resolved by starting loopback-only OmniVoice-Studio or configuring a local
-OmniVoice command, by pointing `HERMES_OMNIVOICE_COMMAND_JSON` at
-`scripts/hermes-omnivoice-python-adapter.py`, or by installing
-`omnivoice-infer` and setting `HERMES_OMNIVOICE_AUTO_CLI=1`, then creating or
-importing at least one consented voice profile under
-`~/.hermes/voices/omnivoice`.
+Current expected blockers on a fresh machine are Hermes source readiness and
+real backend readiness. Hermes source readiness is resolved by running the
+installer or final wiring from an actual Hermes Agent checkout. Real backend
+readiness is resolved by starting loopback-only OmniVoice-Studio or configuring
+a local OmniVoice command, by pointing `HERMES_OMNIVOICE_COMMAND_JSON` at
+`scripts/hermes-omnivoice-python-adapter.py`, or by installing `omnivoice-infer`
+and setting `HERMES_OMNIVOICE_AUTO_CLI=1`, then creating or importing at least
+one consented voice profile under `~/.hermes/voices/omnivoice`.
 
 Use `python scripts/setup-omnivoice-python-env.py --dry-run` before creating
 the local Python backend environment. Use `--check-only --require-ready` after
