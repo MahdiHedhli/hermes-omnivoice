@@ -291,6 +291,10 @@ python scripts/install-hermes-omnivoice-bridge.py \
 `find-hermes-source.py` is read-only. It reports candidate source trees and TTS
 indicators, skips secret-named files, and marks this bridge repo separately
 from a real Hermes Agent checkout.
+Prefer explicit candidate roots or the bounded source finder over broad content
+grep across a whole development tree. Generic terms such as `provider`, `voice`,
+and `tts` appear in many unrelated repositories and are not sufficient evidence
+of a Hermes Agent checkout.
 
 Then install without `--dry-run`. Existing files are not overwritten unless
 `--force` is passed. Add `--with-examples` when you want the sample Hermes

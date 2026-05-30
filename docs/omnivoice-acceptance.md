@@ -38,6 +38,10 @@ python scripts/omnivoice-acceptance.py \
   --source-root /path/to/search
 ```
 
+Use explicit candidate roots or `scripts/find-hermes-source.py` for handoff
+evidence. Broad content searches across a whole workspace are too noisy because
+unrelated repos often contain generic `voice`, `tts`, or `provider` text.
+
 For a strict Hermes-source check:
 
 ```bash

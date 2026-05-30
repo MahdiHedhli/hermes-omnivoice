@@ -26,10 +26,10 @@ it does not claim backend readiness by accident.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-30 14:30 America/New_York on branch
+As of 2026-05-30 16:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 76 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 77 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
@@ -40,7 +40,10 @@ As of 2026-05-30 14:30 America/New_York on branch
 - `scripts/test-omnivoice-tts.sh` generated a valid temporary WAV through that
   adapter path using the required smoke text.
 - `scripts/find-hermes-source.py` still finds only this bridge repo under the
-  searched Hermes/Coding roots, so native-provider work remains deferred.
+  searched Hermes/Coding roots, so native-provider work remains deferred. Use
+  the bounded helper or an explicit candidate root rather than a broad workspace
+  grep; generic `voice`, `tts`, and `provider` matches are too noisy to prove a
+  real Hermes Agent checkout.
 - `scripts/check-omnivoice-runtime.py` reports no default Studio URL, backend
   command, or auto CLI; it now sees one local designed profile under
   `~/.hermes/voices/omnivoice`.

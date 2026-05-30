@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-30 15:30 America/New_York on branch
+Status as of 2026-05-30 16:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -69,6 +69,9 @@ sample and contains explicit confirmed consent metadata.
 
 1. Locate or clone the real Hermes Agent source and run
    `python scripts/find-hermes-source.py --root /path/to/hermes --json`.
+   Prefer explicit candidate roots or the bounded helper over broad content grep
+   across `~/Documents/Coding`; generic terms such as `provider`, `voice`, and
+   `tts` create noisy false positives in unrelated repositories.
 2. Dry-run the bridge installer against that checkout:
    `python scripts/install-hermes-omnivoice-bridge.py --target-root /path/to/hermes --dry-run`.
 3. Wire Hermes to the command-provider config first; defer a native provider

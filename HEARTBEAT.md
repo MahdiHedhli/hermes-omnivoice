@@ -1960,7 +1960,7 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Commit the shell-export helper, then prepare a final branch summary or keep
     searching for the actual Hermes Agent source if more local hints appear.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 15:30 America/New_York
 - Completed:
@@ -2007,6 +2007,70 @@ local backend path, validation state, blockers, security notes, and next steps.
 - Next action:
   - Commit the weekend summary, then either locate the actual Hermes Agent
     checkout or keep the branch clean for handoff.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 16:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `4d475a9`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready and can print
+    shell-safe exports for strict real-backend acceptance.
+  - Confirmed no active broad workspace source-search processes remained after
+    the noisy manual search; the only remaining command-line match was a
+    long-lived Codex helper process containing older prompt text.
+  - Re-ran bounded Hermes source discovery. It still finds only this bridge repo
+    under the Hermes/Coding roots and reports no likely Hermes Agent checkout.
+  - Updated the setup, acceptance, MVP handoff, and weekend summary docs to
+    direct operators toward explicit candidate roots or
+    `scripts/find-hermes-source.py` instead of broad workspace grep.
+  - Re-ran deterministic validation and strict real-backend acceptance using the
+    generated shell exports.
+- Commands run:
+  - `ps ax -o pid,ppid,stat,etime,command | rg 'find-hermes-source|find /Users/mhedhli/Documents/Coding|rg -n .*Hermes Agent|sed .*/.git' || true`
+  - `pgrep -x find | xargs -r ps -o pid,ppid,stat,etime,command -p`
+  - `pgrep -x rg | xargs -r ps -o pid,ppid,stat,etime,command -p`
+  - `pgrep -x sed | xargs -r ps -o pid,ppid,stat,etime,command -p`
+  - `pgrep -fl find-hermes-source.py || true`
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `python3 scripts/find-hermes-source.py --root /Users/mhedhli/Documents/Coding/hermes --root /Users/mhedhli/Documents/Coding --scan-timeout 8 --max-candidates 40 --json`
+  - `rg -n "source discover|find-hermes-source|Hermes Agent source|native provider|weekend summary|broad" docs HEARTBEAT.md README.md scripts tests examples`
+  - `sed -n ... HEARTBEAT.md docs/omnivoice-weekend-summary.md docs/omnivoice-mvp-handoff.md docs/omnivoice-setup.md docs/omnivoice-acceptance.md`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `git diff --check`
+  - `find . -type f (...) -print`
+  - `find . -type d -name __pycache__ -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - Bounded Hermes source discovery: PASS as a check, but reports
+    `no_likely_hermes_agent`; one candidate was this bridge repo only.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 77 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`.
+  - Repo artifact scan: PASS; no generated audio, model weights, env files, or
+    local voice selection state found in the repo.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Native-provider work should remain deferred until a real Hermes Agent
+    checkout is available and source discovery can inspect its TTS schema.
+  - Bounded helper output is the handoff evidence; broad workspace grep is too
+    noisy for this repo.
+- Next action:
+  - Commit the bounded-source-discovery handoff docs, then keep the branch clean
+    for handoff or install into the real Hermes Agent checkout once found.
 
 ## Decision log
 
