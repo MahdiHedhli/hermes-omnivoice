@@ -23,6 +23,8 @@ This repo is intentionally conservative:
   Hermes local registry after explicit consent confirmation.
 - `scripts/hermes-omnivoice-voices.py`: list, inspect, preview, and print sample
   config for local voices.
+- `scripts/check-omnivoice-runtime.py`: read-only diagnostics for local backend,
+  Studio, CLI, and voice registry availability.
 - `scripts/validate-omnivoice-bridge.sh`: deterministic local validation.
 - `docs/`: setup, Studio bridge notes, integration findings, and custom voice
   usage.
@@ -54,6 +56,12 @@ Point the wrapper at local OmniVoice-Studio:
 
 ```bash
 export HERMES_OMNIVOICE_STUDIO_URL=http://127.0.0.1:3900
+```
+
+Check the local runtime without generating audio:
+
+```bash
+python scripts/check-omnivoice-runtime.py
 ```
 
 Generate a preview:

@@ -73,3 +73,7 @@ WAV before writing it into the registry.
 `/generate` contract test. That verifies request shape and WAV response handling
 without downloading model weights. A real model-backed Studio smoke test is
 still required before claiming synthesis quality.
+
+Use `scripts/check-omnivoice-runtime.py --studio-url http://127.0.0.1:3900` as
+a read-only probe before a real smoke test. It checks Studio `/profiles`
+reachability and keeps the same loopback-only default as the synthesis wrapper.

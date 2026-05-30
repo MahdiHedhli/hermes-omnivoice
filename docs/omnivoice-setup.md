@@ -126,6 +126,17 @@ Run all local bridge checks:
 scripts/validate-omnivoice-bridge.sh
 ```
 
+Check which local runtime path is available without running synthesis:
+
+```bash
+python scripts/check-omnivoice-runtime.py
+```
+
+The runtime check does not execute configured backend commands and does not
+print command arguments. It only reports whether a backend command is configured,
+whether a loopback Studio `/profiles` endpoint is reachable, whether an
+`omnivoice` CLI is on `PATH`, and how many local registry profiles exist.
+
 Run the smoke test only after configuring a real backend command:
 
 ```bash

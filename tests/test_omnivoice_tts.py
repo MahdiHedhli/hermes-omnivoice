@@ -24,6 +24,9 @@ VOICES_SCRIPT_PATH = (
 CREATE_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "create-omnivoice-voice.py"
 )
+CHECK_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "check-omnivoice-runtime.py"
+)
 FAKE_BACKEND_PATH = Path(__file__).resolve().parent / "fixtures" / "fake_omnivoice_backend.py"
 EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
 SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_tts", SCRIPT_PATH)
@@ -51,6 +54,12 @@ assert CREATE_SPEC is not None and CREATE_SPEC.loader is not None
 create_voice = importlib.util.module_from_spec(CREATE_SPEC)
 sys.modules["create_omnivoice_voice"] = create_voice
 CREATE_SPEC.loader.exec_module(create_voice)
+
+CHECK_SPEC = importlib.util.spec_from_file_location("check_omnivoice_runtime", CHECK_SCRIPT_PATH)
+assert CHECK_SPEC is not None and CHECK_SPEC.loader is not None
+runtime_check = importlib.util.module_from_spec(CHECK_SPEC)
+sys.modules["check_omnivoice_runtime"] = runtime_check
+CHECK_SPEC.loader.exec_module(runtime_check)
 
 
 def write_wav(path: Path) -> None:
@@ -120,6 +129,20 @@ speed: 1.0
 
 class MockStudioHandler(http.server.BaseHTTPRequestHandler):
     requests: list[dict] = []
+    profiles_payload: list[dict] = [{"id": "studio-123", "name": "Studio Voice"}]
+
+    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+        type(self).requests.append({"path": self.path, "method": "GET"})
+        if self.path != "/profiles":
+            self.send_response(404)
+            self.end_headers()
+            return
+        payload = json.dumps(type(self).profiles_payload).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
         content_length = int(self.headers.get("Content-Length", "0"))
@@ -638,6 +661,46 @@ class CreateVoiceTests(unittest.TestCase):
                 )
 
             self.assertEqual(result, 1)
+
+
+class RuntimeCheckTests(unittest.TestCase):
+    def test_runtime_check_reports_missing_backend_without_failing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = runtime_check.run(
+                    ["--voices-dir", str(Path(tmp) / "missing"), "--json"],
+                    env={},
+                )
+
+            self.assertEqual(result, 0)
+            report = json.loads(output.getvalue())
+            self.assertEqual(report["studio"]["status"], "missing")
+            self.assertEqual(report["backend_command"]["status"], "missing")
+            self.assertEqual(report["voices_dir"]["status"], "missing")
+
+    def test_runtime_check_redacts_backend_command_arguments(self) -> None:
+        report = runtime_check.check_backend_command(
+            {"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(["/bin/echo", "secret-arg"])}
+        )
+
+        encoded = json.dumps(report)
+        self.assertEqual(report["status"], "configured")
+        self.assertEqual(report["mode"], "command_json")
+        self.assertIn("echo", report["executable"])
+        self.assertNotIn("secret-arg", encoded)
+
+    def test_runtime_check_rejects_remote_studio_by_default(self) -> None:
+        with self.assertRaisesRegex(runtime_check.RuntimeCheckError, "non-loopback"):
+            runtime_check.validate_studio_url("http://10.0.0.5:3900")
+
+    def test_runtime_check_accepts_loopback_studio_profiles(self) -> None:
+        with mock_studio_server() as (studio_url, requests):
+            report = runtime_check.check_studio(studio_url, 5, False)
+
+        self.assertEqual(report["status"], "reachable")
+        self.assertEqual(report["profile_count"], 1)
+        self.assertEqual(requests[0]["path"], "/profiles")
 
 
 class VoiceCliTests(unittest.TestCase):

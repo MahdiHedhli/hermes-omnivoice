@@ -384,7 +384,7 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the voice-creation and path-hardening checkpoint, then evaluate a
     bounded real Studio startup probe or a packaging/install helper.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 02:00 America/New_York
 - Completed:
@@ -431,6 +431,54 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the reference-audio hardening checkpoint, then attempt a bounded
     runtime probe for local Studio dependencies or add an install helper.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 02:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `0696315`.
+  - Added `scripts/check-omnivoice-runtime.py`, a read-only diagnostic for
+    local Studio reachability, configured backend command presence, OmniVoice
+    CLI availability, and local registry profile count.
+  - Kept the runtime check loopback-only for Studio by default and avoided
+    printing configured backend command arguments.
+  - Added tests for missing-runtime reporting, command argument redaction,
+    remote Studio rejection, and loopback Studio `/profiles` reachability.
+  - Updated README and setup/Studio docs with the diagnostic workflow.
+  - Ran the diagnostic locally; current machine reports no Studio URL, no
+    backend command, no `omnivoice` CLI, and no local voice registry yet.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -9`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `find . -maxdepth 3 -type f -not -path './.git/*' -print | sort`
+  - `sed -n ... scripts/hermes-omnivoice-tts.py`
+  - `sed -n ... scripts/validate-omnivoice-bridge.sh`
+  - `sed -n ... tests/test_omnivoice_tts.py`
+  - `sed -n ... README.md`
+  - `chmod +x scripts/check-omnivoice-runtime.py`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `git diff --stat`
+  - `find . -type d -name __pycache__ -print`
+  - `find . -type f \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.onnx' -o -name '*.pt' -o -name '*.pth' -o -name '*.safetensors' -o -name '.env' -o -name '.env.*' \) -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation now includes 37 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - No live OmniVoice-Studio service or real OmniVoice backend is configured, so
+    real synthesis quality is still unverified.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - A read-only runtime diagnostic is safer than attempting model startup before
+    the operator has configured a local backend and consented voices.
+- Next action:
+  - Commit the runtime diagnostic checkpoint, then add a bounded install/start
+    guide or probe Docker availability for a local loopback Studio run.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -456,6 +504,8 @@ path. Top-level handoff docs and example configs are now present.
   inputs; reject dot-segment IDs and symlink escapes rather than following them.
 - Treat cloned voice reference audio as a validated WAV-only input and avoid
   overwriting existing local profile directories without `--force`.
+- Prefer read-only runtime checks before synthesis attempts so setup blockers
+  are explicit without touching generated media or user voice samples.
 
 ## Open follow-ups
 
