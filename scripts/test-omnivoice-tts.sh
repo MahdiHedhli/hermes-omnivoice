@@ -19,7 +19,7 @@ id: smoke
 name: Smoke Test Voice
 engine: omnivoice
 mode: design
-instruct: "calm local assistant, clear delivery, neutral accent"
+instruct: "male, american accent, moderate pitch"
 language: en
 speed: 1.0
 consent:

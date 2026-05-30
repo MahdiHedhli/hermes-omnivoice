@@ -59,7 +59,7 @@ Create a designed voice profile:
 
 ```bash
 python scripts/create-omnivoice-voice.py design narrator \
-  --instruct "calm local assistant voice" \
+  --instruct "male, american accent, moderate pitch" \
   --confirm-consent
 ```
 

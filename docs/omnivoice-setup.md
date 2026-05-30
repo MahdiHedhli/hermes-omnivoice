@@ -18,9 +18,14 @@ Create a designed voice:
 ```bash
 python scripts/create-omnivoice-voice.py design narrator \
   --name Narrator \
-  --instruct "calm male narrator, low pitch, clear delivery" \
+  --instruct "male, american accent, moderate pitch" \
   --confirm-consent
 ```
+
+For English designed voices, OmniVoice expects comma-separated tags from its
+supported set, such as `male`, `female`, `american accent`, `british accent`,
+`young adult`, `middle-aged`, `low pitch`, `moderate pitch`, or `whisper`.
+Free-form phrases like `calm narrator` are rejected by the upstream model.
 
 Create a cloned voice from a local WAV reference sample:
 
@@ -63,7 +68,7 @@ id: narrator
 name: Narrator
 engine: omnivoice
 mode: design
-instruct: "calm male narrator, low pitch, clear delivery"
+instruct: "male, american accent, moderate pitch"
 language: en
 speed: 1.0
 consent:

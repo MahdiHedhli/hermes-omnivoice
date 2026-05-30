@@ -15,8 +15,12 @@ now present. The optional direct OmniVoice CLI path targets the upstream
 to avoid surprise model downloads. A packaged Python API adapter can also call
 `OmniVoice.from_pretrained` through `HERMES_OMNIVOICE_COMMAND_JSON` when the
 local `omnivoice` package is installed. A dry-run/check-first environment helper
-now plans and inspects an isolated OmniVoice Python venv outside the repo, and
-prefers supported Python 3.10-3.13 interpreters over too-new local defaults.
+now plans, installs, and inspects an isolated OmniVoice Python venv outside the
+repo, prefers supported Python 3.10-3.13 interpreters over too-new local
+defaults, and has been used successfully with `/opt/homebrew/bin/python3.11`.
+The real upstream `omnivoice-infer` path has now generated a valid temporary
+WAV through `scripts/test-omnivoice-tts.sh`. English designed voices are also
+validated against OmniVoice's supported design tag set before model startup.
 
 ## Previous heartbeat
 
@@ -1016,7 +1020,7 @@ prefers supported Python 3.10-3.13 interpreters over too-new local defaults.
     OmniVoice environment or switch to a loopback Studio image pull/build for
     the first real synthesis smoke.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 07:30 America/New_York
 - Completed:
@@ -1089,6 +1093,84 @@ prefers supported Python 3.10-3.13 interpreters over too-new local defaults.
     Python environment with Python 3.11 or start the loopback Studio image
     pull/build for the first real synthesis smoke.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 08:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `d7bbf32`.
+  - Created the isolated OmniVoice Python environment at
+    `~/.cache/hermes/omnivoice-python` using `/opt/homebrew/bin/python3.11`.
+  - Installed the upstream `omnivoice` package plus its local runtime
+    dependencies outside the repo.
+  - Verified `scripts/setup-omnivoice-python-env.py --check-only --json`
+    reports `ready: true`, including `omnivoice`, `soundfile`, `torch`, and a
+    venv-local `omnivoice-infer`.
+  - Verified `scripts/check-omnivoice-runtime.py --json` sees the configured
+    command JSON and venv-local `omnivoice-infer`.
+  - Verified `omnivoice-infer --help` exposes the expected upstream arguments:
+    text, output, ref audio/text, instruct, language, speed, and device.
+  - Ran the first real synthesis smoke; it loaded/downloaded the model and then
+    failed because the existing smoke design prompt used unsupported free-form
+    English tags.
+  - Updated the smoke profile, example voice, docs, and tests to use supported
+    OmniVoice design tags: `male, american accent, moderate pitch`.
+  - Added wrapper validation so unsupported English design tags fail before
+    starting the heavy model runtime.
+  - Retried the real smoke test successfully; it generated a valid temporary
+    WAV through the upstream `omnivoice-infer` CLI.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --dry-run --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --json`
+  - `PATH=... HERMES_OMNIVOICE_COMMAND_JSON=... HERMES_OMNIVOICE_MODEL=... python3 scripts/check-omnivoice-runtime.py --json`
+  - `/Users/mhedhli/.cache/hermes/omnivoice-python/bin/omnivoice-infer --help`
+  - `PATH=... HERMES_OMNIVOICE_AUTO_CLI=1 HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice scripts/test-omnivoice-tts.sh`
+  - `rg -n "instruct:|calm local assistant|calm male narrator|clear delivery|neutral accent|low pitch|male|female|american accent|voice design|design" scripts docs tests examples README.md HEARTBEAT.md`
+  - `python3 -m unittest discover -s tests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-tts.py scripts/hermes-omnivoice-python-adapter.py scripts/setup-omnivoice-python-env.py scripts/check-omnivoice-runtime.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `PATH=... HERMES_OMNIVOICE_AUTO_CLI=1 HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice python3 scripts/omnivoice-acceptance.py --voices-dir /tmp/.../voices --require-real-backend --json`
+- Tests:
+  - `python3 scripts/setup-omnivoice-python-env.py --json`: PASS; created the
+    isolated venv outside the repo and installed OmniVoice runtime packages.
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`: PASS;
+    reported `ready: true`.
+  - Runtime check with venv command JSON and venv `PATH`: PASS; backend command
+    configured, CLI found, Studio missing as expected, voices dir missing as
+    expected.
+  - First real `scripts/test-omnivoice-tts.sh` with `HERMES_OMNIVOICE_AUTO_CLI=1`:
+    expected FAIL after model load because the smoke profile used unsupported
+    free-form design tags.
+  - `python3 -m unittest discover -s tests -v`: PASS, 63 tests run, 1 skipped
+    real-backend integration test.
+  - `python3 -m py_compile ...`: PASS.
+  - Corrected real `scripts/test-omnivoice-tts.sh` with
+    `HERMES_OMNIVOICE_AUTO_CLI=1`: PASS, generated a valid temporary WAV.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes unit tests,
+    py_compile, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, and `git diff --check`.
+  - Acceptance with a temporary consented design profile and the venv
+    `omnivoice-infer`: PASS; `real_backend_ready: true`.
+- Blockers:
+  - No running OmniVoice-Studio service on `127.0.0.1:3900`, so Studio import
+    and Studio `/generate` smoke remain unverified against a live service.
+  - No persistent local voice profiles exist under
+    `~/.hermes/voices/omnivoice`; the real smoke used a temporary consented
+    design profile created by the smoke script.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - English OmniVoice designed voices should use the upstream supported tag
+    vocabulary rather than free-form descriptive prompts.
+  - Downloaded model/package caches are acceptable under user-local cache
+    directories and must not be copied into the repo.
+- Next action:
+  - Commit the installed runtime plus real-smoke checkpoint, then either start
+    a loopback Studio service or locate the real Hermes Agent source for schema
+    verification.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -1136,19 +1218,17 @@ prefers supported Python 3.10-3.13 interpreters over too-new local defaults.
   dependencies so package and cache behavior remain visible.
 - Prefer Python 3.10-3.13 for the OmniVoice Python environment; reject newer
   interpreters by default because model runtime wheels may not be available.
+- Validate English OmniVoice design prompts against the upstream supported tag
+  vocabulary before model startup to avoid expensive late failures.
 
 ## Open follow-ups
 
 - Locate or clone the actual Hermes Agent source and verify the TTS schema.
 - Start a local loopback Studio container and run the Studio importer against a
   live local Studio service.
-- Configure a real OmniVoice backend command or install `omnivoice-infer`, then
-  run `scripts/test-omnivoice-tts.sh`.
-- Install `omnivoice` in an isolated local environment and smoke-test the
-  Python adapter with a consented designed or cloned voice profile.
-- Use `scripts/setup-omnivoice-python-env.py` for the isolated install/check
-  flow before running a real Python API smoke test.
-- Create the isolated Python environment with `/opt/homebrew/bin/python3.11`
-  rather than the local `python3` 3.14 default.
+- Smoke-test the Python adapter path with the installed isolated OmniVoice
+  package if direct Python API coverage is still needed beyond the proven CLI
+  path.
 - Locate the actual Hermes Agent source before wiring native `/voice` commands.
-- Consider a native Hermes provider only after command-provider synthesis works.
+- Consider a native Hermes provider only after the actual Hermes Agent source
+  and provider schema are available.

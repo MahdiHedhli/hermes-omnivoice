@@ -2,7 +2,7 @@ id: narrator
 name: Narrator
 engine: omnivoice
 mode: design
-instruct: "calm narrator, clear delivery, neutral accent"
+instruct: "male, american accent, moderate pitch"
 language: en
 speed: 1.0
 consent:

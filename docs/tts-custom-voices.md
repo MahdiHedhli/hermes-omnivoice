@@ -59,7 +59,7 @@ For local non-Studio profiles, create a consented registry entry with:
 
 ```bash
 python scripts/create-omnivoice-voice.py design narrator \
-  --instruct "calm local assistant voice" \
+  --instruct "male, american accent, moderate pitch" \
   --confirm-consent
 
 python scripts/create-omnivoice-voice.py clone marvin \

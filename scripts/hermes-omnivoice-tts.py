@@ -21,6 +21,31 @@ import wave
 
 VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
+OMNIVOICE_ENGLISH_INSTRUCT_ITEMS = {
+    "american accent",
+    "australian accent",
+    "british accent",
+    "canadian accent",
+    "child",
+    "chinese accent",
+    "elderly",
+    "female",
+    "high pitch",
+    "indian accent",
+    "japanese accent",
+    "korean accent",
+    "low pitch",
+    "male",
+    "middle-aged",
+    "moderate pitch",
+    "portuguese accent",
+    "russian accent",
+    "teenager",
+    "very high pitch",
+    "very low pitch",
+    "whisper",
+    "young adult",
+}
 
 
 class OmniVoiceConfigError(RuntimeError):
@@ -187,10 +212,29 @@ def validate_voice_profile(profile: dict, voice_dir: Path) -> dict:
             raise OmniVoiceConfigError("clone voice ref_audio must be a WAV file")
         validate_audio_file(ref_audio_path)
         resolved["ref_audio_path"] = str(ref_audio_path)
-    elif not str(profile.get("instruct", "")).strip():
-        raise OmniVoiceConfigError("design voice requires instruct")
+    else:
+        validate_design_instruct(str(profile.get("instruct", "")))
 
     return resolved
+
+
+def validate_design_instruct(instruct: str) -> None:
+    clean = instruct.strip()
+    if not clean:
+        raise OmniVoiceConfigError("design voice requires instruct")
+    if not clean.isascii():
+        return
+
+    items = [item.strip().lower() for item in clean.split(",")]
+    invalid = [item for item in items if not item or item not in OMNIVOICE_ENGLISH_INSTRUCT_ITEMS]
+    if invalid:
+        valid = ", ".join(sorted(OMNIVOICE_ENGLISH_INSTRUCT_ITEMS))
+        raise OmniVoiceConfigError(
+            "design voice instruct contains unsupported OmniVoice English item(s): "
+            f"{', '.join(invalid)}. Use comma-separated supported items such as "
+            "'male, american accent, moderate pitch'. Valid items: "
+            f"{valid}"
+        )
 
 
 def build_backend_command(

@@ -169,7 +169,7 @@ def write_design_voice(root: Path, voice_id: str = "narrator", studio_profile_id
 name: Narrator
 engine: omnivoice
 mode: design
-instruct: "calm local assistant, clear delivery"
+instruct: "male, american accent, moderate pitch"
 language: en
 speed: 1.0
 {studio_line}consent:
@@ -495,6 +495,33 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             self.assertIn(profile["instruct"], command)
             self.assertNotIn("--ref_audio", command)
 
+    def test_design_instruct_rejects_unsupported_english_items(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp)
+            voice_dir = voices_root / "bad"
+            voice_dir.mkdir(parents=True)
+            (voice_dir / "voice.yaml").write_text(
+                """id: bad
+name: Bad
+engine: omnivoice
+mode: design
+instruct: "calm local assistant, clear delivery"
+language: en
+speed: 1.0
+consent:
+  status: confirmed
+  source: user_created
+  allowed_uses:
+    - personal_assistant
+    - local_generation
+""",
+                encoding="utf-8",
+            )
+            profile, resolved_dir = omnivoice.load_voice_profile(voices_root, "bad")
+
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "unsupported"):
+                omnivoice.validate_voice_profile(profile, resolved_dir)
+
     def test_studio_url_must_be_loopback_by_default(self) -> None:
         with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "non-loopback"):
             omnivoice.validate_studio_url("http://10.0.0.5:3900", {})
@@ -618,7 +645,7 @@ class PythonAdapterTests(unittest.TestCase):
                         "--out",
                         str(out_file),
                         "--instruct",
-                        "calm local assistant voice",
+                        "male, american accent, moderate pitch",
                         "--device",
                         "mps",
                         "--dtype",
@@ -631,7 +658,7 @@ class PythonAdapterTests(unittest.TestCase):
             self.assertEqual(fake_model.captured_load["dtype"], "float32")
             self.assertEqual(
                 fake_model.captured_generate["instruct"],
-                "calm local assistant voice",
+                "male, american accent, moderate pitch",
             )
             self.assertNotIn("ref_audio", fake_model.captured_generate)
 
@@ -902,7 +929,7 @@ class CreateVoiceTests(unittest.TestCase):
                         "--name",
                         "Narrator",
                         "--instruct",
-                        "calm local assistant voice",
+                        "male, american accent, moderate pitch",
                         "--confirm-consent",
                     ]
                 )
