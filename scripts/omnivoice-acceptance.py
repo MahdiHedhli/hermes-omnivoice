@@ -14,7 +14,7 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_CHECK_PATH = PROJECT_ROOT / "scripts" / "check-omnivoice-runtime.py"
 SOURCE_FINDER_PATH = PROJECT_ROOT / "scripts" / "find-hermes-source.py"
-REQUIRED_FILES = [
+BRIDGE_REQUIRED_FILES = [
     "scripts/hermes-omnivoice-tts.py",
     "scripts/hermes-omnivoice-python-adapter.py",
     "scripts/setup-omnivoice-python-env.py",
@@ -23,10 +23,9 @@ REQUIRED_FILES = [
     "scripts/hermes-omnivoice-voices.py",
     "scripts/find-hermes-source.py",
     "scripts/check-omnivoice-runtime.py",
-    "scripts/install-hermes-omnivoice-bridge.py",
     "scripts/omnivoice-studio-local.py",
     "scripts/test-omnivoice-tts.sh",
-    "scripts/validate-omnivoice-bridge.sh",
+    "scripts/omnivoice-acceptance.py",
     "docs/omnivoice-integration-notes.md",
     "docs/omnivoice-mvp-handoff.md",
     "docs/omnivoice-setup.md",
@@ -34,11 +33,16 @@ REQUIRED_FILES = [
     "docs/omnivoice-weekend-summary.md",
     "docs/omnivoice-acceptance.md",
     "docs/tts-custom-voices.md",
+]
+PACKAGE_REQUIRED_FILES = [
+    "scripts/install-hermes-omnivoice-bridge.py",
+    "scripts/validate-omnivoice-bridge.sh",
     "examples/hermes-tts-omnivoice.yaml",
     "examples/voices/marvin/voice.yaml",
     "examples/voices/narrator/voice.yaml",
     "HEARTBEAT.md",
 ]
+REQUIRED_FILES = BRIDGE_REQUIRED_FILES
 
 
 def load_runtime_check():
@@ -59,12 +63,13 @@ def load_source_finder():
     return module
 
 
-def check_required_files(root: Path) -> dict:
-    missing = [path for path in REQUIRED_FILES if not (root / path).exists()]
+def check_required_files(root: Path, required_files: list[str] | None = None) -> dict:
+    required = REQUIRED_FILES if required_files is None else required_files
+    missing = [path for path in required if not (root / path).exists()]
     return {
         "status": "pass" if not missing else "fail",
         "missing": missing,
-        "required_count": len(REQUIRED_FILES),
+        "required_count": len(required),
     }
 
 
@@ -104,7 +109,8 @@ def build_report(args: argparse.Namespace, env: dict[str, str]) -> dict:
         scan_timeout=args.source_scan_timeout,
     )
     source_report = source_finder.discover(source_args)
-    static = check_required_files(PROJECT_ROOT)
+    static = check_required_files(PROJECT_ROOT, BRIDGE_REQUIRED_FILES)
+    package_static = check_required_files(PROJECT_ROOT, PACKAGE_REQUIRED_FILES)
     runtime = evaluate_runtime(runtime_report)
     mvp_ready = static["status"] == "pass"
     real_backend_ready = runtime["backend_ready"] and runtime["voices_ready"]
@@ -114,6 +120,7 @@ def build_report(args: argparse.Namespace, env: dict[str, str]) -> dict:
         "real_backend_ready": real_backend_ready,
         "hermes_source_ready": hermes_source_ready,
         "required_files": static,
+        "package_files": package_static,
         "runtime": runtime,
         "runtime_report": runtime_report,
         "source_discovery": source_report,
@@ -126,6 +133,12 @@ def print_human(report: dict) -> None:
     if report["required_files"]["missing"]:
         print("  Missing:")
         for path in report["required_files"]["missing"]:
+            print(f"  - {path}")
+    package = report["package_files"]
+    print(f"- Local package handoff files: {'PASS' if package['status'] == 'pass' else 'BLOCKED'}")
+    if package["missing"]:
+        print("  Missing package-only files:")
+        for path in package["missing"]:
             print(f"  - {path}")
     print(f"- Real backend ready: {'PASS' if report['real_backend_ready'] else 'BLOCKED'}")
     runtime = report["runtime"]
@@ -160,6 +173,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
     parser.add_argument("--source-max-file-bytes", default=65536, type=int)
     parser.add_argument("--source-scan-timeout", default=5, type=int)
     parser.add_argument("--require-hermes-source", action="store_true")
+    parser.add_argument("--require-package-files", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -174,6 +188,8 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
     if args.require_real_backend and not report["real_backend_ready"]:
         return 1
     if args.require_hermes_source and not report["hermes_source_ready"]:
+        return 1
+    if args.require_package_files and report["package_files"]["status"] != "pass":
         return 1
     return 0
 

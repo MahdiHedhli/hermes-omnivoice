@@ -25,6 +25,9 @@ Static MVP acceptance currently passes without a real model backend. Live
 backend acceptance now passes on this machine when the prepared OmniVoice
 Python adapter command is exported; the default shell remains unconfigured so
 it does not claim backend readiness by accident.
+Acceptance also reports package-only handoff files separately, so the copied
+`scripts/omnivoice-acceptance.py` remains useful after a default install into a
+real Hermes checkout.
 
 ## Current Acceptance Snapshot
 

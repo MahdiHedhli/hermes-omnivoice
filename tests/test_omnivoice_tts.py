@@ -1656,10 +1656,15 @@ def argparse_namespace(**kwargs):
 
 class AcceptanceTests(unittest.TestCase):
     def test_acceptance_required_files_are_present(self) -> None:
-        report = acceptance.check_required_files(Path(__file__).resolve().parents[1])
+        root = Path(__file__).resolve().parents[1]
+        report = acceptance.check_required_files(root)
+        package_report = acceptance.check_required_files(root, acceptance.PACKAGE_REQUIRED_FILES)
 
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["missing"], [])
+        self.assertEqual(report["required_count"], len(installer.BASE_MANIFEST))
+        self.assertEqual(package_report["status"], "pass")
+        self.assertEqual(package_report["missing"], [])
 
     def test_acceptance_default_succeeds_without_real_backend(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1679,8 +1684,46 @@ class AcceptanceTests(unittest.TestCase):
             report = json.loads(output.getvalue())
             self.assertEqual(result, 0)
             self.assertTrue(report["mvp_static_ready"])
+            self.assertEqual(report["package_files"]["status"], "pass")
             self.assertFalse(report["real_backend_ready"])
             self.assertFalse(report["hermes_source_ready"])
+
+    def test_acceptance_runs_after_default_install(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            with contextlib.redirect_stdout(io.StringIO()):
+                install_result = installer.run(["--target-root", str(target)])
+            self.assertEqual(install_result, 0)
+
+            spec = importlib.util.spec_from_file_location(
+                "installed_omnivoice_acceptance",
+                target / "scripts" / "omnivoice-acceptance.py",
+            )
+            assert spec is not None and spec.loader is not None
+            installed_acceptance = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(installed_acceptance)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = installed_acceptance.run(
+                    [
+                        "--voices-dir",
+                        str(target / "missing-voices"),
+                        "--source-root",
+                        str(target / "missing-source"),
+                        "--json",
+                    ],
+                    env={},
+                )
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertTrue(report["mvp_static_ready"])
+            self.assertEqual(report["package_files"]["status"], "fail")
+            self.assertIn(
+                "scripts/install-hermes-omnivoice-bridge.py",
+                report["package_files"]["missing"],
+            )
 
     def test_acceptance_can_require_real_backend(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

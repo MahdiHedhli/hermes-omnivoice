@@ -2,14 +2,19 @@
 
 This repo separates three gates:
 
-1. Static MVP readiness: the command bridge, registry tools, Studio bridge,
-   docs, examples, tests, and heartbeat record are present.
+1. Static MVP readiness: the installed command bridge, registry tools, Studio
+   bridge, runtime checks, and handoff docs are present.
 2. Real backend readiness: a live local Studio service, configured backend
    command, or OmniVoice CLI is available, and at least one local voice profile
    exists.
 3. Hermes source readiness: a bounded read-only discovery pass has found a
    likely Hermes Agent checkout for final command-provider or native-provider
    wiring.
+
+It also reports local package-only handoff files, such as the installer,
+validation script, examples, and heartbeat record. Those package extras are
+required in this bridge repo but are not required after a default install into a
+real Hermes checkout.
 
 Run:
 
@@ -52,6 +57,12 @@ For a strict live-runtime check:
 
 ```bash
 python scripts/omnivoice-acceptance.py --require-real-backend
+```
+
+For a strict local package handoff check in this repo:
+
+```bash
+python scripts/omnivoice-acceptance.py --require-package-files
 ```
 
 Current expected blockers on a fresh machine are Hermes source readiness and

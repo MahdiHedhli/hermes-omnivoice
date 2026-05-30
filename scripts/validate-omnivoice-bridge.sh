@@ -22,6 +22,8 @@ cd "$ROOT_DIR"
   tests/test_omnivoice_tts.py \
   tests/fixtures/fake_omnivoice_backend.py
 
+"$PYTHON_BIN" scripts/omnivoice-acceptance.py --require-package-files --json >/dev/null
+
 HERMES_OMNIVOICE_COMMAND_JSON='["python3","tests/fixtures/fake_omnivoice_backend.py","--text-file","{text_file}","--out","{out}","--voice-dir","{voice_dir}","--speed","{speed}"]' \
   scripts/test-omnivoice-tts.sh
 

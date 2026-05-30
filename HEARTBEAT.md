@@ -2072,7 +2072,7 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Commit the bounded-source-discovery handoff docs, then keep the branch clean
     for handoff or install into the real Hermes Agent checkout once found.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 16:30 America/New_York
 - Completed:
@@ -2133,6 +2133,77 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Native-provider work should still wait for real Hermes Agent source.
 - Next action:
   - Commit the installer/acceptance manifest update, then keep the branch clean
+    for handoff or install into the real Hermes Agent checkout once found.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 17:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `8e06899`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready.
+  - Split acceptance static checks into installed bridge files and local
+    package-only handoff files. This keeps `scripts/omnivoice-acceptance.py`
+    meaningful after a default install into a real Hermes checkout, while still
+    allowing strict local package validation in this repo.
+  - Added `--require-package-files` for strict local package handoff checks and
+    wired it into `scripts/validate-omnivoice-bridge.sh`.
+  - Added coverage proving acceptance succeeds after a default installer copy
+    even though package-only files such as the installer and heartbeat record
+    are not copied into the target.
+  - Updated acceptance and MVP handoff docs to describe installed bridge
+    readiness versus package-only handoff files.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `sed -n ... scripts/install-hermes-omnivoice-bridge.py scripts/omnivoice-acceptance.py HEARTBEAT.md tests/test_omnivoice_tts.py docs/omnivoice-acceptance.md docs/omnivoice-mvp-handoff.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.AcceptanceTests tests.test_omnivoice_tts.InstallerTests -v`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `python3 scripts/omnivoice-acceptance.py --require-package-files --json`
+  - `python3 scripts/install-hermes-omnivoice-bridge.py --target-root /tmp/hermes-omnivoice-install-check --dry-run --json`
+  - `python3 -m py_compile scripts/omnivoice-acceptance.py scripts/validate-omnivoice-bridge.sh tests/test_omnivoice_tts.py`
+  - `python3 -m py_compile scripts/omnivoice-acceptance.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `git diff --check`
+  - `find . -type f (...) -print`
+  - `find . -type d -name __pycache__ -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - Targeted acceptance and installer tests: PASS, 11 tests.
+  - Default acceptance: PASS; installed bridge files present with
+    `required_count: 18`, package handoff files present with
+    `required_count: 6`, expected `real_backend_ready: false` and
+    `hermes_source_ready: false` in the default shell.
+  - Strict package-file acceptance: PASS.
+  - Installer dry-run: PASS; base manifest remains 18 files.
+  - `python3 -m py_compile scripts/omnivoice-acceptance.py scripts/validate-omnivoice-bridge.sh tests/test_omnivoice_tts.py`: FAIL as expected because `scripts/validate-omnivoice-bridge.sh` is a shell script, not Python.
+  - Corrected Python-only py_compile: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 78 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`.
+  - Repo artifact scan: PASS; no generated audio, model weights, env files, or
+    local voice selection state found in the repo.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Acceptance should be useful both in this source package and after the bridge
+    is copied into a real Hermes checkout.
+  - Package-only files should stay reported and strictly checkable here without
+    making default installed-target acceptance fail.
+- Next action:
+  - Commit the acceptance/install handoff hardening, then keep the branch clean
     for handoff or install into the real Hermes Agent checkout once found.
 
 ## Decision log
@@ -2213,6 +2284,9 @@ local backend path, validation state, blockers, security notes, and next steps.
   acceptance can be reproduced without hand-copying long JSON.
 - Include the weekend summary in the installer and static acceptance gate so a
   real Hermes checkout receives the same concise operator handoff as this repo.
+- Split installed-bridge acceptance from package-only handoff checks so the
+  copied acceptance script can run successfully in a real Hermes checkout while
+  local package completeness remains strictly checkable.
 
 ## Open follow-ups
 
