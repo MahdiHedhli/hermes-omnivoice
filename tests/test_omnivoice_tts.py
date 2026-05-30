@@ -21,6 +21,9 @@ IMPORT_SCRIPT_PATH = (
 VOICES_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-voices.py"
 )
+CREATE_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "create-omnivoice-voice.py"
+)
 FAKE_BACKEND_PATH = Path(__file__).resolve().parent / "fixtures" / "fake_omnivoice_backend.py"
 EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
 SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_tts", SCRIPT_PATH)
@@ -42,6 +45,12 @@ assert VOICES_SPEC is not None and VOICES_SPEC.loader is not None
 voices_cli = importlib.util.module_from_spec(VOICES_SPEC)
 sys.modules["hermes_omnivoice_voices"] = voices_cli
 VOICES_SPEC.loader.exec_module(voices_cli)
+
+CREATE_SPEC = importlib.util.spec_from_file_location("create_omnivoice_voice", CREATE_SCRIPT_PATH)
+assert CREATE_SPEC is not None and CREATE_SPEC.loader is not None
+create_voice = importlib.util.module_from_spec(CREATE_SPEC)
+sys.modules["create_omnivoice_voice"] = create_voice
+CREATE_SPEC.loader.exec_module(create_voice)
 
 
 def write_wav(path: Path) -> None:
@@ -167,6 +176,28 @@ class OmniVoiceRegistryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "voice profile not found"):
                 omnivoice.load_voice_profile(Path(tmp), "missing")
+
+    def test_dot_segment_voice_ids_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            for voice_id in (".", ".."):
+                with self.subTest(voice_id=voice_id):
+                    with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "voice id"):
+                        omnivoice.resolve_voice_dir(Path(tmp), voice_id)
+
+    def test_symlink_voice_dir_escape_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = root / "outside"
+            outside.mkdir()
+            symlink = root / "voices" / "escape"
+            symlink.parent.mkdir()
+            try:
+                symlink.symlink_to(outside, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "escapes"):
+                omnivoice.resolve_voice_dir(root / "voices", "escape")
 
     def test_invalid_consent_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -334,6 +365,39 @@ class StudioImportTests(unittest.TestCase):
         with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "non-loopback"):
             studio_import.validate_studio_url("http://10.0.0.5:3900")
 
+    def test_importer_rejects_dot_segment_voice_id_before_network(self) -> None:
+        errors = io.StringIO()
+        with contextlib.redirect_stderr(errors):
+            result = studio_import.run(
+                [
+                    "--studio-url",
+                    "http://127.0.0.1:3900",
+                    "--profile-id",
+                    "studio-123",
+                    "--voice-id",
+                    "..",
+                    "--confirm-consent",
+                ]
+            )
+
+        self.assertEqual(result, 1)
+        self.assertIn("voice id contains unsupported characters", errors.getvalue())
+
+    def test_importer_rejects_symlink_voice_dir_escape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = root / "outside"
+            outside.mkdir()
+            symlink = root / "voices" / "escape"
+            symlink.parent.mkdir()
+            try:
+                symlink.symlink_to(outside, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "escapes"):
+                studio_import.resolve_voice_dir(root / "voices", "escape")
+
     def test_importer_writes_registry_yaml_compatible_with_wrapper(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -360,6 +424,134 @@ class StudioImportTests(unittest.TestCase):
 
             self.assertEqual(validated["studio_profile_id"], "studio-123")
             self.assertEqual(validated["consent"]["status"], "confirmed")
+
+
+class CreateVoiceTests(unittest.TestCase):
+    def test_create_design_voice_validates_with_confirmed_consent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp)
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "design",
+                        "narrator",
+                        "--name",
+                        "Narrator",
+                        "--instruct",
+                        "calm local assistant voice",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            loaded, voice_dir = omnivoice.load_voice_profile(voices_root, "narrator")
+            validated = omnivoice.validate_voice_profile(loaded, voice_dir)
+            self.assertEqual(validated["mode"], "design")
+            self.assertEqual(validated["consent"]["source"], "user_created")
+
+    def test_create_clone_voice_requires_confirmed_consent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ref_audio = root / "ref.wav"
+            write_wav(ref_audio)
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(root / "voices"),
+                        "clone",
+                        "marvin",
+                        "--ref-audio",
+                        str(ref_audio),
+                        "--ref-text",
+                        "Reference transcript.",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertFalse((root / "voices" / "marvin" / "voice.yaml").exists())
+
+    def test_create_clone_voice_copies_wav_and_validates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            source_ref = root / "source.wav"
+            write_wav(source_ref)
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "clone",
+                        "marvin",
+                        "--name",
+                        "Marvin",
+                        "--ref-audio",
+                        str(source_ref),
+                        "--ref-text",
+                        "Reference transcript.",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            self.assertTrue((voices_root / "marvin" / "ref.wav").is_file())
+            loaded, voice_dir = omnivoice.load_voice_profile(voices_root, "marvin")
+            validated = omnivoice.validate_voice_profile(loaded, voice_dir)
+            self.assertEqual(validated["mode"], "clone")
+            self.assertEqual(
+                validated["ref_audio_path"],
+                str((voices_root / "marvin" / "ref.wav").resolve()),
+            )
+
+    def test_create_voice_refuses_dot_segment_voice_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        tmp,
+                        "design",
+                        "..",
+                        "--instruct",
+                        "calm voice",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+
+    def test_create_voice_rejects_symlink_voice_dir_escape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            outside = root / "outside"
+            outside.mkdir()
+            symlink = root / "voices" / "escape"
+            symlink.parent.mkdir()
+            try:
+                symlink.symlink_to(outside, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(root / "voices"),
+                        "design",
+                        "escape",
+                        "--instruct",
+                        "calm voice",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
 
 
 class VoiceCliTests(unittest.TestCase):

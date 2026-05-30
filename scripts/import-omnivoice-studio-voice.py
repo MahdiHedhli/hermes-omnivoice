@@ -22,6 +22,22 @@ class ImportErrorWithContext(RuntimeError):
     pass
 
 
+def validate_voice_id(voice_id: str) -> None:
+    if not VOICE_ID_RE.fullmatch(voice_id) or voice_id in {".", ".."}:
+        raise ImportErrorWithContext("voice id contains unsupported characters")
+
+
+def resolve_voice_dir(voices_dir: Path, voice_id: str) -> Path:
+    validate_voice_id(voice_id)
+    resolved_root = voices_dir.expanduser().resolve()
+    resolved_child = (resolved_root / voice_id).resolve()
+    try:
+        resolved_child.relative_to(resolved_root)
+    except ValueError as exc:
+        raise ImportErrorWithContext("voice directory escapes the voices root") from exc
+    return resolved_child
+
+
 def validate_studio_url(url: str, allow_remote: bool = False) -> str:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
@@ -119,13 +135,12 @@ def run(argv: list[str] | None = None) -> int:
         if not args.confirm_consent:
             raise ImportErrorWithContext("refusing import without --confirm-consent")
         voice_id = args.voice_id or args.profile_id
-        if not VOICE_ID_RE.fullmatch(voice_id):
-            raise ImportErrorWithContext("voice id contains unsupported characters")
+        validate_voice_id(voice_id)
 
         base_url = validate_studio_url(args.studio_url, args.allow_remote_studio)
         profile = request_json(f"{base_url}/profiles/{urllib.parse.quote(args.profile_id)}", args.timeout)
 
-        voice_dir = (args.voices_dir.expanduser() / voice_id).resolve()
+        voice_dir = resolve_voice_dir(args.voices_dir, voice_id)
         voice_dir.mkdir(parents=True, exist_ok=True)
 
         audio_bytes = b""

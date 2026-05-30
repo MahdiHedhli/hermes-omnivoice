@@ -288,7 +288,7 @@ path. Top-level handoff docs and example configs are now present.
     handoff or attempt a real loopback Studio startup if runtime cost looks
     acceptable.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 01:00 America/New_York
 - Completed:
@@ -336,6 +336,54 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the README/examples handoff checkpoint, then consider a lightweight
     packaging/install script or a bounded real Studio startup probe.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 01:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `488690a`.
+  - Added `scripts/create-omnivoice-voice.py` for creating local design and
+    clone registry profiles with explicit `--confirm-consent`.
+  - Hardened voice directory resolution in the wrapper, Studio importer, and
+    new creator so `.`/`..` voice IDs and symlink escapes cannot leave the
+    configured voices root.
+  - Added tests for the creator, dot-segment voice IDs, symlink escape
+    rejection, and importer validation before network access.
+  - Updated README and setup/custom-voice docs with the safe local creation
+    workflow.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `find . -maxdepth 3 -type f -not -path './.git/*' -print | sort`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `sed -n ... scripts/hermes-omnivoice-tts.py`
+  - `sed -n ... scripts/import-omnivoice-studio-voice.py`
+  - `sed -n ... scripts/hermes-omnivoice-voices.py`
+  - `sed -n ... tests/test_omnivoice_tts.py`
+  - `sed -n ... README.md docs/omnivoice-setup.md docs/tts-custom-voices.md`
+  - `chmod +x scripts/create-omnivoice-voice.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `git diff --stat`
+  - `find . -type d -name __pycache__ -print`
+  - `find . -type f \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.onnx' -o -name '*.pt' -o -name '*.pth' -o -name '*.safetensors' -o -name '.env' -o -name '.env.*' \) -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation now includes 28 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - No live OmniVoice-Studio service or real OmniVoice backend is configured, so
+    real synthesis quality is still unverified.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - Voice registry paths are a trust boundary; local symlink convenience is less
+    important than preventing accidental writes or reads outside the configured
+    voices root.
+- Next action:
+  - Commit the voice-creation and path-hardening checkpoint, then evaluate a
+    bounded real Studio startup probe or a packaging/install helper.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -357,6 +405,8 @@ path. Top-level handoff docs and example configs are now present.
   every heartbeat has the same deterministic local evidence.
 - Cover both backend-command mode and Studio API mode in local tests before
   attempting heavier real-model smoke validation.
+- Treat voice IDs and resolved voice directories as security-sensitive registry
+  inputs; reject dot-segment IDs and symlink escapes rather than following them.
 
 ## Open follow-ups
 

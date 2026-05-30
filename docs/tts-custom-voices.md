@@ -55,6 +55,19 @@ tts:
 For Studio-created voices, import the profile first with
 `scripts/import-omnivoice-studio-voice.py`.
 
+For local non-Studio profiles, create a consented registry entry with:
+
+```bash
+python scripts/create-omnivoice-voice.py design narrator \
+  --instruct "calm local assistant voice" \
+  --confirm-consent
+
+python scripts/create-omnivoice-voice.py clone marvin \
+  --ref-audio /path/to/consented-reference.wav \
+  --ref-text "Reference transcript for the voice sample." \
+  --confirm-consent
+```
+
 ## Operational Notes
 
 - Store voice profiles outside the repo under `~/.hermes/voices/omnivoice`.

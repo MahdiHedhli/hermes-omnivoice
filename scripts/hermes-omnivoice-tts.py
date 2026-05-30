@@ -122,11 +122,18 @@ def load_voice_yaml(path: Path) -> dict:
 
 
 def resolve_voice_dir(voices_dir: Path, voice_id: str) -> Path:
-    if not VOICE_ID_RE.fullmatch(voice_id):
+    if not VOICE_ID_RE.fullmatch(voice_id) or voice_id in {".", ".."}:
         raise OmniVoiceConfigError(
-            "voice id may contain only letters, numbers, dot, underscore, and dash"
+            "voice id may contain only letters, numbers, dot, underscore, and dash, "
+            "and cannot be . or .."
         )
-    return (voices_dir.expanduser() / voice_id).resolve()
+    resolved_root = voices_dir.expanduser().resolve()
+    resolved_child = (resolved_root / voice_id).resolve()
+    try:
+        resolved_child.relative_to(resolved_root)
+    except ValueError as exc:
+        raise OmniVoiceConfigError("voice directory escapes the voices root") from exc
+    return resolved_child
 
 
 def _safe_child_path(parent: Path, child: str) -> Path:

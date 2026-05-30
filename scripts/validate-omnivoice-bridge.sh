@@ -9,6 +9,7 @@ cd "$ROOT_DIR"
 "$PYTHON_BIN" -m unittest discover -s tests -v
 "$PYTHON_BIN" -m py_compile \
   scripts/hermes-omnivoice-tts.py \
+  scripts/create-omnivoice-voice.py \
   scripts/import-omnivoice-studio-voice.py \
   scripts/hermes-omnivoice-voices.py \
   tests/test_omnivoice_tts.py \

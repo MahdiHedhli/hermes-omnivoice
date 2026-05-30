@@ -10,6 +10,31 @@ Create one directory per local voice:
   ref.wav
 ```
 
+The safest way to create local profiles is the helper script. It refuses to
+write a usable profile until consent is explicitly confirmed.
+
+Create a designed voice:
+
+```bash
+python scripts/create-omnivoice-voice.py design narrator \
+  --name Narrator \
+  --instruct "calm male narrator, low pitch, clear delivery" \
+  --confirm-consent
+```
+
+Create a cloned voice from a local WAV reference sample:
+
+```bash
+python scripts/create-omnivoice-voice.py clone marvin \
+  --name Marvin \
+  --ref-audio /path/to/consented-reference.wav \
+  --ref-text "Reference transcript for the voice sample." \
+  --confirm-consent
+```
+
+The clone command copies the reference sample into the local registry as
+`ref.wav`. Keep that registry outside the repo.
+
 Example clone profile:
 
 ```yaml

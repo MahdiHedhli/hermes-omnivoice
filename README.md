@@ -16,6 +16,8 @@ This repo is intentionally conservative:
 ## What Is Included
 
 - `scripts/hermes-omnivoice-tts.py`: Hermes TTS command-provider wrapper.
+- `scripts/create-omnivoice-voice.py`: creates local design or clone voice
+  registry profiles with explicit consent metadata.
 - `scripts/import-omnivoice-studio-voice.py`: imports a Studio profile into the
   Hermes local registry after explicit consent confirmation.
 - `scripts/hermes-omnivoice-voices.py`: list, inspect, preview, and print sample
@@ -37,6 +39,14 @@ Create or import a voice under:
 
 ```text
 ~/.hermes/voices/omnivoice/<voice_id>/voice.yaml
+```
+
+Create a designed voice profile:
+
+```bash
+python scripts/create-omnivoice-voice.py design narrator \
+  --instruct "calm local assistant voice" \
+  --confirm-consent
 ```
 
 Point the wrapper at local OmniVoice-Studio:
