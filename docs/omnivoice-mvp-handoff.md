@@ -18,6 +18,8 @@ The bridge is ready as a command-provider MVP package. It includes:
   `omnivoice-infer`.
 - Runtime diagnostics, acceptance checks, deterministic contract tests, and a
   dry-run-first installer for a real Hermes checkout.
+- A concise weekend summary that is included in the install manifest for
+  operator handoff.
 
 Static MVP acceptance currently passes without a real model backend. Live
 backend acceptance now passes on this machine when the prepared OmniVoice

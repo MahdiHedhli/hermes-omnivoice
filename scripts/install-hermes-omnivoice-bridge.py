@@ -27,6 +27,7 @@ BASE_MANIFEST = [
     "docs/omnivoice-mvp-handoff.md",
     "docs/omnivoice-setup.md",
     "docs/omnivoice-studio-bridge.md",
+    "docs/omnivoice-weekend-summary.md",
     "docs/omnivoice-acceptance.md",
     "docs/tts-custom-voices.md",
 ]

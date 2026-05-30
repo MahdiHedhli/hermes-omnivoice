@@ -2008,7 +2008,7 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Commit the weekend summary, then either locate the actual Hermes Agent
     checkout or keep the branch clean for handoff.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 16:00 America/New_York
 - Completed:
@@ -2070,6 +2070,69 @@ local backend path, validation state, blockers, security notes, and next steps.
     noisy for this repo.
 - Next action:
   - Commit the bounded-source-discovery handoff docs, then keep the branch clean
+    for handoff or install into the real Hermes Agent checkout once found.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 16:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `813c5ab`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready.
+  - Added `docs/omnivoice-weekend-summary.md` to the conservative installer
+    base manifest so dry-run or real installs into Hermes carry the final
+    operator handoff.
+  - Added the weekend summary to the static acceptance required-file gate.
+  - Updated the MVP handoff to call out that the weekend summary is included in
+    the install manifest.
+  - Re-ran targeted installer/acceptance tests, install dry-run, deterministic
+    validation, and strict real-backend acceptance using generated shell exports.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `tail -n 220 HEARTBEAT.md`
+  - `rg -n "TODO|FIXME|Next Steps|Remaining Blockers|Open follow-ups|native provider|actual Hermes|source discovery|install" README.md docs scripts tests examples HEARTBEAT.md`
+  - `sed -n ... scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py examples README.md .gitignore scripts/omnivoice-acceptance.py scripts/validate-omnivoice-bridge.sh`
+  - `python3 -m unittest tests.test_omnivoice_tts.InstallerTests tests.test_omnivoice_tts.AcceptanceTests -v`
+  - `python3 scripts/install-hermes-omnivoice-bridge.py --target-root /tmp/hermes-omnivoice-install-check --dry-run --json`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `python3 -m py_compile scripts/install-hermes-omnivoice-bridge.py scripts/omnivoice-acceptance.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `git diff --check`
+  - `find . -type f (...) -print`
+  - `find . -type d -name __pycache__ -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - Targeted installer and acceptance tests: PASS, 10 tests.
+  - Installer dry-run: PASS; base manifest now includes 18 files including
+    `docs/omnivoice-weekend-summary.md`.
+  - Default acceptance: PASS for static MVP with 23 required files; expected
+    `real_backend_ready: false` and `hermes_source_ready: false` in the default
+    shell.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 77 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`.
+  - Repo artifact scan: PASS; no generated audio, model weights, env files, or
+    local voice selection state found in the repo.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - The installer manifest should carry the concise weekend summary because it
+    is now the best first-read handoff artifact for a real Hermes checkout.
+  - Native-provider work should still wait for real Hermes Agent source.
+- Next action:
+  - Commit the installer/acceptance manifest update, then keep the branch clean
     for handoff or install into the real Hermes Agent checkout once found.
 
 ## Decision log
@@ -2148,6 +2211,8 @@ local backend path, validation state, blockers, security notes, and next steps.
   instead of cloning any voice sample.
 - Print adapter backend exports through the setup helper so real-backend
   acceptance can be reproduced without hand-copying long JSON.
+- Include the weekend summary in the installer and static acceptance gate so a
+  real Hermes checkout receives the same concise operator handoff as this repo.
 
 ## Open follow-ups
 
