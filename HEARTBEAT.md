@@ -3,8 +3,9 @@
 ## Current status
 
 Initial heartbeat started against an empty scheduled workspace. The repo now has
-a command-provider MVP foundation plus a localhost-only OmniVoice-Studio API
-bridge and Studio profile importer.
+a command-provider MVP foundation, a localhost-only OmniVoice-Studio API bridge,
+a Studio profile importer, and deterministic tests proving the command wrapper
+writes valid WAV output through a local backend contract.
 
 ## Previous heartbeat
 
@@ -57,7 +58,7 @@ bridge and Studio profile importer.
   - Run unit tests, fix failures, make scripts executable, then commit the MVP
     foundation if clean.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-29 22:30 America/New_York
 - Completed:
@@ -117,6 +118,53 @@ bridge and Studio profile importer.
     Agent source path or installed config to verify the TTS command-provider
     schema.
 
+## Latest heartbeat
+
+- Time: 2026-05-29 23:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `825eaa9`.
+  - Added `tests/fixtures/fake_omnivoice_backend.py`, a deterministic local
+    backend that writes a valid short WAV for wrapper contract testing.
+  - Added a happy-path wrapper test proving `HERMES_OMNIVOICE_COMMAND_JSON`
+    produces a valid WAV.
+  - Added importer tests for explicit consent, loopback-only Studio URLs, and
+    wrapper-compatible registry YAML generation.
+  - Verified `scripts/test-omnivoice-tts.sh` can pass with the fake backend and
+    still skips cleanly when no backend is configured.
+  - Added setup docs for using the fake backend as a local contract smoke test.
+  - Ran a quick memory check for prior heartbeat context; it confirmed the
+    schedule/name correction and did not identify a local Hermes source path.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -5`
+  - `sed -n '1,260p' tests/test_omnivoice_tts.py`
+  - `sed -n '1,260p' scripts/import-omnivoice-studio-voice.py`
+  - `chmod +x tests/fixtures/fake_omnivoice_backend.py`
+  - `python3 -m unittest discover -s tests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-tts.py scripts/import-omnivoice-studio-voice.py tests/test_omnivoice_tts.py tests/fixtures/fake_omnivoice_backend.py`
+  - `HERMES_OMNIVOICE_COMMAND_JSON='[...]' scripts/test-omnivoice-tts.sh`
+  - `scripts/test-omnivoice-tts.sh`
+  - `rg -n "Hermes Agent|Hermes dashboard|Hermes Memory|hermes-agent|/opt/hermes|~/.hermes|omnivoice" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `sed -n '232,262p' /Users/mhedhli/.codex/memories/MEMORY.md`
+- Tests:
+  - `python3 -m unittest discover -s tests -v`: PASS, 13 tests run, 1 skipped
+    real-backend integration test.
+  - `python3 -m py_compile ...`: PASS.
+  - Fake-backend smoke test: PASS, generated a valid temporary WAV.
+  - Unconfigured smoke test: SKIP with exit 77.
+- Blockers:
+  - No live OmniVoice-Studio service or real OmniVoice backend is configured, so
+    real synthesis quality is still unverified.
+  - Actual Hermes Agent source is still not present in this checkout, so native
+    provider discovery remains deferred.
+- Assumptions:
+  - A deterministic fake backend is acceptable only for wrapper contract tests,
+    not for claiming real OmniVoice synthesis support.
+- Next action:
+  - Commit the expanded test coverage checkpoint, then continue searching for a
+    safe local Hermes Agent source/config path or build a first-class config
+    handoff package around the command-provider MVP.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -130,6 +178,8 @@ bridge and Studio profile importer.
   SQLite reads.
 - Refuse non-loopback Studio URLs by default because Studio has no built-in
   authentication.
+- Keep the fake backend confined to tests and docs as a contract verifier only;
+  never present it as a real TTS engine.
 
 ## Open follow-ups
 

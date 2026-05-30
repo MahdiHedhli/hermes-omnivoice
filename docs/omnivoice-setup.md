@@ -102,6 +102,27 @@ HERMES_OMNIVOICE_COMMAND_JSON='[...]' scripts/test-omnivoice-tts.sh
 Without a backend command, the smoke test exits `77` to mark the integration as
 skipped rather than failed.
 
+For CI or local contract testing without model weights, use the deterministic
+test fixture backend:
+
+```bash
+HERMES_OMNIVOICE_COMMAND_JSON='[
+  "python3",
+  "tests/fixtures/fake_omnivoice_backend.py",
+  "--text-file",
+  "{text_file}",
+  "--out",
+  "{out}",
+  "--voice-dir",
+  "{voice_dir}",
+  "--speed",
+  "{speed}"
+]' scripts/test-omnivoice-tts.sh
+```
+
+This verifies Hermes wrapper I/O and WAV validation only. It is not a real
+OmniVoice synthesis quality test.
+
 ## Import A Studio Voice
 
 After creating a profile in OmniVoice-Studio, import it into the Hermes registry:

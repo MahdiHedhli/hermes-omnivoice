@@ -10,11 +10,23 @@ import wave
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-tts.py"
+IMPORT_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "import-omnivoice-studio-voice.py"
+)
+FAKE_BACKEND_PATH = Path(__file__).resolve().parent / "fixtures" / "fake_omnivoice_backend.py"
 SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_tts", SCRIPT_PATH)
 assert SPEC is not None and SPEC.loader is not None
 omnivoice = importlib.util.module_from_spec(SPEC)
 sys.modules["hermes_omnivoice_tts"] = omnivoice
 SPEC.loader.exec_module(omnivoice)
+
+IMPORT_SPEC = importlib.util.spec_from_file_location(
+    "import_omnivoice_studio_voice", IMPORT_SCRIPT_PATH
+)
+assert IMPORT_SPEC is not None and IMPORT_SPEC.loader is not None
+studio_import = importlib.util.module_from_spec(IMPORT_SPEC)
+sys.modules["import_omnivoice_studio_voice"] = studio_import
+IMPORT_SPEC.loader.exec_module(studio_import)
 
 
 def write_wav(path: Path) -> None:
@@ -114,6 +126,46 @@ class OmniVoiceRegistryTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
 
+    def test_command_success_writes_valid_wav(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            command = [
+                sys.executable,
+                str(FAKE_BACKEND_PATH),
+                "--text-file",
+                "{text_file}",
+                "--out",
+                "{out}",
+                "--voice-dir",
+                "{voice_dir}",
+                "--speed",
+                "{speed}",
+            ]
+
+            result = omnivoice.run(
+                [
+                    "--voices-dir",
+                    str(voices_root),
+                    "--text-file",
+                    str(text_file),
+                    "--out",
+                    str(out_file),
+                    "--voice",
+                    "marvin",
+                ],
+                env={"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(command)},
+            )
+
+            self.assertEqual(result, 0)
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertEqual(wav.getnchannels(), 1)
+                self.assertGreater(wav.getnframes(), 0)
+
     def test_studio_url_must_be_loopback_by_default(self) -> None:
         with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "non-loopback"):
             omnivoice.validate_studio_url("http://10.0.0.5:3900", {})
@@ -140,6 +192,51 @@ class OmniVoiceIntegrationTests(unittest.TestCase):
             "Configure HERMES_OMNIVOICE_COMMAND_JSON or HERMES_OMNIVOICE_COMMAND "
             "with a real OmniVoice backend to run integration synthesis."
         )
+
+
+class StudioImportTests(unittest.TestCase):
+    def test_import_requires_explicit_consent_before_network(self) -> None:
+        result = studio_import.run(
+            [
+                "--studio-url",
+                "http://127.0.0.1:3900",
+                "--profile-id",
+                "marvin",
+            ]
+        )
+
+        self.assertEqual(result, 1)
+
+    def test_importer_refuses_remote_studio_by_default(self) -> None:
+        with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "non-loopback"):
+            studio_import.validate_studio_url("http://10.0.0.5:3900")
+
+    def test_importer_writes_registry_yaml_compatible_with_wrapper(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voice_dir = root / "marvin"
+            voice_dir.mkdir()
+            write_wav(voice_dir / "ref.wav")
+            profile = {
+                "id": "studio-123",
+                "name": "Marvin",
+                "ref_text": "Reference transcript.",
+                "instruct": "clear local assistant voice",
+                "language": "en",
+            }
+
+            studio_import.write_voice_yaml(
+                voice_dir / "voice.yaml",
+                profile,
+                "marvin",
+                "clone",
+                ["personal_assistant", "local_generation"],
+            )
+            loaded, resolved_dir = omnivoice.load_voice_profile(root, "marvin")
+            validated = omnivoice.validate_voice_profile(loaded, resolved_dir)
+
+            self.assertEqual(validated["studio_profile_id"], "studio-123")
+            self.assertEqual(validated["consent"]["status"], "confirmed")
 
 
 if __name__ == "__main__":
