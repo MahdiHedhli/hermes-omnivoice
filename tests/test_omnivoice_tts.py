@@ -19,6 +19,9 @@ SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoic
 PYTHON_ADAPTER_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-python-adapter.py"
 )
+SETUP_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "setup-omnivoice-python-env.py"
+)
 IMPORT_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "import-omnivoice-studio-voice.py"
 )
@@ -55,6 +58,14 @@ assert PYTHON_ADAPTER_SPEC is not None and PYTHON_ADAPTER_SPEC.loader is not Non
 python_adapter = importlib.util.module_from_spec(PYTHON_ADAPTER_SPEC)
 sys.modules["hermes_omnivoice_python_adapter"] = python_adapter
 PYTHON_ADAPTER_SPEC.loader.exec_module(python_adapter)
+
+SETUP_SPEC = importlib.util.spec_from_file_location(
+    "setup_omnivoice_python_env", SETUP_SCRIPT_PATH
+)
+assert SETUP_SPEC is not None and SETUP_SPEC.loader is not None
+setup_env = importlib.util.module_from_spec(SETUP_SPEC)
+sys.modules["setup_omnivoice_python_env"] = setup_env
+SETUP_SPEC.loader.exec_module(setup_env)
 
 IMPORT_SPEC = importlib.util.spec_from_file_location(
     "import_omnivoice_studio_voice", IMPORT_SCRIPT_PATH
@@ -641,6 +652,69 @@ class PythonAdapterTests(unittest.TestCase):
                         str(root / "out.wav"),
                         "--ref-audio",
                         str(ref_audio),
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+
+
+class PythonEnvSetupTests(unittest.TestCase):
+    def test_setup_env_dry_run_plans_command_json_without_creating_venv(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            venv_dir = Path(tmp) / "omnivoice-env"
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                result = setup_env.run(
+                    [
+                        "--venv-dir",
+                        str(venv_dir),
+                        "--dry-run",
+                        "--json",
+                    ]
+                )
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertEqual(report["status"], "planned")
+            self.assertFalse(venv_dir.exists())
+            self.assertEqual(report["package"], "omnivoice")
+            self.assertIn("HERMES_OMNIVOICE_COMMAND_JSON", report["env"])
+            command = json.loads(report["env"]["HERMES_OMNIVOICE_COMMAND_JSON"])
+            self.assertEqual(command[0], str(setup_env.venv_python(venv_dir.resolve())))
+            self.assertTrue(command[1].endswith("hermes-omnivoice-python-adapter.py"))
+            self.assertIn("{ref_audio}", command)
+            self.assertIn("{instruct}", command)
+
+    def test_setup_env_check_only_reports_missing_venv(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                result = setup_env.run(
+                    [
+                        "--venv-dir",
+                        str(Path(tmp) / "missing"),
+                        "--check-only",
+                        "--json",
+                    ]
+                )
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertEqual(report["status"], "checked")
+            self.assertFalse(report["ready"])
+            self.assertFalse(report["python_exists"])
+
+    def test_setup_env_require_ready_fails_for_missing_venv(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = setup_env.run(
+                    [
+                        "--venv-dir",
+                        str(Path(tmp) / "missing"),
+                        "--check-only",
+                        "--require-ready",
                     ]
                 )
 

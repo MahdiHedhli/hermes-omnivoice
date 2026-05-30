@@ -14,6 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BASE_MANIFEST = [
     "scripts/hermes-omnivoice-tts.py",
     "scripts/hermes-omnivoice-python-adapter.py",
+    "scripts/setup-omnivoice-python-env.py",
     "scripts/create-omnivoice-voice.py",
     "scripts/import-omnivoice-studio-voice.py",
     "scripts/hermes-omnivoice-voices.py",

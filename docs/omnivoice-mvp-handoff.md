@@ -7,6 +7,8 @@ The bridge is ready as a command-provider MVP package. It includes:
 - A Hermes-facing wrapper at `scripts/hermes-omnivoice-tts.py`.
 - A Python API adapter at `scripts/hermes-omnivoice-python-adapter.py` for
   environments where the `omnivoice` package is installed.
+- A dry-run/check-first Python environment helper at
+  `scripts/setup-omnivoice-python-env.py`.
 - Local voice registry tools for creating, importing, listing, selecting, and
   previewing voice profiles.
 - Consent and reference-audio validation for cloned voices.
@@ -35,6 +37,7 @@ Summarize static and live readiness:
 ```bash
 python scripts/omnivoice-acceptance.py
 python scripts/check-omnivoice-runtime.py
+python scripts/setup-omnivoice-python-env.py --check-only
 ```
 
 Use strict acceptance only after a real backend and local voice profile should
@@ -107,6 +110,13 @@ export HERMES_OMNIVOICE_COMMAND_JSON='[
   "--speed",
   "{speed}"
 ]'
+```
+
+Plan or create the isolated adapter environment:
+
+```bash
+python scripts/setup-omnivoice-python-env.py --dry-run
+python scripts/setup-omnivoice-python-env.py
 ```
 
 For the official OmniVoice CLI:

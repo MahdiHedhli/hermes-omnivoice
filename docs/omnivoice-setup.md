@@ -133,6 +133,24 @@ The adapter imports `omnivoice`, loads `HERMES_OMNIVOICE_MODEL` or
 `HERMES_OMNIVOICE_DEVICE` and `HERMES_OMNIVOICE_DTYPE` if the defaults do not
 match the local runtime.
 
+To prepare an isolated local environment outside this repo, start with a
+dry-run:
+
+```bash
+python scripts/setup-omnivoice-python-env.py --dry-run
+```
+
+Then install when the planned venv path and package source look correct:
+
+```bash
+python scripts/setup-omnivoice-python-env.py
+python scripts/setup-omnivoice-python-env.py --check-only --require-ready
+```
+
+The default venv path is `~/.cache/hermes/omnivoice-python`. Model caches remain
+under the normal Hugging Face cache unless separately configured; do not add
+them to this repo.
+
 Option C: use the official OmniVoice CLI directly. Install OmniVoice so
 `omnivoice-infer` is on `PATH`, then opt in:
 
@@ -179,6 +197,7 @@ Check which local runtime path is available without running synthesis:
 
 ```bash
 python scripts/check-omnivoice-runtime.py
+python scripts/setup-omnivoice-python-env.py --check-only
 ```
 
 The runtime check does not execute configured backend commands and does not

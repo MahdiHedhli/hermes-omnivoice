@@ -128,6 +128,9 @@ For Python API mode, use `HERMES_OMNIVOICE_COMMAND_JSON` to call
 `scripts/hermes-omnivoice-python-adapter.py`. That adapter imports
 `OmniVoice.from_pretrained`, reads Hermes' text file, passes clone or design
 fields from the registry placeholders, and writes WAV output with `soundfile`.
+Use `scripts/setup-omnivoice-python-env.py --dry-run` before installing
+OmniVoice dependencies so venv, package, and command-provider settings are
+visible before any large package or model downloads.
 
 ## OmniVoice-Studio API Findings
 

@@ -14,7 +14,8 @@ now present. The optional direct OmniVoice CLI path targets the upstream
 `omnivoice-infer` executable and is gated behind `HERMES_OMNIVOICE_AUTO_CLI=1`
 to avoid surprise model downloads. A packaged Python API adapter can also call
 `OmniVoice.from_pretrained` through `HERMES_OMNIVOICE_COMMAND_JSON` when the
-local `omnivoice` package is installed.
+local `omnivoice` package is installed. A dry-run/check-first environment helper
+now plans and inspects an isolated OmniVoice Python venv outside the repo.
 
 ## Previous heartbeat
 
@@ -876,7 +877,7 @@ local `omnivoice` package is installed.
     environment for a real smoke test or start the loopback Studio image
     pull/build.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 06:30 America/New_York
 - Completed:
@@ -942,6 +943,78 @@ local `omnivoice` package is installed.
     isolated local environment for a real smoke test or start the loopback
     Studio image pull/build.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 07:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `9387a08`.
+  - Added `scripts/setup-omnivoice-python-env.py`, a dry-run/check-first helper
+    for planning, creating, and inspecting an isolated OmniVoice Python venv
+    outside the repo.
+  - The helper emits the `HERMES_OMNIVOICE_COMMAND_JSON` value needed to point
+    Hermes at `scripts/hermes-omnivoice-python-adapter.py`.
+  - Added the setup helper to static acceptance, validation py_compile, and the
+    dry-run-first install manifest.
+  - Added unit tests for dry-run planning, check-only missing-env reporting, and
+    `--require-ready` failure on a missing venv.
+  - Updated README, setup, MVP handoff, Studio bridge, integration notes,
+    acceptance, and custom voice docs with the check-first Python environment
+    flow.
+  - Ran the setup helper in dry-run mode against `/tmp/hermes-omnivoice-python-env`
+    and check-only mode against a missing temp venv; no environment was created.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat|OmniVoice-Studio" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `sed -n ... scripts/hermes-omnivoice-python-adapter.py`
+  - `sed -n ... scripts/check-omnivoice-runtime.py`
+  - `sed -n ... docs/omnivoice-setup.md`
+  - `chmod +x scripts/setup-omnivoice-python-env.py`
+  - `python3 scripts/setup-omnivoice-python-env.py --venv-dir /tmp/hermes-omnivoice-python-env --dry-run --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --venv-dir /tmp/hermes-omnivoice-python-env-missing --check-only --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.PythonEnvSetupTests -v`
+  - `git diff --stat`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `find . -type d -name __pycache__ -print`
+  - `find . -type f \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.onnx' -o -name '*.pt' -o -name '*.pth' -o -name '*.safetensors' -o -name '.env' -o -name '.env.*' -o -name 'omnivoice-selection.json' \) -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `git diff --check`
+  - `git add .`
+  - `git diff --cached --stat`
+  - `git diff --cached --check`
+  - `git commit -m "feat: add OmniVoice Python env setup helper"`
+- Tests:
+  - `python3 scripts/setup-omnivoice-python-env.py --venv-dir /tmp/hermes-omnivoice-python-env --dry-run --json`:
+    PASS; reported venv creation/install commands and command-provider JSON
+    without creating a venv.
+  - `python3 scripts/setup-omnivoice-python-env.py --venv-dir /tmp/hermes-omnivoice-python-env-missing --check-only --json`:
+    PASS; reported not ready with no venv present.
+  - `python3 -m unittest tests.test_omnivoice_tts.PythonEnvSetupTests -v`: PASS,
+    3 tests.
+  - `python3 scripts/omnivoice-acceptance.py --json`: PASS; static MVP ready
+    with 21 required files, real backend not ready.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation includes 60 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - Studio image is not present locally, and no Studio container is running on
+    `127.0.0.1:3900`.
+  - No real OmniVoice backend command is configured.
+  - `omnivoice-infer` is not installed on `PATH`.
+  - The `omnivoice` Python package is not installed in this repo environment.
+  - No local voice profiles exist under `~/.hermes/voices/omnivoice`.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - The setup helper should expose planned package and command-provider settings
+    before any heavy runtime install or model download happens.
+- Next action:
+  - Commit the environment setup helper, then use it to create an isolated
+    OmniVoice environment or switch to a loopback Studio image pull/build for
+    the first real synthesis smoke.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -985,6 +1058,8 @@ local `omnivoice` package is installed.
   `HERMES_OMNIVOICE_AUTO_CLI=1` opt-in before the wrapper invokes it.
 - Keep direct Python API usage behind an explicit command adapter so the main
   wrapper does not import or initialize model dependencies unless configured.
+- Use dry-run/check-only environment setup before installing OmniVoice runtime
+  dependencies so package and cache behavior remain visible.
 
 ## Open follow-ups
 
@@ -995,5 +1070,7 @@ local `omnivoice` package is installed.
   run `scripts/test-omnivoice-tts.sh`.
 - Install `omnivoice` in an isolated local environment and smoke-test the
   Python adapter with a consented designed or cloned voice profile.
+- Use `scripts/setup-omnivoice-python-env.py` for the isolated install/check
+  flow before running a real Python API smoke test.
 - Locate the actual Hermes Agent source before wiring native `/voice` commands.
 - Consider a native Hermes provider only after command-provider synthesis works.

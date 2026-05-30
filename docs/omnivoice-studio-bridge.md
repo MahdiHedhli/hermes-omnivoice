@@ -41,6 +41,8 @@ The command path can point to:
 This repo ships `scripts/hermes-omnivoice-python-adapter.py` as the concrete
 Python API adapter. Use it through `HERMES_OMNIVOICE_COMMAND_JSON` when the
 local Python environment has `omnivoice`, `torch`, and `soundfile` installed.
+Use `scripts/setup-omnivoice-python-env.py --dry-run` to inspect the venv path
+and command JSON before creating that environment.
 
 This avoids taking a dependency on Studio's database layout before its backend
 API is inspected.

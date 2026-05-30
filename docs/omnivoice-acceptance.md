@@ -41,5 +41,9 @@ OmniVoice command, by pointing `HERMES_OMNIVOICE_COMMAND_JSON` at
 importing at least one consented voice profile under
 `~/.hermes/voices/omnivoice`.
 
+Use `python scripts/setup-omnivoice-python-env.py --dry-run` before creating
+the local Python backend environment. Use `--check-only --require-ready` after
+installation when the Python API path should be considered ready.
+
 Do not treat fake-backend tests as real synthesis acceptance. They only prove
 wrapper I/O and WAV validation.

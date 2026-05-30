@@ -97,6 +97,13 @@ export HERMES_OMNIVOICE_COMMAND_JSON='[
 The wrapper validates the voice profile first, then passes clone or design
 fields to the adapter.
 
+Prepare or inspect the adapter environment outside the repo with:
+
+```bash
+python scripts/setup-omnivoice-python-env.py --dry-run
+python scripts/setup-omnivoice-python-env.py --check-only
+```
+
 ## Operational Notes
 
 - Store voice profiles outside the repo under `~/.hermes/voices/omnivoice`.

@@ -19,6 +19,8 @@ This repo is intentionally conservative:
 - `scripts/hermes-omnivoice-tts.py`: Hermes TTS command-provider wrapper.
 - `scripts/hermes-omnivoice-python-adapter.py`: optional command adapter for
   calling the OmniVoice Python API directly.
+- `scripts/setup-omnivoice-python-env.py`: dry-run/check-first helper for an
+  isolated local OmniVoice Python environment outside this repo.
 - `scripts/create-omnivoice-voice.py`: creates local design or clone voice
   registry profiles with explicit consent metadata.
 - `scripts/import-omnivoice-studio-voice.py`: imports a Studio profile into the
@@ -71,6 +73,7 @@ Check the local runtime without generating audio:
 
 ```bash
 python scripts/check-omnivoice-runtime.py
+python scripts/setup-omnivoice-python-env.py --check-only
 ```
 
 Check or start a local loopback-only Studio container:
