@@ -58,6 +58,7 @@ GITIGNORE_PATTERNS = [
     "*.onnx",
     "*.safetensors",
     ".env",
+    ".env.*",
     ".env.local",
     "*.local",
 ]

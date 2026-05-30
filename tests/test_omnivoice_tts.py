@@ -1878,6 +1878,7 @@ class InstallerTests(unittest.TestCase):
             self.assertIn(installer.GITIGNORE_START, gitignore)
             self.assertIn("*.wav", gitignore)
             self.assertIn("*.safetensors", gitignore)
+            self.assertIn(".env.*", gitignore)
             self.assertIn(".env.local", gitignore)
 
             second = io.StringIO()
