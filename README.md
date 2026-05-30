@@ -141,6 +141,7 @@ is opt-in because the first
 
 - [Setup](docs/omnivoice-setup.md)
 - [MVP handoff](docs/omnivoice-mvp-handoff.md)
+- [Weekend summary](docs/omnivoice-weekend-summary.md)
 - [Studio bridge](docs/omnivoice-studio-bridge.md)
 - [Acceptance checklist](docs/omnivoice-acceptance.md)
 - [Integration notes](docs/omnivoice-integration-notes.md)

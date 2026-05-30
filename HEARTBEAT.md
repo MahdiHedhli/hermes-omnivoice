@@ -54,6 +54,8 @@ A local designed profile named `heartbeat_narrator` now exists under
 prepared Python adapter command is exported.
 The Python environment helper can now print shell-safe exports for the prepared
 adapter command with `--check-only --shell`.
+`docs/omnivoice-weekend-summary.md` now captures the delivered MVP, proven
+local backend path, validation state, blockers, security notes, and next steps.
 
 ## Previous heartbeat
 
@@ -1903,7 +1905,7 @@ adapter command with `--check-only --shell`.
     work on locating the actual Hermes Agent source or packaging a final branch
     summary.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 15:00 America/New_York
 - Completed:
@@ -1957,6 +1959,54 @@ adapter command with `--check-only --shell`.
 - Next action:
   - Commit the shell-export helper, then prepare a final branch summary or keep
     searching for the actual Hermes Agent source if more local hints appear.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 15:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `ad35305`.
+  - Rechecked default runtime state: no backend command exported by default,
+    one local designed profile present under `~/.hermes/voices/omnivoice`, and
+    the isolated OmniVoice Python venv ready.
+  - Added `docs/omnivoice-weekend-summary.md` as a concise branch summary with
+    delivered MVP scope, proven local backend path, latest validation evidence,
+    blockers, security notes, and next steps.
+  - Linked the weekend summary from README.
+  - Re-ran deterministic validation and strict real-backend acceptance using the
+    generated shell exports.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -12`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `tail -n 240 HEARTBEAT.md`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `git diff --check`
+  - `find . -type f (...) -print`
+- Tests:
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 77 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`.
+  - Repo artifact scan: PASS; no generated audio, model weights, env files, or
+    local voice selection state found in the repo.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under `/Users/mhedhli/Documents/Coding/hermes`.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - A concise weekend summary is now the best handoff surface for another
+    operator or for installing into the real Hermes Agent source tree.
+  - Further native-provider work should wait for the real Hermes Agent checkout
+    rather than guessing at its TTS schema.
+- Next action:
+  - Commit the weekend summary, then either locate the actual Hermes Agent
+    checkout or keep the branch clean for handoff.
 
 ## Decision log
 
