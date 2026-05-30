@@ -69,12 +69,14 @@ commands:
 
 - `scripts/hermes-omnivoice-voices.py list`
 - `scripts/hermes-omnivoice-voices.py info <voice_id>`
+- `scripts/hermes-omnivoice-voices.py set <voice_id>`
+- `scripts/hermes-omnivoice-voices.py current`
 - `scripts/hermes-omnivoice-voices.py preview <voice_id> --out <path>`
 - `scripts/hermes-omnivoice-voices.py config <voice_id>`
 
 If Hermes has a command/plugin layer in the real source tree, these operations
-can be wired behind `/voice list`, `/voice info`, `/voice preview`, and a config
-selection command without changing the registry contract.
+can be wired behind `/voice list`, `/voice info`, `/voice set`, `/voice preview`,
+and a config selection command without changing the registry contract.
 
 ## Backend Command Contract
 

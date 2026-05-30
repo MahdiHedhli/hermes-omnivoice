@@ -577,7 +577,7 @@ path. Top-level handoff docs and example configs are now present.
     in a bounded run or improve the package handoff for installing the bridge
     into a real Hermes checkout.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 04:00 America/New_York
 - Completed:
@@ -625,6 +625,54 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the installer checkpoint, then continue toward either a bounded live
     Studio run or a final package summary if no backend appears.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 04:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `6006958`.
+  - Confirmed acceptance still reports static MVP readiness PASS and live
+    backend readiness BLOCKED.
+  - Added `set` and `current` subcommands to
+    `scripts/hermes-omnivoice-voices.py` so the local helper now maps to
+    `/voice list`, `/voice info`, `/voice set`, and `/voice preview`.
+  - `set` validates the selected profile and consent gates before writing
+    user-level selection state to `~/.hermes/omnivoice-selection.json`.
+  - Added tests for writing and reading the selection file and for refusing to
+    set an invalid profile.
+  - Updated README, custom voice docs, and integration notes with the selection
+    workflow.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -13`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `sed -n ... scripts/hermes-omnivoice-voices.py`
+  - `sed -n ... docs/tts-custom-voices.md`
+  - `sed -n ... tests/test_omnivoice_tts.py`
+  - `sed -n ... README.md`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `find . -type d -name __pycache__ -print`
+  - `find . -type f \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.onnx' -o -name '*.pt' -o -name '*.pth' -o -name '*.safetensors' -o -name '.env' -o -name '.env.*' -o -name 'omnivoice-selection.json' \) -print`
+  - `git diff --stat`
+- Tests:
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation now includes 49 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - Studio is not currently running on `127.0.0.1:3900`.
+  - No real OmniVoice backend command or `omnivoice` CLI is configured.
+  - No local voice profiles exist under `~/.hermes/voices/omnivoice`.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - User-level voice selection should live outside the repo and only be written
+    after the selected profile validates.
+- Next action:
+  - Commit the voice-selection helper checkpoint, then continue with final
+    package polish or a bounded live Studio/backend attempt.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -658,6 +706,8 @@ path. Top-level handoff docs and example configs are now present.
   is not overstated when model-backed synthesis remains unavailable.
 - Prefer a no-overwrite, dry-run-first installer for handing the bridge to a
   real Hermes checkout.
+- Keep selected voice state outside the repo and validate profiles before
+  writing selection metadata.
 
 ## Open follow-ups
 

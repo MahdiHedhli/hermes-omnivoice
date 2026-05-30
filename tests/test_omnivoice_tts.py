@@ -946,6 +946,70 @@ class VoiceCliTests(unittest.TestCase):
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
 
+    def test_set_and_current_commands_manage_selection_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            selection_file = root / "selection.json"
+            write_voice(voices_root, "marvin")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                set_result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--selection-file",
+                        str(selection_file),
+                        "set",
+                        "marvin",
+                    ]
+                )
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                current_result = voices_cli.run(
+                    [
+                        "--selection-file",
+                        str(selection_file),
+                        "current",
+                        "--json",
+                    ]
+                )
+
+            payload = json.loads(selection_file.read_text(encoding="utf-8"))
+            current = json.loads(output.getvalue())
+            self.assertEqual(set_result, 0)
+            self.assertEqual(current_result, 0)
+            self.assertEqual(payload["provider"], "omnivoice")
+            self.assertEqual(payload["voice"], "marvin")
+            self.assertEqual(current["voice"], "marvin")
+
+    def test_set_command_refuses_invalid_voice(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            selection_file = root / "selection.json"
+            invalid = voices_root / "bad"
+            invalid.mkdir(parents=True)
+            (invalid / "voice.yaml").write_text(
+                "id: bad\nname: Bad\nengine: omnivoice\nmode: clone\n",
+                encoding="utf-8",
+            )
+
+            with contextlib.redirect_stderr(io.StringIO()):
+                result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--selection-file",
+                        str(selection_file),
+                        "set",
+                        "bad",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertFalse(selection_file.exists())
+
 
 class ExampleFileTests(unittest.TestCase):
     def test_design_voice_example_validates(self) -> None:

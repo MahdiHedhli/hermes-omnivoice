@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import importlib.util
 import json
 from pathlib import Path
@@ -137,6 +138,52 @@ def command_preview(args: argparse.Namespace) -> int:
     return completed.returncode
 
 
+def _selection_payload(voices_dir: Path, voice: str, summary: dict) -> dict:
+    return {
+        "provider": "omnivoice",
+        "voice": voice,
+        "voices_dir": str(voices_dir.expanduser()),
+        "speed": summary["speed"],
+        "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+    }
+
+
+def command_set(args: argparse.Namespace) -> int:
+    summary = _profile_summary(args.voices_dir, args.voice)
+    if summary["status"] != "ready":
+        print(f"Voice {args.voice} is invalid: {summary['error']}", file=sys.stderr)
+        return 1
+    selection_path = args.selection_file.expanduser().resolve()
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = _selection_payload(args.voices_dir, args.voice, summary)
+    selection_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        print(f"Selected OmniVoice voice {args.voice} in {selection_path}")
+    return 0
+
+
+def command_current(args: argparse.Namespace) -> int:
+    selection_path = args.selection_file.expanduser()
+    if not selection_path.is_file():
+        print(f"No OmniVoice selection found: {selection_path}", file=sys.stderr)
+        return 1
+    try:
+        payload = json.loads(selection_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"Selection is not readable JSON: {exc}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+    print(f"Voice: {payload.get('voice', '')}")
+    print(f"Provider: {payload.get('provider', '')}")
+    print(f"Voices dir: {payload.get('voices_dir', '')}")
+    print(f"Speed: {payload.get('speed', '')}")
+    return 0
+
+
 def command_config(args: argparse.Namespace) -> int:
     script_path = args.script_path or WRAPPER_PATH
     command = (
@@ -171,6 +218,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Directory containing <voice_id>/voice.yaml registries",
     )
+    parser.add_argument(
+        "--selection-file",
+        default=Path("~/.hermes/omnivoice-selection.json"),
+        type=Path,
+        help="User-level selected OmniVoice profile file",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     list_parser = subparsers.add_parser("list", help="List local OmniVoice profiles")
@@ -189,6 +242,15 @@ def build_parser() -> argparse.ArgumentParser:
     preview_parser.add_argument("--speed", default=None)
     preview_parser.add_argument("--timeout", default=180, type=int)
     preview_parser.set_defaults(func=command_preview)
+
+    set_parser = subparsers.add_parser("set", help="Set the selected local OmniVoice profile")
+    set_parser.add_argument("voice")
+    set_parser.add_argument("--json", action="store_true")
+    set_parser.set_defaults(func=command_set)
+
+    current_parser = subparsers.add_parser("current", help="Show the selected OmniVoice profile")
+    current_parser.add_argument("--json", action="store_true")
+    current_parser.set_defaults(func=command_current)
 
     config_parser = subparsers.add_parser("config", help="Print sample Hermes TTS config")
     config_parser.add_argument("voice")

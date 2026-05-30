@@ -89,6 +89,8 @@ python scripts/install-hermes-omnivoice-bridge.py \
 Generate a preview:
 
 ```bash
+python scripts/hermes-omnivoice-voices.py set narrator
+python scripts/hermes-omnivoice-voices.py current
 python scripts/hermes-omnivoice-voices.py preview marvin --out /tmp/marvin-preview.wav
 ```
 
