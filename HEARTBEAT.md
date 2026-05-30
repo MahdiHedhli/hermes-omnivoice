@@ -529,7 +529,7 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the local Studio helper checkpoint, then either run a bounded Studio
     container startup or improve packaging around the command-provider bridge.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 03:30 America/New_York
 - Completed:
@@ -577,6 +577,54 @@ path. Top-level handoff docs and example configs are now present.
     in a bounded run or improve the package handoff for installing the bridge
     into a real Hermes checkout.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 04:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `ca81b4c`.
+  - Confirmed acceptance still reports static MVP readiness PASS and live
+    backend readiness BLOCKED.
+  - Added `scripts/install-hermes-omnivoice-bridge.py`, a conservative handoff
+    installer for copying bridge scripts/docs into a real Hermes checkout or
+    staging directory.
+  - Installer supports `--dry-run`, refuses overwrites unless `--force` is
+    passed, rejects target path escapes, and copies safe examples only when
+    `--with-examples` is explicit.
+  - Added installer tests for dry-run behavior, overwrite refusal, optional
+    examples, and path escape rejection.
+  - Updated README, setup, and acceptance docs with the install workflow.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -12`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `sed -n ... scripts/omnivoice-acceptance.py`
+  - `sed -n ... scripts/hermes-omnivoice-voices.py`
+  - `sed -n ... README.md`
+  - `sed -n ... tests/test_omnivoice_tts.py`
+  - `chmod +x scripts/install-hermes-omnivoice-bridge.py`
+  - `python3 scripts/install-hermes-omnivoice-bridge.py --target-root <tmp>/hermes-agent --dry-run --json`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - Installer dry-run: PASS; reported 13 bridge files and copied nothing.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation now includes 47 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - Studio is not currently running on `127.0.0.1:3900`.
+  - No real OmniVoice backend command or `omnivoice` CLI is configured.
+  - No local voice profiles exist under `~/.hermes/voices/omnivoice`.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - A no-overwrite installer is the safest useful package handoff until the
+    actual Hermes checkout and TTS schema are available.
+- Next action:
+  - Commit the installer checkpoint, then continue toward either a bounded live
+    Studio run or a final package summary if no backend appears.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -608,6 +656,8 @@ path. Top-level handoff docs and example configs are now present.
   helper runs.
 - Track static MVP readiness separately from real-backend readiness so progress
   is not overstated when model-backed synthesis remains unavailable.
+- Prefer a no-overwrite, dry-run-first installer for handing the bridge to a
+  real Hermes checkout.
 
 ## Open follow-ups
 

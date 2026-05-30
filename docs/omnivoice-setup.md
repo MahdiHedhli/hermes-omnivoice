@@ -168,6 +168,20 @@ Docker Compose profile: cpu
 First startup can pull the Studio image and download model files. Keep those
 artifacts in Docker volumes or local caches; do not add them to this repo.
 
+## Install Into Hermes
+
+When the real Hermes checkout is available, stage the bridge files first:
+
+```bash
+python scripts/install-hermes-omnivoice-bridge.py \
+  --target-root /path/to/hermes-agent \
+  --dry-run
+```
+
+Then install without `--dry-run`. Existing files are not overwritten unless
+`--force` is passed. Add `--with-examples` when you want the sample Hermes
+config and safe voice templates copied too.
+
 Run the smoke test only after configuring a real backend command:
 
 ```bash

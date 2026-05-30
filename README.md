@@ -25,6 +25,8 @@ This repo is intentionally conservative:
   config for local voices.
 - `scripts/check-omnivoice-runtime.py`: read-only diagnostics for local backend,
   Studio, CLI, and voice registry availability.
+- `scripts/install-hermes-omnivoice-bridge.py`: copies bridge files into a real
+  Hermes checkout or staging directory without overwriting by default.
 - `scripts/omnivoice-studio-local.py`: helper for checking, fetching, starting,
   stopping, and inspecting loopback-only OmniVoice-Studio with Docker Compose.
 - `scripts/omnivoice-acceptance.py`: summarizes static MVP readiness and live
@@ -74,6 +76,14 @@ Check or start a local loopback-only Studio container:
 ```bash
 python scripts/omnivoice-studio-local.py check
 python scripts/omnivoice-studio-local.py start
+```
+
+Install the bridge into a real Hermes checkout or staging directory:
+
+```bash
+python scripts/install-hermes-omnivoice-bridge.py \
+  --target-root /path/to/hermes-agent \
+  --dry-run
 ```
 
 Generate a preview:

@@ -15,6 +15,14 @@ scripts/validate-omnivoice-bridge.sh
 python scripts/omnivoice-acceptance.py
 ```
 
+For handoff into a real Hermes checkout, dry-run the installer first:
+
+```bash
+python scripts/install-hermes-omnivoice-bridge.py \
+  --target-root /path/to/hermes-agent \
+  --dry-run
+```
+
 For a strict live-runtime check:
 
 ```bash

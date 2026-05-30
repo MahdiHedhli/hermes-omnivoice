@@ -27,6 +27,9 @@ CREATE_SCRIPT_PATH = (
 CHECK_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "check-omnivoice-runtime.py"
 )
+INSTALL_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "install-hermes-omnivoice-bridge.py"
+)
 STUDIO_LOCAL_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "omnivoice-studio-local.py"
 )
@@ -66,6 +69,14 @@ assert CHECK_SPEC is not None and CHECK_SPEC.loader is not None
 runtime_check = importlib.util.module_from_spec(CHECK_SPEC)
 sys.modules["check_omnivoice_runtime"] = runtime_check
 CHECK_SPEC.loader.exec_module(runtime_check)
+
+INSTALL_SPEC = importlib.util.spec_from_file_location(
+    "install_hermes_omnivoice_bridge", INSTALL_SCRIPT_PATH
+)
+assert INSTALL_SPEC is not None and INSTALL_SPEC.loader is not None
+installer = importlib.util.module_from_spec(INSTALL_SPEC)
+sys.modules["install_hermes_omnivoice_bridge"] = installer
+INSTALL_SPEC.loader.exec_module(installer)
 
 STUDIO_LOCAL_SPEC = importlib.util.spec_from_file_location(
     "omnivoice_studio_local", STUDIO_LOCAL_SCRIPT_PATH
@@ -816,6 +827,54 @@ class AcceptanceTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
             self.assertIn("Real backend ready: BLOCKED", output.getvalue())
+
+
+class InstallerTests(unittest.TestCase):
+    def test_installer_dry_run_reports_manifest_without_copying(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                result = installer.run(
+                    ["--target-root", str(target), "--dry-run", "--json"],
+                )
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertTrue(report["dry_run"])
+            self.assertEqual(report["files"], len(installer.BASE_MANIFEST))
+            self.assertFalse((target / "scripts" / "hermes-omnivoice-tts.py").exists())
+
+    def test_installer_copies_files_and_refuses_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                first = installer.run(["--target-root", str(target)])
+            with contextlib.redirect_stderr(io.StringIO()):
+                second = installer.run(["--target-root", str(target)])
+
+            self.assertEqual(first, 0)
+            self.assertEqual(second, 1)
+            self.assertTrue((target / "scripts" / "hermes-omnivoice-tts.py").is_file())
+
+    def test_installer_can_include_examples(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = installer.run(["--target-root", str(target), "--with-examples"])
+
+            self.assertEqual(result, 0)
+            self.assertTrue((target / "examples" / "hermes-tts-omnivoice.yaml").is_file())
+            self.assertTrue((target / "examples" / "voices" / "narrator" / "voice.yaml").is_file())
+
+    def test_installer_rejects_target_escape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(installer.InstallError, "escapes"):
+                installer.resolve_target(Path(tmp), "../outside")
 
 
 class VoiceCliTests(unittest.TestCase):
