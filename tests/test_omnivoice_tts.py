@@ -22,6 +22,7 @@ VOICES_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-voices.py"
 )
 FAKE_BACKEND_PATH = Path(__file__).resolve().parent / "fixtures" / "fake_omnivoice_backend.py"
+EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
 SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_tts", SCRIPT_PATH)
 assert SPEC is not None and SPEC.loader is not None
 omnivoice = importlib.util.module_from_spec(SPEC)
@@ -429,6 +430,21 @@ class VoiceCliTests(unittest.TestCase):
             self.assertIn("Preview written:", output.getvalue())
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
+
+
+class ExampleFileTests(unittest.TestCase):
+    def test_design_voice_example_validates(self) -> None:
+        loaded, voice_dir = omnivoice.load_voice_profile(EXAMPLES_DIR / "voices", "narrator")
+        validated = omnivoice.validate_voice_profile(loaded, voice_dir)
+
+        self.assertEqual(validated["id"], "narrator")
+        self.assertEqual(validated["consent"]["status"], "confirmed")
+
+    def test_clone_voice_example_keeps_missing_audio_out_of_repo(self) -> None:
+        loaded, voice_dir = omnivoice.load_voice_profile(EXAMPLES_DIR / "voices", "marvin")
+
+        with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "ref_audio is missing"):
+            omnivoice.validate_voice_profile(loaded, voice_dir)
 
 
 if __name__ == "__main__":

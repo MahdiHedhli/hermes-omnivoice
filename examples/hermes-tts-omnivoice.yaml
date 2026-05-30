@@ -1,0 +1,13 @@
+# Example only. Verify placeholder names against the real Hermes Agent TTS
+# schema before installing.
+tts:
+  provider: omnivoice
+  providers:
+    omnivoice:
+      type: command
+      command: "python /absolute/path/to/scripts/hermes-omnivoice-tts.py --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
+      voice: marvin
+      output_format: wav
+      timeout: 180
+      voice_compatible: true
+      max_text_length: 2000

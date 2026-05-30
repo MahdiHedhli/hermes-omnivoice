@@ -1,0 +1,13 @@
+id: narrator
+name: Narrator
+engine: omnivoice
+mode: design
+instruct: "calm narrator, clear delivery, neutral accent"
+language: en
+speed: 1.0
+consent:
+  status: confirmed
+  source: user_created
+  allowed_uses:
+    - personal_assistant
+    - local_generation

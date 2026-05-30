@@ -12,7 +12,7 @@ venv/
 *.flac
 *.ogg
 *.m4a
-voices/
+/voices/
 .hermes/
 
 # Model weights and inference caches.

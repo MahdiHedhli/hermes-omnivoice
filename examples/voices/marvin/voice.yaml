@@ -1,0 +1,14 @@
+id: marvin
+name: Marvin
+engine: omnivoice
+mode: clone
+ref_audio: ref.wav
+ref_text: "Reference transcript for the voice sample."
+language: en
+speed: 1.0
+consent:
+  status: confirmed
+  source: user_uploaded
+  allowed_uses:
+    - personal_assistant
+    - local_generation

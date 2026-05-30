@@ -9,7 +9,7 @@ writes valid WAV output through a local backend contract. It also includes a
 standalone voice helper for listing, inspecting, previewing, and printing Hermes
 command-provider config for local voices. A single validation script now reruns
 the full local bridge contract, including a mocked localhost Studio `/generate`
-path.
+path. Top-level handoff docs and example configs are now present.
 
 ## Previous heartbeat
 
@@ -253,7 +253,7 @@ path.
     OmniVoice-Studio smoke attempt or prepare a packaging/readme handoff for the
     command-provider MVP.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 00:30 America/New_York
 - Completed:
@@ -287,6 +287,54 @@ path.
   - Commit the Studio API contract test, then prepare a concise README/package
     handoff or attempt a real loopback Studio startup if runtime cost looks
     acceptable.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 01:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `d79c91e`.
+  - Added a top-level `README.md` with quick start, backend options, security
+    posture, limits, and doc links.
+  - Added `examples/hermes-tts-omnivoice.yaml` as a command-provider config
+    template.
+  - Added `examples/voices/marvin/voice.yaml` and
+    `examples/voices/narrator/voice.yaml` registry templates.
+  - Added tests that keep the design voice example valid and keep the clone
+    example from passing without a real `ref.wav`, so committed user audio does
+    not become normalized.
+  - Narrowed `.gitignore` from broad `voices/` to root-only `/voices/` so safe
+    examples are tracked while local voice material remains ignored.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `find . -maxdepth 3 -type f -not -path './.git/*' -print | sort`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `mkdir -p examples/voices/clone examples/voices/design`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `find examples -maxdepth 3 -type d -empty -print`
+  - `find . -type d -name __pycache__ -print`
+  - `rmdir examples/voices/design examples/voices/clone`
+  - `find . -type f \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.onnx' -o -name '*.pt' -o -name '*.pth' -o -name '*.safetensors' -o -name '.env' -o -name '.env.*' \) -print`
+  - `git diff --cached --stat`
+  - `git add .`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - `scripts/validate-omnivoice-bridge.sh`: PASS after staging.
+  - Validation script now includes 19 unit tests PASS with 1 real-backend
+    integration skip, py_compile PASS, fake-backend smoke PASS, unconfigured
+    smoke SKIP as expected, secret-pattern scan PASS, and `git diff --check`
+    PASS.
+- Blockers:
+  - No live OmniVoice-Studio service or real OmniVoice backend is configured, so
+    real synthesis quality is still unverified.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - A committed clone voice template should not include `ref.wav`; the missing
+    reference audio is expected and tested.
+- Next action:
+  - Commit the README/examples handoff checkpoint, then consider a lightweight
+    packaging/install script or a bounded real Studio startup probe.
 
 ## Decision log
 
