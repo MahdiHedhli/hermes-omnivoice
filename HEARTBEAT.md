@@ -15,7 +15,8 @@ now present. The optional direct OmniVoice CLI path targets the upstream
 to avoid surprise model downloads. A packaged Python API adapter can also call
 `OmniVoice.from_pretrained` through `HERMES_OMNIVOICE_COMMAND_JSON` when the
 local `omnivoice` package is installed. A dry-run/check-first environment helper
-now plans and inspects an isolated OmniVoice Python venv outside the repo.
+now plans and inspects an isolated OmniVoice Python venv outside the repo, and
+prefers supported Python 3.10-3.13 interpreters over too-new local defaults.
 
 ## Previous heartbeat
 
@@ -943,7 +944,7 @@ now plans and inspects an isolated OmniVoice Python venv outside the repo.
     isolated local environment for a real smoke test or start the loopback
     Studio image pull/build.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 07:00 America/New_York
 - Completed:
@@ -1015,6 +1016,79 @@ now plans and inspects an isolated OmniVoice Python venv outside the repo.
     OmniVoice environment or switch to a loopback Studio image pull/build for
     the first real synthesis smoke.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 07:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `432f763`.
+  - Confirmed the machine has `/opt/homebrew/bin/python3.11` and that `python3`
+    currently resolves to Python 3.14.4.
+  - Hardened `scripts/setup-omnivoice-python-env.py` so its default interpreter
+    selection prefers Python 3.10 through 3.13 and skips unsupported candidates.
+  - Added `--allow-unsupported-python` for deliberate overrides, but the default
+    setup path now fails fast when explicitly pointed at an unsupported Python.
+  - Verified dry-run setup now selects `/opt/homebrew/bin/python3.11`.
+  - Verified an explicit `/opt/homebrew/bin/python3` dry-run fails cleanly
+    because it is Python 3.14.4.
+  - Updated setup, handoff, integration, acceptance, and custom voice docs with
+    the supported interpreter range and `--python` guidance.
+  - Added tests for supported interpreter selection and unsupported interpreter
+    rejection.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat|OmniVoice-Studio" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `command -v python3.13 python3.12 python3.11 python3.10 python3`
+  - `python3 --version`
+  - `sed -n ... scripts/setup-omnivoice-python-env.py`
+  - `sed -n ... tests/test_omnivoice_tts.py`
+  - `python3 scripts/setup-omnivoice-python-env.py --venv-dir /tmp/hermes-omnivoice-python-env --dry-run --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --venv-dir /tmp/hermes-omnivoice-python-env --python /opt/homebrew/bin/python3 --dry-run`
+  - `python3 -m unittest tests.test_omnivoice_tts.PythonEnvSetupTests -v`
+  - `python3 scripts/setup-omnivoice-python-env.py --venv-dir /tmp/hermes-omnivoice-python-env-missing --check-only --json`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `git diff --stat`
+  - `git diff -- scripts/setup-omnivoice-python-env.py tests/test_omnivoice_tts.py docs/omnivoice-setup.md docs/omnivoice-mvp-handoff.md`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `find . -type d -name __pycache__ -print`
+  - `find . -type f \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.onnx' -o -name '*.pt' -o -name '*.pth' -o -name '*.safetensors' -o -name '.env' -o -name '.env.*' -o -name 'omnivoice-selection.json' \) -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `git diff --check`
+  - `git add .`
+  - `git diff --cached --stat`
+  - `git diff --cached --check`
+  - `git commit -m "fix: choose supported Python for OmniVoice setup"`
+- Tests:
+  - `python3 scripts/setup-omnivoice-python-env.py --venv-dir /tmp/hermes-omnivoice-python-env --dry-run --json`:
+    PASS; selected `/opt/homebrew/bin/python3.11`, reported Python 3.11.15,
+    and created no venv.
+  - Explicit unsupported Python dry-run with `/opt/homebrew/bin/python3`:
+    expected BLOCKED exit because it is Python 3.14.4.
+  - `python3 -m unittest tests.test_omnivoice_tts.PythonEnvSetupTests -v`: PASS,
+    5 tests.
+  - `python3 scripts/omnivoice-acceptance.py --json`: PASS; static MVP ready
+    with 21 required files, real backend not ready.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation includes 62 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - Studio image is not present locally, and no Studio container is running on
+    `127.0.0.1:3900`.
+  - No real OmniVoice backend command is configured.
+  - `omnivoice-infer` is not installed on `PATH`.
+  - The `omnivoice` Python package is not installed in this repo environment.
+  - No local voice profiles exist under `~/.hermes/voices/omnivoice`.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - Python 3.14 is too new for a predictable OmniVoice/PyTorch install path, so
+    setup should prefer the available Python 3.11 interpreter.
+- Next action:
+  - Commit the supported-Python setup guard, then create the isolated OmniVoice
+    Python environment with Python 3.11 or start the loopback Studio image
+    pull/build for the first real synthesis smoke.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -1060,6 +1134,8 @@ now plans and inspects an isolated OmniVoice Python venv outside the repo.
   wrapper does not import or initialize model dependencies unless configured.
 - Use dry-run/check-only environment setup before installing OmniVoice runtime
   dependencies so package and cache behavior remain visible.
+- Prefer Python 3.10-3.13 for the OmniVoice Python environment; reject newer
+  interpreters by default because model runtime wheels may not be available.
 
 ## Open follow-ups
 
@@ -1072,5 +1148,7 @@ now plans and inspects an isolated OmniVoice Python venv outside the repo.
   Python adapter with a consented designed or cloned voice profile.
 - Use `scripts/setup-omnivoice-python-env.py` for the isolated install/check
   flow before running a real Python API smoke test.
+- Create the isolated Python environment with `/opt/homebrew/bin/python3.11`
+  rather than the local `python3` 3.14 default.
 - Locate the actual Hermes Agent source before wiring native `/voice` commands.
 - Consider a native Hermes provider only after command-provider synthesis works.

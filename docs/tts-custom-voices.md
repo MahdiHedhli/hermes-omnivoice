@@ -104,6 +104,9 @@ python scripts/setup-omnivoice-python-env.py --dry-run
 python scripts/setup-omnivoice-python-env.py --check-only
 ```
 
+Use `--python` with a Python 3.10 through 3.13 interpreter if the default
+`python3` on the machine is newer than the current OmniVoice runtime stack.
+
 ## Operational Notes
 
 - Store voice profiles outside the repo under `~/.hermes/voices/omnivoice`.

@@ -679,12 +679,70 @@ class PythonEnvSetupTests(unittest.TestCase):
             self.assertEqual(report["status"], "planned")
             self.assertFalse(venv_dir.exists())
             self.assertEqual(report["package"], "omnivoice")
+            self.assertTrue(report["setup_python_supported"])
             self.assertIn("HERMES_OMNIVOICE_COMMAND_JSON", report["env"])
             command = json.loads(report["env"]["HERMES_OMNIVOICE_COMMAND_JSON"])
             self.assertEqual(command[0], str(setup_env.venv_python(venv_dir.resolve())))
             self.assertTrue(command[1].endswith("hermes-omnivoice-python-adapter.py"))
             self.assertIn("{ref_audio}", command)
             self.assertIn("{instruct}", command)
+
+    def test_setup_env_prefers_supported_python_candidate(self) -> None:
+        def fake_which(name: str) -> str | None:
+            return {
+                "python3.11": "/opt/test/bin/python3.11",
+                "python3": "/opt/test/bin/python3.14",
+            }.get(name)
+
+        def fake_version(path: str) -> tuple[int, int, int]:
+            if path.endswith("python3.11"):
+                return 3, 11, 9
+            return 3, 14, 4
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with unittest.mock.patch.object(setup_env.shutil, "which", side_effect=fake_which):
+                with unittest.mock.patch.object(
+                    setup_env,
+                    "detect_python_version",
+                    side_effect=fake_version,
+                ):
+                    with contextlib.redirect_stdout(output):
+                        result = setup_env.run(
+                            [
+                                "--venv-dir",
+                                str(Path(tmp) / "omnivoice-env"),
+                                "--dry-run",
+                                "--json",
+                            ]
+                        )
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertEqual(report["setup_python"], "/opt/test/bin/python3.11")
+            self.assertEqual(report["setup_python_version"], "3.11.9")
+
+    def test_setup_env_rejects_unsupported_python_without_override(self) -> None:
+        errors = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            with unittest.mock.patch.object(
+                setup_env,
+                "detect_python_version",
+                return_value=(3, 14, 4),
+            ):
+                with contextlib.redirect_stderr(errors):
+                    result = setup_env.run(
+                        [
+                            "--venv-dir",
+                            str(Path(tmp) / "omnivoice-env"),
+                            "--python",
+                            "/opt/test/bin/python3.14",
+                            "--dry-run",
+                        ]
+                    )
+
+        self.assertEqual(result, 1)
+        self.assertIn("outside the supported setup range", errors.getvalue())
 
     def test_setup_env_check_only_reports_missing_venv(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

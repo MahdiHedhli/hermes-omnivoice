@@ -43,7 +43,9 @@ importing at least one consented voice profile under
 
 Use `python scripts/setup-omnivoice-python-env.py --dry-run` before creating
 the local Python backend environment. Use `--check-only --require-ready` after
-installation when the Python API path should be considered ready.
+installation when the Python API path should be considered ready. If the dry-run
+selects an unsupported Python, rerun it with `--python` pointing at Python 3.10
+through 3.13.
 
 Do not treat fake-backend tests as real synthesis acceptance. They only prove
 wrapper I/O and WAV validation.

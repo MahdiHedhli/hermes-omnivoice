@@ -130,7 +130,9 @@ For Python API mode, use `HERMES_OMNIVOICE_COMMAND_JSON` to call
 fields from the registry placeholders, and writes WAV output with `soundfile`.
 Use `scripts/setup-omnivoice-python-env.py --dry-run` before installing
 OmniVoice dependencies so venv, package, and command-provider settings are
-visible before any large package or model downloads.
+visible before any large package or model downloads. The helper prefers Python
+3.10 through 3.13 because model runtime dependencies may lag the newest local
+Python release.
 
 ## OmniVoice-Studio API Findings
 

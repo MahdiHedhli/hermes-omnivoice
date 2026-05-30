@@ -140,6 +140,14 @@ dry-run:
 python scripts/setup-omnivoice-python-env.py --dry-run
 ```
 
+The helper prefers Python 3.10 through 3.13 when multiple interpreters are
+available. If `python3` points at a newer interpreter, pass an explicit
+supported interpreter:
+
+```bash
+python scripts/setup-omnivoice-python-env.py --python /opt/homebrew/bin/python3.11 --dry-run
+```
+
 Then install when the planned venv path and package source look correct:
 
 ```bash

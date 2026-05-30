@@ -119,6 +119,10 @@ python scripts/setup-omnivoice-python-env.py --dry-run
 python scripts/setup-omnivoice-python-env.py
 ```
 
+The helper chooses Python 3.10 through 3.13 when available. On this machine,
+`python3` may point at a newer interpreter, so pass `--python` if the dry-run
+shows an unsupported setup Python.
+
 For the official OmniVoice CLI:
 
 ```bash
