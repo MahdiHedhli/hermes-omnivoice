@@ -142,6 +142,10 @@ def local_image_exists(image: str, command_timeout: int | None = None) -> bool:
     return True
 
 
+def pull_image(image: str, command_timeout: int | None = None) -> None:
+    run_command(["docker", "pull", image], capture=True, timeout=command_timeout)
+
+
 def preflight_start(args: argparse.Namespace, config: dict) -> None:
     image = service_image(config, args.profile)
     if args.no_build and args.pull == "never" and image and not local_image_exists(
@@ -152,6 +156,10 @@ def preflight_start(args: argparse.Namespace, config: dict) -> None:
             f"Studio image is not available locally: {image}; "
             "allow a pull or build before using --pull never --no-build"
         )
+    if args.no_build and args.pull in {"always", "missing"} and image:
+        image_exists = local_image_exists(image, args.command_timeout)
+        if args.pull == "always" or not image_exists:
+            pull_image(image, args.command_timeout)
 
 
 def compose_args(args: argparse.Namespace) -> list[str]:

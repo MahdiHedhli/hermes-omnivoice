@@ -258,6 +258,11 @@ failed startup attempts run `docker compose down` by default. Add
 `--remove-volumes-on-fail` only when you are sure no existing Studio volume
 data should be preserved.
 
+With `--no-build --pull missing` or `--no-build --pull always`, the helper
+performs the bounded image pull before `docker compose up`. This keeps registry
+or platform failures out of Compose startup; for example, a missing image
+manifest fails before Compose creates containers, networks, or volumes.
+
 ## Install Into Hermes
 
 When the real Hermes checkout is available, stage the bridge files first:

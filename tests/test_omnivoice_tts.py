@@ -1375,6 +1375,115 @@ class StudioLocalTests(unittest.TestCase):
 
         run_command.assert_not_called()
 
+    def test_no_build_pull_missing_pulls_image_before_compose_up(self) -> None:
+        args = unittest.mock.Mock()
+        args.studio_dir = Path("/tmp/omnivoice-studio-src")
+        args.profile = "cpu"
+        args.fetch = False
+        args.port = 3900
+        args.command_timeout = 10
+        args.no_build = True
+        args.pull = "missing"
+        args.cleanup_on_fail = True
+        args.remove_volumes_on_fail = False
+        args.studio_url = "http://127.0.0.1:3900"
+        config = {
+            "services": {
+                "omnivoice": {
+                    "image": "ghcr.io/debpalash/omnivoice-studio:latest",
+                    "ports": [
+                        {
+                            "host_ip": "127.0.0.1",
+                            "target": 3900,
+                            "published": "3900",
+                        }
+                    ],
+                }
+            }
+        }
+        commands: list[list[str]] = []
+
+        def fake_run_command(command: list[str], **_kwargs) -> str:
+            commands.append(command)
+            return ""
+
+        with unittest.mock.patch.object(studio_local, "require_binary", return_value="/usr/bin/docker"), \
+            unittest.mock.patch.object(
+                studio_local,
+                "compose_file",
+                return_value=Path("/tmp/omnivoice-studio-src/deploy/docker-compose.yml"),
+            ), unittest.mock.patch.object(
+                studio_local,
+                "compose_config",
+                return_value=config,
+            ), unittest.mock.patch.object(
+                studio_local,
+                "local_image_exists",
+                return_value=False,
+            ), unittest.mock.patch.object(studio_local, "run_command", fake_run_command):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    result = studio_local.command_start(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            commands[0],
+            ["docker", "pull", "ghcr.io/debpalash/omnivoice-studio:latest"],
+        )
+        self.assertIn("compose", commands[1])
+
+    def test_no_build_pull_missing_skips_pull_when_local_image_exists(self) -> None:
+        args = unittest.mock.Mock()
+        args.studio_dir = Path("/tmp/omnivoice-studio-src")
+        args.profile = "cpu"
+        args.fetch = False
+        args.port = 3900
+        args.command_timeout = 10
+        args.no_build = True
+        args.pull = "missing"
+        args.cleanup_on_fail = True
+        args.remove_volumes_on_fail = False
+        args.studio_url = "http://127.0.0.1:3900"
+        config = {
+            "services": {
+                "omnivoice": {
+                    "image": "ghcr.io/debpalash/omnivoice-studio:latest",
+                    "ports": [
+                        {
+                            "host_ip": "127.0.0.1",
+                            "target": 3900,
+                            "published": "3900",
+                        }
+                    ],
+                }
+            }
+        }
+        commands: list[list[str]] = []
+
+        def fake_run_command(command: list[str], **_kwargs) -> str:
+            commands.append(command)
+            return ""
+
+        with unittest.mock.patch.object(studio_local, "require_binary", return_value="/usr/bin/docker"), \
+            unittest.mock.patch.object(
+                studio_local,
+                "compose_file",
+                return_value=Path("/tmp/omnivoice-studio-src/deploy/docker-compose.yml"),
+            ), unittest.mock.patch.object(
+                studio_local,
+                "compose_config",
+                return_value=config,
+            ), unittest.mock.patch.object(
+                studio_local,
+                "local_image_exists",
+                return_value=True,
+            ), unittest.mock.patch.object(studio_local, "run_command", fake_run_command):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    result = studio_local.command_start(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(len(commands), 1)
+        self.assertIn("compose", commands[0])
+
     def test_run_command_timeout_fails_cleanly(self) -> None:
         with self.assertRaisesRegex(studio_local.StudioLocalError, "timed out"):
             studio_local.run_command(

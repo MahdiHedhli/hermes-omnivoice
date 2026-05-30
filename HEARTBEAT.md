@@ -39,7 +39,9 @@ bounded inspection grace window when a later broad root consumes the scan
 timeout, so acceptance evidence stays useful without unbounded filesystem
 traversal. The local Studio helper now preflights no-pull/no-build startup
 against local Docker image availability and fails before creating Compose
-resources when the image is missing.
+resources when the image is missing. It also performs bounded image pulls
+before Compose startup for no-build pull-enabled runs, so registry or platform
+failures do not create transient Compose resources.
 
 ## Previous heartbeat
 
@@ -1567,7 +1569,7 @@ resources when the image is missing.
     loopback Studio startup with the bounded helper or prepare final handoff
     notes around the remaining external blockers.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 12:30 America/New_York
 - Completed:
@@ -1640,6 +1642,69 @@ resources when the image is missing.
     bounded image pull/build window or prepare final handoff notes around the
     external blockers.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 13:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `d741453`.
+  - Re-ran acceptance and runtime checks. Static MVP remains ready; real backend
+    and Hermes source readiness remain blocked in the default environment.
+  - Rechecked the cached Studio checkout; Compose config remains loopback-only
+    and the local Studio health check remains unreachable.
+  - Attempted a bounded no-fetch/no-build Studio start with `--pull missing`.
+    The pull failed quickly because `ghcr.io/debpalash/omnivoice-studio:latest`
+    has no `linux/arm64/v8` manifest for this Mac.
+  - Confirmed there were no leftover Studio containers, networks, or volumes
+    after the failed pull/start attempt.
+  - Hardened `scripts/omnivoice-studio-local.py` so no-build pull-enabled runs
+    perform the bounded `docker pull` before `docker compose up`.
+  - Updated the pull helper to capture Docker pull errors and return them
+    through the helper's own error path.
+  - Added tests proving `--no-build --pull missing` pulls before Compose when
+    the image is absent and skips that pull when the image is already local.
+  - Updated setup and Studio bridge docs to describe pre-Compose image pulls and
+    platform/registry failures.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/omnivoice-acceptance.py --source-root /Users/mhedhli/Documents/Coding/hermes --source-root /Users/mhedhli/Documents/Coding --source-scan-timeout 5 --source-max-candidates 20 --json`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/omnivoice-studio-local.py check --studio-dir /tmp/omnivoice-studio-src --profile cpu --command-timeout 30 --json`
+  - `tail -n 190 HEARTBEAT.md`
+  - `python3 scripts/omnivoice-studio-local.py start --studio-dir /tmp/omnivoice-studio-src --profile cpu --no-fetch --no-build --pull missing --command-timeout 180 --remove-volumes-on-fail`
+  - `docker ps -a --format ... | rg -i 'omnivoice|studio|hermes'`
+  - `docker volume ls --format ... | rg -i 'omnivoice|studio|deploy'`
+  - `docker network ls --format ... | rg -i 'omnivoice|studio|deploy'`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioLocalTests -v`
+  - `python3 -m py_compile scripts/omnivoice-studio-local.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioLocalTests -v`: PASS,
+    10 tests.
+  - `python3 -m py_compile scripts/omnivoice-studio-local.py tests/test_omnivoice_tts.py`:
+    PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 76 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under `/Users/mhedhli/Documents/Coding/hermes`.
+  - The published OmniVoice-Studio image does not provide a `linux/arm64/v8`
+    manifest, so image-pull startup is blocked on this Mac unless an alternate
+    platform, build path, or compatible image is used.
+  - No persistent local voice profiles exist under
+    `~/.hermes/voices/omnivoice`; real smokes continue to use temporary
+    consented profiles.
+- Assumptions:
+  - Pull failures should happen before Compose startup so the helper does not
+    create avoidable Docker resources on unsupported platforms.
+  - Building from source may be the next Studio path on Apple Silicon, but it
+    should remain bounded by the helper's command timeout.
+- Next action:
+  - Commit the pull-before-Compose hardening, then either attempt a bounded
+    source build or prepare final handoff notes around the remaining external
+    blockers.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -1703,6 +1768,9 @@ resources when the image is missing.
   hits its timeout; a truncated search should degrade the report, not erase it.
 - Preflight local Studio no-pull/no-build startup against Docker image
   availability before invoking Compose.
+- Pull Studio images explicitly before Compose startup for no-build pull-enabled
+  runs, so registry and platform failures happen before Compose resources are
+  created.
 
 ## Open follow-ups
 

@@ -102,5 +102,8 @@ If the Studio image is missing locally, the helper fails before invoking
 `docker compose up`, avoiding transient Compose resources. Other failed startup
 attempts clean up containers and networks by default while preserving volumes
 unless `--remove-volumes-on-fail` is explicitly set.
+For `--no-build --pull missing` and `--no-build --pull always`, the helper runs
+the bounded image pull before Compose startup. Registry or platform failures
+therefore fail before Compose creates transient resources.
 Docker/Git commands are bounded by `--command-timeout` seconds, defaulting to
 900, so a stalled image pull or build does not block a heartbeat indefinitely.
