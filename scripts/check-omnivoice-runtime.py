@@ -91,11 +91,14 @@ def check_studio(studio_url: str, timeout: int, allow_remote: bool) -> dict:
     return {"status": "reachable", "url": base_url, "profile_count": profile_count}
 
 
-def check_omnivoice_cli() -> dict:
-    path = shutil.which("omnivoice")
+def check_omnivoice_cli(env: dict[str, str]) -> dict:
+    path = shutil.which("omnivoice-infer")
     return {
         "status": "found" if path else "missing",
         "path": path or "",
+        "executable": "omnivoice-infer",
+        "auto_enabled": env.get("HERMES_OMNIVOICE_AUTO_CLI") == "1",
+        "model": env.get("HERMES_OMNIVOICE_MODEL", "k2-fsa/OmniVoice"),
     }
 
 
@@ -116,7 +119,7 @@ def build_report(args: argparse.Namespace, env: dict[str, str]) -> dict:
     return {
         "studio": check_studio(studio_url, args.timeout, args.allow_remote_studio),
         "backend_command": check_backend_command(env),
-        "omnivoice_cli": check_omnivoice_cli(),
+        "omnivoice_cli": check_omnivoice_cli(env),
         "voices_dir": check_voices_dir(args.voices_dir),
     }
 
@@ -143,6 +146,8 @@ def print_human(report: dict) -> None:
     print(f"- OmniVoice CLI: {cli['status']}")
     if cli.get("path"):
         print(f"  Path: {cli['path']}")
+    print(f"  Executable: {cli['executable']}")
+    print(f"  Auto CLI enabled: {cli['auto_enabled']}")
 
     voices = report["voices_dir"]
     print(f"- Voices dir: {voices['status']}")

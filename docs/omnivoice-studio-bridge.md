@@ -29,12 +29,14 @@ The wrapper consumes a stable local registry and can synthesize through either:
 - `HERMES_OMNIVOICE_STUDIO_URL=http://127.0.0.1:3900`
 - `HERMES_OMNIVOICE_COMMAND_JSON`
 - `HERMES_OMNIVOICE_COMMAND`
+- `HERMES_OMNIVOICE_AUTO_CLI=1` with `omnivoice-infer` on `PATH`
 
 The command path can point to:
 
 - an OmniVoice CLI adapter
 - a Python module importing OmniVoice
 - a local OmniVoice-Studio FastAPI endpoint adapter
+- the official `omnivoice-infer` CLI when auto CLI mode is explicitly enabled
 
 This avoids taking a dependency on Studio's database layout before its backend
 API is inspected.

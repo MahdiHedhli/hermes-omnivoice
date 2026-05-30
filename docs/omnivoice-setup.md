@@ -104,6 +104,20 @@ export HERMES_OMNIVOICE_COMMAND_JSON='[
 ]'
 ```
 
+Option C: use the official OmniVoice CLI directly. Install OmniVoice so
+`omnivoice-infer` is on `PATH`, then opt in:
+
+```bash
+export HERMES_OMNIVOICE_AUTO_CLI=1
+export HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice
+```
+
+The wrapper maps clone profiles to `omnivoice-infer --ref_audio --ref_text`
+and designed profiles to `omnivoice-infer --instruct`. Set
+`HERMES_OMNIVOICE_DEVICE=mps`, `cuda:0`, or another supported device to
+override OmniVoice's device autodetection. First use may download model files;
+keep those caches outside this repo.
+
 Then run:
 
 ```bash
@@ -141,7 +155,8 @@ python scripts/check-omnivoice-runtime.py
 The runtime check does not execute configured backend commands and does not
 print command arguments. It only reports whether a backend command is configured,
 whether a loopback Studio `/profiles` endpoint is reachable, whether an
-`omnivoice` CLI is on `PATH`, and how many local registry profiles exist.
+`omnivoice-infer` CLI is on `PATH`, whether auto CLI mode is enabled, and how
+many local registry profiles exist.
 
 ## Local Studio With Docker
 
@@ -192,14 +207,15 @@ Then install without `--dry-run`. Existing files are not overwritten unless
 `--force` is passed. Add `--with-examples` when you want the sample Hermes
 config and safe voice templates copied too.
 
-Run the smoke test only after configuring a real backend command:
+Run the smoke test only after configuring a real backend command, Studio URL,
+or opt-in CLI backend:
 
 ```bash
 HERMES_OMNIVOICE_COMMAND_JSON='[...]' scripts/test-omnivoice-tts.sh
 ```
 
-Without a backend command, the smoke test exits `77` to mark the integration as
-skipped rather than failed.
+Without a backend, the smoke test exits `77` to mark the integration as skipped
+rather than failed.
 
 For CI or local contract testing without model weights, use the deterministic
 test fixture backend:

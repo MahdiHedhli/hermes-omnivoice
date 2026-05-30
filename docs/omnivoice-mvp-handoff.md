@@ -10,6 +10,8 @@ The bridge is ready as a command-provider MVP package. It includes:
 - Consent and reference-audio validation for cloned voices.
 - Localhost-only Studio API support through `HERMES_OMNIVOICE_STUDIO_URL`.
 - Backend command support through `HERMES_OMNIVOICE_COMMAND_JSON`.
+- Opt-in official CLI support through `HERMES_OMNIVOICE_AUTO_CLI=1` and
+  `omnivoice-infer`.
 - Runtime diagnostics, acceptance checks, deterministic contract tests, and a
   dry-run-first installer for a real Hermes checkout.
 
@@ -82,6 +84,16 @@ export HERMES_OMNIVOICE_COMMAND_JSON='[
 ]'
 ```
 
+For the official OmniVoice CLI:
+
+```bash
+export HERMES_OMNIVOICE_AUTO_CLI=1
+export HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice
+```
+
+This uses `omnivoice-infer` and passes clone profiles as `--ref_audio` plus
+`--ref_text`, or designed profiles as `--instruct`.
+
 Studio must stay on loopback unless it is explicitly protected by
 authentication. Do not expose an unauthenticated Studio API to the LAN.
 
@@ -126,7 +138,8 @@ python scripts/hermes-omnivoice-voices.py preview narrator --out /tmp/narrator.w
 
 - No local Studio service is running on `127.0.0.1:3900`.
 - No local Studio image is present for a no-pull startup probe.
-- No real OmniVoice backend command or `omnivoice` CLI is configured.
+- No real OmniVoice backend command is configured and `omnivoice-infer` is not
+  available as an enabled local CLI backend.
 - No local consented voice profiles exist under
   `~/.hermes/voices/omnivoice`.
 - The real Hermes Agent source is not present in this checkout, so native

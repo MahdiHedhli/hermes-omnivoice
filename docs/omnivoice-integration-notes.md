@@ -27,7 +27,7 @@ Use a local voice registry and explicit backend command configuration:
 Hermes Agent
   -> command TTS provider
   -> scripts/hermes-omnivoice-tts.py
-  -> HERMES_OMNIVOICE_COMMAND_JSON or HERMES_OMNIVOICE_COMMAND
+  -> HERMES_OMNIVOICE_COMMAND_JSON, HERMES_OMNIVOICE_COMMAND, or omnivoice-infer
   -> OmniVoice or OmniVoice-Studio local backend
   -> output WAV returned to Hermes
 ```
@@ -114,6 +114,12 @@ Available placeholders:
 
 `HERMES_OMNIVOICE_COMMAND` is also supported for a shell-style string, but the
 wrapper still executes without `shell=True`.
+
+The upstream OmniVoice package exposes `omnivoice-infer` as its single-item
+inference CLI. The wrapper's `HERMES_OMNIVOICE_AUTO_CLI=1` path is opt-in and
+uses that executable with `--text`, `--output`, `--speed`, optional
+`--language`, `--device`, and either `--ref_audio`/`--ref_text` for clone
+profiles or `--instruct` for designed profiles.
 
 ## OmniVoice-Studio API Findings
 

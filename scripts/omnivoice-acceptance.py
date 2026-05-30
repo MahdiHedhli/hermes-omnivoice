@@ -57,7 +57,10 @@ def check_required_files(root: Path) -> dict:
 def evaluate_runtime(runtime_report: dict) -> dict:
     studio_ready = runtime_report["studio"]["status"] == "reachable"
     command_ready = runtime_report["backend_command"]["status"] == "configured"
-    cli_ready = runtime_report["omnivoice_cli"]["status"] == "found"
+    cli_ready = (
+        runtime_report["omnivoice_cli"]["status"] == "found"
+        and runtime_report["omnivoice_cli"].get("auto_enabled") is True
+    )
     voices_ready = runtime_report["voices_dir"]["profile_count"] > 0
     return {
         "backend_ready": studio_ready or command_ready or cli_ready,

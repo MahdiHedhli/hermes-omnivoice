@@ -107,9 +107,11 @@ Use exactly one of these local backend paths:
 - `HERMES_OMNIVOICE_STUDIO_URL=http://127.0.0.1:3900`
 - `HERMES_OMNIVOICE_COMMAND_JSON='[...]'`
 - `HERMES_OMNIVOICE_COMMAND='...'`
+- `HERMES_OMNIVOICE_AUTO_CLI=1` with `omnivoice-infer` on `PATH`
 
 Prefer `HERMES_OMNIVOICE_COMMAND_JSON` for custom adapters because it avoids
-shell quoting hazards.
+shell quoting hazards. The auto CLI path is opt-in because the first
+`omnivoice-infer` run may download model files.
 
 ## Current Limits
 

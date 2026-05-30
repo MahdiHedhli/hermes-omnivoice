@@ -203,9 +203,11 @@ def build_backend_command(
     output_path: Path,
     speed: str,
 ) -> list[str]:
+    text = text_file.read_text(encoding="utf-8")
     mapping = {
         "text_file": str(text_file),
         "input_path": str(text_file),
+        "text": text,
         "out": str(output_path),
         "output_path": str(output_path),
         "voice": voice_id,
@@ -233,24 +235,42 @@ def build_backend_command(
         quoted = {key: shlex.quote(value) for key, value in mapping.items()}
         return shlex.split(string_template.format_map(quoted))
 
-    omnivoice_bin = shutil.which("omnivoice")
+    omnivoice_bin = shutil.which("omnivoice-infer")
     if omnivoice_bin and env.get("HERMES_OMNIVOICE_AUTO_CLI") == "1":
-        return [
+        command = [
             omnivoice_bin,
-            "tts",
-            "--text-file",
-            str(text_file),
-            "--out",
+            "--model",
+            env.get("HERMES_OMNIVOICE_MODEL", "k2-fsa/OmniVoice"),
+            "--text",
+            text,
+            "--output",
             str(output_path),
-            "--voice",
-            voice_id,
             "--speed",
             speed,
         ]
+        language = str(profile.get("language", "")).strip()
+        if language:
+            command.extend(["--language", language])
+        device = env.get("HERMES_OMNIVOICE_DEVICE", "").strip()
+        if device:
+            command.extend(["--device", device])
+        if profile.get("mode") == "clone":
+            command.extend(
+                [
+                    "--ref_audio",
+                    str(profile["ref_audio_path"]),
+                    "--ref_text",
+                    str(profile.get("ref_text", "")),
+                ]
+            )
+        else:
+            command.extend(["--instruct", str(profile.get("instruct", ""))])
+        return command
 
     raise OmniVoiceConfigError(
         "no OmniVoice backend configured; set HERMES_OMNIVOICE_COMMAND_JSON "
-        "or HERMES_OMNIVOICE_COMMAND"
+        "or HERMES_OMNIVOICE_COMMAND, or install omnivoice-infer and set "
+        "HERMES_OMNIVOICE_AUTO_CLI=1"
     )
 
 

@@ -10,7 +10,9 @@ standalone voice helper for listing, inspecting, previewing, and printing Hermes
 command-provider config for local voices. A single validation script now reruns
 the full local bridge contract, including a mocked localhost Studio `/generate`
 path. Top-level handoff docs, an MVP package handoff, and example configs are
-now present.
+now present. The optional direct OmniVoice CLI path targets the upstream
+`omnivoice-infer` executable and is gated behind `HERMES_OMNIVOICE_AUTO_CLI=1`
+to avoid surprise model downloads.
 
 ## Previous heartbeat
 
@@ -737,7 +739,7 @@ now present.
     whether to start the full Studio image pull/build or keep polishing final
     handoff docs.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 05:30 America/New_York
 - Completed:
@@ -798,6 +800,80 @@ now present.
   - Commit the MVP handoff checkpoint, then decide whether to start a full
     Studio image pull/build or wait for a real Hermes Agent source/backend path.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 06:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `357b1c3`.
+  - Cloned and inspected upstream `k2-fsa/OmniVoice` in `/tmp/omnivoice-src`.
+  - Confirmed the official single-item CLI is `omnivoice-infer`, with `--text`,
+    `--output`, `--ref_audio`, `--ref_text`, `--instruct`, `--language`,
+    `--speed`, `--model`, and `--device` options.
+  - Fixed the wrapper's optional auto-CLI path to use `omnivoice-infer` instead
+    of the speculative `omnivoice tts` command.
+  - Kept auto CLI opt-in through `HERMES_OMNIVOICE_AUTO_CLI=1` so merely having
+    the CLI installed does not trigger model downloads.
+  - Updated runtime diagnostics and acceptance logic so CLI readiness requires
+    both `omnivoice-infer` on `PATH` and explicit auto-CLI opt-in.
+  - Updated docs and smoke-test skip behavior for the official CLI path.
+  - Added tests for clone/design `omnivoice-infer` command construction and
+    runtime CLI auto-gate reporting.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -5`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat|OmniVoice-Studio" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `sed -n ... HEARTBEAT.md`
+  - `sed -n ... scripts/hermes-omnivoice-tts.py`
+  - `if [ -d /tmp/omnivoice-src/.git ]; then git -C /tmp/omnivoice-src status --short --branch; else printf 'missing\n'; fi`
+  - `git clone --depth 1 https://github.com/k2-fsa/OmniVoice /tmp/omnivoice-src`
+  - `git -C /tmp/omnivoice-src status --short --branch`
+  - `find /tmp/omnivoice-src -maxdepth 3 -type f ...`
+  - `rg -n "argparse|click|typer|fire|if __name__|def main|tts|infer|synth|clone|voice|ref_audio|prompt|audio_prompt|save|wav|torchaudio|soundfile|sf\\.write|write_wav" /tmp/omnivoice-src -g '!*.ipynb'`
+  - `sed -n ... /tmp/omnivoice-src/README.md`
+  - `sed -n ... /tmp/omnivoice-src/omnivoice/cli/infer.py`
+  - `sed -n ... /tmp/omnivoice-src/pyproject.toml`
+  - `sed -n ... /tmp/omnivoice-src/omnivoice/models/omnivoice.py`
+  - `sed -n ... scripts/check-omnivoice-runtime.py`
+  - `rg -n "AUTO_CLI|omnivoice_cli|omnivoice|HERMES_OMNIVOICE_MODEL|backend command|HERMES_OMNIVOICE_COMMAND" README.md docs scripts tests examples`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `git diff --stat`
+  - `git diff -- scripts/hermes-omnivoice-tts.py scripts/check-omnivoice-runtime.py scripts/omnivoice-acceptance.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `find . -type d -name __pycache__ -print`
+  - `find . -type f \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.onnx' -o -name '*.pt' -o -name '*.pth' -o -name '*.safetensors' -o -name '.env' -o -name '.env.*' -o -name 'omnivoice-selection.json' \) -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `git diff --check`
+  - `git add .`
+  - `git diff --cached --stat`
+  - `git diff --cached --check`
+  - `git commit -m "fix: use official OmniVoice inference CLI"`
+- Tests:
+  - `python3 scripts/omnivoice-acceptance.py --json`: PASS; static MVP ready
+    with 19 required files, real backend not ready.
+  - `python3 scripts/check-omnivoice-runtime.py --json`: PASS; reports no
+    Studio URL, no backend command, no `omnivoice-infer`, auto CLI disabled,
+    and no local voices directory.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation includes 54 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - Studio image is not present locally, and no Studio container is running on
+    `127.0.0.1:3900`.
+  - No real OmniVoice backend command is configured.
+  - `omnivoice-infer` is not installed on `PATH`.
+  - No local voice profiles exist under `~/.hermes/voices/omnivoice`.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - The official CLI path should stay opt-in because `omnivoice-infer` may
+    download model files on first use.
+- Next action:
+  - Commit the official CLI correction, then either install OmniVoice in a local
+    environment for a real smoke test or start the loopback Studio image
+    pull/build.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -837,12 +913,15 @@ now present.
   model-backed containers.
 - Keep a single MVP handoff page in the package so install and live-readiness
   work does not depend on reading the full heartbeat history.
+- Use upstream `omnivoice-infer` for direct CLI synthesis and require explicit
+  `HERMES_OMNIVOICE_AUTO_CLI=1` opt-in before the wrapper invokes it.
 
 ## Open follow-ups
 
 - Locate or clone the actual Hermes Agent source and verify the TTS schema.
 - Start a local loopback Studio container and run the Studio importer against a
   live local Studio service.
-- Configure a real OmniVoice backend command and run `scripts/test-omnivoice-tts.sh`.
+- Configure a real OmniVoice backend command or install `omnivoice-infer`, then
+  run `scripts/test-omnivoice-tts.sh`.
 - Locate the actual Hermes Agent source before wiring native `/voice` commands.
 - Consider a native Hermes provider only after command-provider synthesis works.

@@ -26,6 +26,7 @@ set +e
 env -u HERMES_OMNIVOICE_COMMAND_JSON \
   -u HERMES_OMNIVOICE_COMMAND \
   -u HERMES_OMNIVOICE_STUDIO_URL \
+  -u HERMES_OMNIVOICE_AUTO_CLI \
   scripts/test-omnivoice-tts.sh
 skip_status=$?
 set -e

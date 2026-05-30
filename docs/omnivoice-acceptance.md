@@ -35,8 +35,9 @@ python scripts/omnivoice-acceptance.py --require-real-backend
 
 Current expected blocker on a fresh machine is real backend readiness. That is
 resolved by starting loopback-only OmniVoice-Studio or configuring a local
-OmniVoice command, then creating or importing at least one consented voice
-profile under `~/.hermes/voices/omnivoice`.
+OmniVoice command, or by installing `omnivoice-infer` and setting
+`HERMES_OMNIVOICE_AUTO_CLI=1`, then creating or importing at least one
+consented voice profile under `~/.hermes/voices/omnivoice`.
 
 Do not treat fake-backend tests as real synthesis acceptance. They only prove
 wrapper I/O and WAV validation.

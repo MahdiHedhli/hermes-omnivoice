@@ -352,6 +352,81 @@ class OmniVoiceRegistryTests(unittest.TestCase):
                 self.assertEqual(wav.getnchannels(), 1)
                 self.assertGreater(wav.getnframes(), 0)
 
+    def test_auto_cli_builds_official_clone_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            profile, voice_dir = omnivoice.load_voice_profile(voices_root, "marvin")
+            profile = omnivoice.validate_voice_profile(profile, voice_dir)
+
+            with unittest.mock.patch.object(
+                omnivoice.shutil,
+                "which",
+                return_value="/usr/local/bin/omnivoice-infer",
+            ):
+                command = omnivoice.build_backend_command(
+                    env={
+                        "HERMES_OMNIVOICE_AUTO_CLI": "1",
+                        "HERMES_OMNIVOICE_MODEL": "k2-fsa/OmniVoice",
+                        "HERMES_OMNIVOICE_DEVICE": "mps",
+                    },
+                    profile=profile,
+                    voice_id="marvin",
+                    voice_dir=voice_dir,
+                    text_file=text_file,
+                    output_path=root / "out.wav",
+                    speed="1.25",
+                )
+
+            self.assertEqual(command[0], "/usr/local/bin/omnivoice-infer")
+            self.assertIn("--text", command)
+            self.assertIn("Hermes custom voice synthesis test.", command)
+            self.assertIn("--output", command)
+            self.assertIn("--speed", command)
+            self.assertIn("1.25", command)
+            self.assertIn("--language", command)
+            self.assertIn("en", command)
+            self.assertIn("--device", command)
+            self.assertIn("mps", command)
+            self.assertIn("--ref_audio", command)
+            self.assertIn(profile["ref_audio_path"], command)
+            self.assertIn("--ref_text", command)
+
+    def test_auto_cli_builds_official_design_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_design_voice(voices_root, "narrator")
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            profile, voice_dir = omnivoice.load_voice_profile(voices_root, "narrator")
+            profile = omnivoice.validate_voice_profile(profile, voice_dir)
+
+            with unittest.mock.patch.object(
+                omnivoice.shutil,
+                "which",
+                return_value="/usr/local/bin/omnivoice-infer",
+            ):
+                command = omnivoice.build_backend_command(
+                    env={"HERMES_OMNIVOICE_AUTO_CLI": "1"},
+                    profile=profile,
+                    voice_id="narrator",
+                    voice_dir=voice_dir,
+                    text_file=text_file,
+                    output_path=root / "out.wav",
+                    speed="1.0",
+                )
+
+            self.assertEqual(command[0], "/usr/local/bin/omnivoice-infer")
+            self.assertIn("--model", command)
+            self.assertIn("k2-fsa/OmniVoice", command)
+            self.assertIn("--instruct", command)
+            self.assertIn(profile["instruct"], command)
+            self.assertNotIn("--ref_audio", command)
+
     def test_studio_url_must_be_loopback_by_default(self) -> None:
         with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "non-loopback"):
             omnivoice.validate_studio_url("http://10.0.0.5:3900", {})
@@ -409,8 +484,9 @@ class OmniVoiceRegistryTests(unittest.TestCase):
 class OmniVoiceIntegrationTests(unittest.TestCase):
     def test_real_omnivoice_backend_is_configured(self) -> None:
         self.skipTest(
-            "Configure HERMES_OMNIVOICE_COMMAND_JSON or HERMES_OMNIVOICE_COMMAND "
-            "with a real OmniVoice backend to run integration synthesis."
+            "Configure HERMES_OMNIVOICE_COMMAND_JSON, HERMES_OMNIVOICE_COMMAND, "
+            "or HERMES_OMNIVOICE_AUTO_CLI=1 with a real OmniVoice backend to run "
+            "integration synthesis."
         )
 
 
@@ -734,6 +810,24 @@ class RuntimeCheckTests(unittest.TestCase):
         self.assertEqual(report["status"], "reachable")
         self.assertEqual(report["profile_count"], 1)
         self.assertEqual(requests[0]["path"], "/profiles")
+
+    def test_runtime_check_reports_official_cli_auto_gate(self) -> None:
+        with unittest.mock.patch.object(
+            runtime_check.shutil,
+            "which",
+            return_value="/usr/local/bin/omnivoice-infer",
+        ):
+            report = runtime_check.check_omnivoice_cli(
+                {
+                    "HERMES_OMNIVOICE_AUTO_CLI": "1",
+                    "HERMES_OMNIVOICE_MODEL": "local-model",
+                }
+            )
+
+        self.assertEqual(report["status"], "found")
+        self.assertEqual(report["executable"], "omnivoice-infer")
+        self.assertTrue(report["auto_enabled"])
+        self.assertEqual(report["model"], "local-model")
 
 
 class StudioLocalTests(unittest.TestCase):
