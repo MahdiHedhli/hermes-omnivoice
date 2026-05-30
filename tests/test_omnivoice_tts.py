@@ -5,6 +5,7 @@ import http.server
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -581,11 +582,60 @@ consent:
 
 class OmniVoiceIntegrationTests(unittest.TestCase):
     def test_real_omnivoice_backend_is_configured(self) -> None:
-        self.skipTest(
-            "Configure HERMES_OMNIVOICE_COMMAND_JSON, HERMES_OMNIVOICE_COMMAND, "
-            "or HERMES_OMNIVOICE_AUTO_CLI=1 with a real OmniVoice backend to run "
-            "integration synthesis."
+        if os.environ.get("HERMES_OMNIVOICE_RUN_REAL_TEST") != "1":
+            self.skipTest("set HERMES_OMNIVOICE_RUN_REAL_TEST=1 to run real synthesis")
+
+        runtime_env = {
+            key: os.environ[key]
+            for key in (
+                "HERMES_OMNIVOICE_COMMAND_JSON",
+                "HERMES_OMNIVOICE_COMMAND",
+                "HERMES_OMNIVOICE_STUDIO_URL",
+                "HERMES_OMNIVOICE_AUTO_CLI",
+                "HERMES_OMNIVOICE_MODEL",
+                "HERMES_OMNIVOICE_DEVICE",
+                "HERMES_OMNIVOICE_DTYPE",
+            )
+            if key in os.environ
+        }
+        self.assertTrue(
+            any(
+                runtime_env.get(key)
+                for key in (
+                    "HERMES_OMNIVOICE_COMMAND_JSON",
+                    "HERMES_OMNIVOICE_COMMAND",
+                    "HERMES_OMNIVOICE_STUDIO_URL",
+                    "HERMES_OMNIVOICE_AUTO_CLI",
+                )
+            ),
+            "set a real OmniVoice backend env var before enabling the integration test",
         )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_design_voice(voices_root, "real")
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+
+            result = omnivoice.run(
+                [
+                    "--voices-dir",
+                    str(voices_root),
+                    "--text-file",
+                    str(text_file),
+                    "--out",
+                    str(out_file),
+                    "--voice",
+                    "real",
+                ],
+                env=runtime_env,
+            )
+
+            self.assertEqual(result, 0)
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertGreater(wav.getnframes(), 0)
 
 
 class PythonAdapterTests(unittest.TestCase):

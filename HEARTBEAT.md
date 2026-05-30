@@ -26,7 +26,9 @@ The packaged Python API adapter now imports the installed package's actual
 temporary WAV through the same command-provider wrapper path. The local
 OmniVoice-Studio Docker helper validates loopback-only Compose config and now
 bounds Docker/Git subprocesses so a stalled pull or build cannot block a
-heartbeat indefinitely.
+heartbeat indefinitely. The unittest integration smoke is now a real opt-in
+test: normal runs skip without model work, while
+`HERMES_OMNIVOICE_RUN_REAL_TEST=1` exercises actual synthesis.
 
 ## Previous heartbeat
 
@@ -1238,7 +1240,7 @@ heartbeat indefinitely.
     on a loopback OmniVoice-Studio live smoke or actual Hermes Agent source
     discovery.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 09:00 America/New_York
 - Completed:
@@ -1315,6 +1317,63 @@ heartbeat indefinitely.
     Studio image pull/build window or locate the actual Hermes Agent source for
     schema verification.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 09:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `56a0ac4`.
+  - Searched the local Hermes and broader Coding directories for a real Hermes
+    Agent checkout; only this plugin repo was found under
+    `/Users/mhedhli/Documents/Coding/hermes`.
+  - Checked `~/.hermes` and `~/.config` for Hermes/TTS config paths; none were
+    found.
+  - Converted the previously unconditional real-backend integration skip into
+    an explicit opt-in integration test gated by
+    `HERMES_OMNIVOICE_RUN_REAL_TEST=1`.
+  - The opt-in test now creates a temporary consented design voice, invokes
+    `scripts/hermes-omnivoice-tts.py` with the configured real backend, and
+    validates the generated WAV.
+  - Documented the opt-in integration unittest command in
+    `docs/omnivoice-setup.md`.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `find /Users/mhedhli/Documents/Coding/hermes -maxdepth 4 -type d -name .git -print`
+  - `find /Users/mhedhli/Documents/Coding -maxdepth 5 -type d \( -iname '*hermes*' -o -iname '*agent*' \) -print`
+  - `find ~/.hermes ~/.config -maxdepth 4 \( -iname '*hermes*' -o -iname '*tts*' \) -print`
+  - `sed -n ... tests/test_omnivoice_tts.py`
+  - `rg -n "real_omnivoice|RUN_REAL|integration|test_real_omnivoice|HERMES_OMNIVOICE" docs README.md scripts tests`
+  - `sed -n ... scripts/validate-omnivoice-bridge.sh`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceIntegrationTests -v`
+  - `PATH=... HERMES_OMNIVOICE_RUN_REAL_TEST=1 HERMES_OMNIVOICE_AUTO_CLI=1 HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice python3 -m unittest tests.test_omnivoice_tts.OmniVoiceIntegrationTests -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - Default `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceIntegrationTests -v`:
+    PASS with 1 skip and no model work.
+  - Explicit real integration unittest with the venv `omnivoice-infer`: PASS,
+    generated and validated a temporary WAV in about 12 seconds.
+  - `python3 -m py_compile tests/test_omnivoice_tts.py`: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 64 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+  - Published OmniVoice-Studio image pull is still unresolved from the previous
+    heartbeat, so no live Studio `/profiles` or `/generate` smoke has run.
+  - No persistent local voice profiles exist under
+    `~/.hermes/voices/omnivoice`; real smokes continue to use temporary
+    consented profiles.
+- Assumptions:
+  - Heavy real model synthesis should remain opt-in for unittest runs, while
+    shell smoke scripts can remain the primary manual real-backend check.
+  - The command-provider MVP is now materially testable without a real Hermes
+    checkout because the wrapper path itself is proven against real OmniVoice.
+- Next action:
+  - Commit the opt-in real integration unittest, then either retry Studio with a
+    bounded pull/build window or add a Hermes-source discovery/report helper for
+    future schema verification.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -1368,6 +1427,8 @@ heartbeat indefinitely.
   device detection local, matching the installed upstream package layout.
 - Bound local Studio Docker/Git subprocesses by default so automation cannot
   hang indefinitely on a stalled image pull or build.
+- Keep heavyweight model-backed unittest synthesis opt-in with
+  `HERMES_OMNIVOICE_RUN_REAL_TEST=1`; default validation should skip it.
 
 ## Open follow-ups
 

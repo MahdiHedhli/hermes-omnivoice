@@ -280,6 +280,17 @@ HERMES_OMNIVOICE_COMMAND_JSON='[...]' scripts/test-omnivoice-tts.sh
 Without a backend, the smoke test exits `77` to mark the integration as skipped
 rather than failed.
 
+The Python unittest integration case is also opt-in so normal test runs do not
+download or load model weights:
+
+```bash
+PATH="$HOME/.cache/hermes/omnivoice-python/bin:$PATH" \
+HERMES_OMNIVOICE_RUN_REAL_TEST=1 \
+HERMES_OMNIVOICE_AUTO_CLI=1 \
+HERMES_OMNIVOICE_MODEL=k2-fsa/OmniVoice \
+python3 -m unittest tests.test_omnivoice_tts.OmniVoiceIntegrationTests -v
+```
+
 For CI or local contract testing without model weights, use the deterministic
 test fixture backend:
 
