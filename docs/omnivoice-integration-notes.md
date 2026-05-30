@@ -55,6 +55,12 @@ The wrapper currently supports:
 The clone path refuses to run when the reference audio is missing or consent is
 not confirmed.
 
+## Acceptance Gates
+
+Use `scripts/validate-omnivoice-bridge.sh` for deterministic local contract
+tests, then `scripts/omnivoice-acceptance.py` to summarize whether the static
+MVP is present and whether a real local backend plus voice profile are ready.
+
 ## Voice UX Bridge
 
 The scheduled workspace does not include Hermes command/plugin UX source, so the

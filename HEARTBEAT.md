@@ -479,7 +479,7 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the runtime diagnostic checkpoint, then add a bounded install/start
     guide or probe Docker availability for a local loopback Studio run.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 03:00 America/New_York
 - Completed:
@@ -529,6 +529,54 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the local Studio helper checkpoint, then either run a bounded Studio
     container startup or improve packaging around the command-provider bridge.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 03:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `30b0f87`.
+  - Added `scripts/omnivoice-acceptance.py` to separate static MVP readiness
+    from strict real-backend readiness.
+  - Added `docs/omnivoice-acceptance.md` and linked it from README/setup and
+    integration notes.
+  - Added tests for required file coverage, default acceptance behavior, and
+    strict `--require-real-backend` failure when no live backend or voice
+    registry exists.
+  - Ran acceptance checks locally: static MVP readiness PASS; strict
+    real-backend readiness BLOCKED because no Studio/backend/CLI and no local
+    voice profiles are configured.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -11`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "Hermes OmniVoice|omnivoice-studio-plugin|hermes-omnivoice-weekend-heartbeat" /Users/mhedhli/.codex/memories/MEMORY.md`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `python3 scripts/omnivoice-acceptance.py --require-real-backend`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - `python3 scripts/omnivoice-acceptance.py --json`: PASS; static MVP ready,
+    real backend not ready.
+  - `python3 scripts/omnivoice-acceptance.py --require-real-backend`: expected
+    BLOCKED exit because no live backend or local voice profile is configured.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation now includes 43 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - Studio is not currently running on `127.0.0.1:3900`.
+  - No real OmniVoice backend command or `omnivoice` CLI is configured.
+  - No local voice profiles exist under `~/.hermes/voices/omnivoice`.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - Static MVP readiness should be allowed to pass even when live synthesis is
+    blocked, but strict acceptance should fail until a real local backend and
+    consented voice profile are present.
+- Next action:
+  - Commit the acceptance-checkpoint, then either start the local Studio helper
+    in a bounded run or improve the package handoff for installing the bridge
+    into a real Hermes checkout.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -558,6 +606,8 @@ path. Top-level handoff docs and example configs are now present.
   are explicit without touching generated media or user voice samples.
 - Validate Docker Compose loopback bindings before any local Studio startup
   helper runs.
+- Track static MVP readiness separately from real-backend readiness so progress
+  is not overstated when model-backed synthesis remains unavailable.
 
 ## Open follow-ups
 

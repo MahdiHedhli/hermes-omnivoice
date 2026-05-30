@@ -30,6 +30,9 @@ CHECK_SCRIPT_PATH = (
 STUDIO_LOCAL_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "omnivoice-studio-local.py"
 )
+ACCEPTANCE_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "omnivoice-acceptance.py"
+)
 FAKE_BACKEND_PATH = Path(__file__).resolve().parent / "fixtures" / "fake_omnivoice_backend.py"
 EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
 SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_tts", SCRIPT_PATH)
@@ -71,6 +74,14 @@ assert STUDIO_LOCAL_SPEC is not None and STUDIO_LOCAL_SPEC.loader is not None
 studio_local = importlib.util.module_from_spec(STUDIO_LOCAL_SPEC)
 sys.modules["omnivoice_studio_local"] = studio_local
 STUDIO_LOCAL_SPEC.loader.exec_module(studio_local)
+
+ACCEPTANCE_SPEC = importlib.util.spec_from_file_location(
+    "omnivoice_acceptance", ACCEPTANCE_SCRIPT_PATH
+)
+assert ACCEPTANCE_SPEC is not None and ACCEPTANCE_SPEC.loader is not None
+acceptance = importlib.util.module_from_spec(ACCEPTANCE_SPEC)
+sys.modules["omnivoice_acceptance"] = acceptance
+ACCEPTANCE_SPEC.loader.exec_module(acceptance)
 
 
 def write_wav(path: Path) -> None:
@@ -767,6 +778,44 @@ class StudioLocalTests(unittest.TestCase):
 
         with self.assertRaisesRegex(studio_local.StudioLocalError, "published port"):
             studio_local.validate_loopback_ports(config, "cpu", 3900)
+
+
+class AcceptanceTests(unittest.TestCase):
+    def test_acceptance_required_files_are_present(self) -> None:
+        report = acceptance.check_required_files(Path(__file__).resolve().parents[1])
+
+        self.assertEqual(report["status"], "pass")
+        self.assertEqual(report["missing"], [])
+
+    def test_acceptance_default_succeeds_without_real_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = acceptance.run(
+                    ["--voices-dir", str(Path(tmp) / "missing"), "--json"],
+                    env={},
+                )
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertTrue(report["mvp_static_ready"])
+            self.assertFalse(report["real_backend_ready"])
+
+    def test_acceptance_can_require_real_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = acceptance.run(
+                    [
+                        "--voices-dir",
+                        str(Path(tmp) / "missing"),
+                        "--require-real-backend",
+                    ],
+                    env={},
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("Real backend ready: BLOCKED", output.getvalue())
 
 
 class VoiceCliTests(unittest.TestCase):

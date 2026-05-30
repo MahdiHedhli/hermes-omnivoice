@@ -27,6 +27,8 @@ This repo is intentionally conservative:
   Studio, CLI, and voice registry availability.
 - `scripts/omnivoice-studio-local.py`: helper for checking, fetching, starting,
   stopping, and inspecting loopback-only OmniVoice-Studio with Docker Compose.
+- `scripts/omnivoice-acceptance.py`: summarizes static MVP readiness and live
+  backend readiness.
 - `scripts/validate-omnivoice-bridge.sh`: deterministic local validation.
 - `docs/`: setup, Studio bridge notes, integration findings, and custom voice
   usage.
@@ -38,6 +40,7 @@ Validate the bridge locally:
 
 ```bash
 scripts/validate-omnivoice-bridge.sh
+python scripts/omnivoice-acceptance.py
 ```
 
 Create or import a voice under:
@@ -108,5 +111,6 @@ shell quoting hazards.
 
 - [Setup](docs/omnivoice-setup.md)
 - [Studio bridge](docs/omnivoice-studio-bridge.md)
+- [Acceptance checklist](docs/omnivoice-acceptance.md)
 - [Integration notes](docs/omnivoice-integration-notes.md)
 - [Hermes custom voices](docs/tts-custom-voices.md)

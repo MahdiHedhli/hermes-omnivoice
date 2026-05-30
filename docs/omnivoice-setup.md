@@ -124,7 +124,13 @@ Run all local bridge checks:
 
 ```bash
 scripts/validate-omnivoice-bridge.sh
+python scripts/omnivoice-acceptance.py
 ```
+
+`omnivoice-acceptance.py` reports static MVP readiness separately from live
+backend readiness. Use `--require-real-backend` when a local Studio service,
+backend command, or OmniVoice CLI plus at least one local voice profile should
+be treated as mandatory.
 
 Check which local runtime path is available without running synthesis:
 
