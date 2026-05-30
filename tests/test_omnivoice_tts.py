@@ -1,17 +1,23 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+import unittest.mock
 import wave
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-tts.py"
 IMPORT_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "import-omnivoice-studio-voice.py"
+)
+VOICES_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-voices.py"
 )
 FAKE_BACKEND_PATH = Path(__file__).resolve().parent / "fixtures" / "fake_omnivoice_backend.py"
 SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_tts", SCRIPT_PATH)
@@ -27,6 +33,12 @@ assert IMPORT_SPEC is not None and IMPORT_SPEC.loader is not None
 studio_import = importlib.util.module_from_spec(IMPORT_SPEC)
 sys.modules["import_omnivoice_studio_voice"] = studio_import
 IMPORT_SPEC.loader.exec_module(studio_import)
+
+VOICES_SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_voices", VOICES_SCRIPT_PATH)
+assert VOICES_SPEC is not None and VOICES_SPEC.loader is not None
+voices_cli = importlib.util.module_from_spec(VOICES_SPEC)
+sys.modules["hermes_omnivoice_voices"] = voices_cli
+VOICES_SPEC.loader.exec_module(voices_cli)
 
 
 def write_wav(path: Path) -> None:
@@ -237,6 +249,76 @@ class StudioImportTests(unittest.TestCase):
 
             self.assertEqual(validated["studio_profile_id"], "studio-123")
             self.assertEqual(validated["consent"]["status"], "confirmed")
+
+
+class VoiceCliTests(unittest.TestCase):
+    def test_list_profiles_marks_ready_and_invalid_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_voice(root, "marvin")
+            invalid = root / "bad"
+            invalid.mkdir()
+            (invalid / "voice.yaml").write_text(
+                "id: bad\nname: Bad\nengine: omnivoice\nmode: clone\n",
+                encoding="utf-8",
+            )
+
+            profiles = voices_cli.list_profiles(root)
+            by_id = {profile["id"]: profile for profile in profiles}
+
+            self.assertEqual(by_id["marvin"]["status"], "ready")
+            self.assertEqual(by_id["bad"]["status"], "invalid")
+
+    def test_config_command_prints_command_provider_yaml(self) -> None:
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            result = voices_cli.run(["config", "marvin"])
+
+        self.assertEqual(result, 0)
+        self.assertIn("provider: omnivoice", output.getvalue())
+        self.assertIn("voice: marvin", output.getvalue())
+
+    def test_preview_generates_audio_with_fake_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root, "marvin")
+            out_file = root / "preview.wav"
+            command = [
+                sys.executable,
+                str(FAKE_BACKEND_PATH),
+                "--text-file",
+                "{text_file}",
+                "--out",
+                "{out}",
+                "--voice-dir",
+                "{voice_dir}",
+                "--speed",
+                "{speed}",
+            ]
+
+            with unittest.mock.patch.dict(
+                "os.environ",
+                {"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(command)},
+                clear=False,
+            ):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    result = voices_cli.run(
+                        [
+                            "--voices-dir",
+                            str(voices_root),
+                            "preview",
+                            "marvin",
+                            "--out",
+                            str(out_file),
+                        ]
+                    )
+
+            self.assertEqual(result, 0)
+            self.assertIn("Preview written:", output.getvalue())
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertGreater(wav.getnframes(), 0)
 
 
 if __name__ == "__main__":

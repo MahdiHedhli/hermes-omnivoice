@@ -53,6 +53,21 @@ The wrapper currently supports:
 The clone path refuses to run when the reference audio is missing or consent is
 not confirmed.
 
+## Voice UX Bridge
+
+The scheduled workspace does not include Hermes command/plugin UX source, so the
+project now ships a standalone helper that maps cleanly to the proposed future
+commands:
+
+- `scripts/hermes-omnivoice-voices.py list`
+- `scripts/hermes-omnivoice-voices.py info <voice_id>`
+- `scripts/hermes-omnivoice-voices.py preview <voice_id> --out <path>`
+- `scripts/hermes-omnivoice-voices.py config <voice_id>`
+
+If Hermes has a command/plugin layer in the real source tree, these operations
+can be wired behind `/voice list`, `/voice info`, `/voice preview`, and a config
+selection command without changing the registry contract.
+
 ## Backend Command Contract
 
 Prefer `HERMES_OMNIVOICE_COMMAND_JSON` because it avoids shell quoting issues:

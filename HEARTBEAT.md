@@ -5,7 +5,9 @@
 Initial heartbeat started against an empty scheduled workspace. The repo now has
 a command-provider MVP foundation, a localhost-only OmniVoice-Studio API bridge,
 a Studio profile importer, and deterministic tests proving the command wrapper
-writes valid WAV output through a local backend contract.
+writes valid WAV output through a local backend contract. It also includes a
+standalone voice helper for listing, inspecting, previewing, and printing Hermes
+command-provider config for local voices.
 
 ## Previous heartbeat
 
@@ -118,7 +120,7 @@ writes valid WAV output through a local backend contract.
     Agent source path or installed config to verify the TTS command-provider
     schema.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-29 23:00 America/New_York
 - Completed:
@@ -165,6 +167,45 @@ writes valid WAV output through a local backend contract.
     safe local Hermes Agent source/config path or build a first-class config
     handoff package around the command-provider MVP.
 
+## Latest heartbeat
+
+- Time: 2026-05-29 23:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `2d591a1`.
+  - Added `scripts/hermes-omnivoice-voices.py` with `list`, `info`, `preview`,
+    and `config` subcommands.
+  - Added tests for listing ready/invalid profiles, printing command-provider
+    YAML, and previewing a voice through the fake backend.
+  - Updated docs to describe the helper as a stand-in for future Hermes
+    `/voice list`, `/voice info`, `/voice preview`, and config-selection UX.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -5`
+  - `sed -n '1,380p' scripts/hermes-omnivoice-tts.py`
+  - `sed -n '1,320p' tests/test_omnivoice_tts.py`
+  - `chmod +x scripts/hermes-omnivoice-voices.py`
+  - `python3 -m unittest discover -s tests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-tts.py scripts/import-omnivoice-studio-voice.py scripts/hermes-omnivoice-voices.py tests/test_omnivoice_tts.py tests/fixtures/fake_omnivoice_backend.py`
+  - `HERMES_OMNIVOICE_COMMAND_JSON='[...]' scripts/test-omnivoice-tts.sh`
+  - `scripts/test-omnivoice-tts.sh`
+- Tests:
+  - `python3 -m unittest discover -s tests -v`: PASS, 16 tests run, 1 skipped
+    real-backend integration test.
+  - `python3 -m py_compile ...`: PASS.
+  - Fake-backend smoke test: PASS, generated a valid temporary WAV.
+  - Unconfigured smoke test: SKIP with exit 77.
+- Blockers:
+  - No live OmniVoice-Studio service or real OmniVoice backend is configured, so
+    real synthesis quality is still unverified.
+  - Actual Hermes Agent source is still not present in this checkout, so native
+    provider and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - A standalone voice helper is the safest useful approximation of Hermes voice
+    UX until the real Hermes command/plugin layer is available.
+- Next action:
+  - Run final checks and commit the helper CLI checkpoint, then continue toward
+    either real-backend smoke validation or locating the real Hermes source.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -180,10 +221,13 @@ writes valid WAV output through a local backend contract.
   authentication.
 - Keep the fake backend confined to tests and docs as a contract verifier only;
   never present it as a real TTS engine.
+- Provide voice UX through a standalone helper until the real Hermes command
+  layer can be inspected.
 
 ## Open follow-ups
 
 - Locate or clone the actual Hermes Agent source and verify the TTS schema.
 - Run the Studio importer against a live local Studio service.
 - Configure a real OmniVoice backend command and run `scripts/test-omnivoice-tts.sh`.
+- Locate the actual Hermes Agent source before wiring native `/voice` commands.
 - Consider a native Hermes provider only after command-provider synthesis works.

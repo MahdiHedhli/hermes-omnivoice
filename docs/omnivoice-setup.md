@@ -139,3 +139,29 @@ The importer reads Studio through `GET /profiles/{id}` and
 `GET /profiles/{id}/audio`, then writes
 `~/.hermes/voices/omnivoice/<voice_id>/voice.yaml` and `ref.wav` when reference
 audio is available.
+
+## Inspect And Preview Voices
+
+List local voices:
+
+```bash
+python scripts/hermes-omnivoice-voices.py list
+```
+
+Inspect one voice and verify consent state:
+
+```bash
+python scripts/hermes-omnivoice-voices.py info marvin
+```
+
+Generate a short preview:
+
+```bash
+python scripts/hermes-omnivoice-voices.py preview marvin --out /tmp/marvin-preview.wav
+```
+
+Print a Hermes command-provider config example:
+
+```bash
+python scripts/hermes-omnivoice-voices.py config marvin
+```

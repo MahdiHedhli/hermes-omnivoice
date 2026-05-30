@@ -62,3 +62,19 @@ For Studio-created voices, import the profile first with
 - Use local synthesis only unless a separate security review approves a remote
   service.
 - Treat cloned voice consent as a hard gate, not a documentation-only field.
+
+## Voice Helper CLI
+
+This repo includes a local helper for the UX commands Hermes may eventually
+surface natively:
+
+```bash
+python scripts/hermes-omnivoice-voices.py list
+python scripts/hermes-omnivoice-voices.py info marvin
+python scripts/hermes-omnivoice-voices.py preview marvin --out /tmp/marvin-preview.wav
+python scripts/hermes-omnivoice-voices.py config marvin
+```
+
+The preview command uses `scripts/hermes-omnivoice-tts.py`, so it requires the
+same local Studio URL or backend command configuration as Hermes TTS. The
+`config` command prints a command-provider YAML example for the selected voice.
