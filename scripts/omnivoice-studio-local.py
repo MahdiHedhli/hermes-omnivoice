@@ -24,14 +24,26 @@ class StudioLocalError(RuntimeError):
     pass
 
 
-def run_command(argv: list[str], *, cwd: Path | None = None, capture: bool = False) -> str:
-    completed = subprocess.run(
-        argv,
-        cwd=str(cwd) if cwd else None,
-        check=False,
-        text=True,
-        capture_output=capture,
-    )
+def run_command(
+    argv: list[str],
+    *,
+    cwd: Path | None = None,
+    capture: bool = False,
+    timeout: int | None = None,
+) -> str:
+    try:
+        completed = subprocess.run(
+            argv,
+            cwd=str(cwd) if cwd else None,
+            check=False,
+            text=True,
+            capture_output=capture,
+            timeout=timeout if timeout and timeout > 0 else None,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise StudioLocalError(
+            f"{argv[0]} timed out after {timeout}s: {' '.join(argv)}"
+        ) from exc
     if completed.returncode != 0:
         detail = completed.stderr.strip() if capture and completed.stderr else "command failed"
         raise StudioLocalError(f"{argv[0]} exited {completed.returncode}: {detail}")
@@ -45,16 +57,27 @@ def require_binary(name: str) -> str:
     return path
 
 
-def fetch_source(studio_dir: Path, repo_url: str, update: bool) -> None:
+def fetch_source(
+    studio_dir: Path,
+    repo_url: str,
+    update: bool,
+    command_timeout: int | None = None,
+) -> None:
     target = studio_dir.expanduser()
     if target.exists():
         if not (target / ".git").is_dir():
             raise StudioLocalError(f"Studio directory exists but is not a git repo: {target}")
         if update:
-            run_command(["git", "-C", str(target), "pull", "--ff-only"])
+            run_command(
+                ["git", "-C", str(target), "pull", "--ff-only"],
+                timeout=command_timeout,
+            )
         return
     target.parent.mkdir(parents=True, exist_ok=True)
-    run_command(["git", "clone", "--depth", "1", repo_url, str(target)])
+    run_command(
+        ["git", "clone", "--depth", "1", repo_url, str(target)],
+        timeout=command_timeout,
+    )
 
 
 def compose_file(studio_dir: Path) -> Path:
@@ -64,10 +87,11 @@ def compose_file(studio_dir: Path) -> Path:
     return path
 
 
-def compose_config(path: Path, profile: str) -> dict:
+def compose_config(path: Path, profile: str, command_timeout: int | None = None) -> dict:
     output = run_command(
         ["docker", "compose", "-f", str(path), "--profile", profile, "config", "--format", "json"],
         capture=True,
+        timeout=command_timeout,
     )
     return json.loads(output)
 
@@ -141,7 +165,7 @@ def command_check(args: argparse.Namespace) -> int:
     }
     try:
         path = compose_file(args.studio_dir)
-        config = compose_config(path, args.profile)
+        config = compose_config(path, args.profile, args.command_timeout)
         validate_loopback_ports(config, args.profile, args.port)
         report["compose"] = "loopback-ok"
     except (OSError, json.JSONDecodeError, StudioLocalError) as exc:
@@ -174,7 +198,7 @@ def human_report(report: dict[str, object]) -> str:
 
 def command_fetch(args: argparse.Namespace) -> int:
     require_binary("git")
-    fetch_source(args.studio_dir, args.repo_url, args.update)
+    fetch_source(args.studio_dir, args.repo_url, args.update, args.command_timeout)
     print(f"Studio source ready: {args.studio_dir.expanduser()}")
     return 0
 
@@ -183,16 +207,19 @@ def command_start(args: argparse.Namespace) -> int:
     require_binary("docker")
     require_binary("git")
     if args.fetch:
-        fetch_source(args.studio_dir, args.repo_url, args.update)
+        fetch_source(args.studio_dir, args.repo_url, args.update, args.command_timeout)
     path = compose_file(args.studio_dir)
-    config = compose_config(path, args.profile)
+    config = compose_config(path, args.profile, args.command_timeout)
     validate_loopback_ports(config, args.profile, args.port)
     try:
-        run_command(compose_up_args(args))
+        run_command(compose_up_args(args), timeout=args.command_timeout)
     except StudioLocalError:
         if args.cleanup_on_fail:
             try:
-                run_command(compose_down_args(args, args.remove_volumes_on_fail))
+                run_command(
+                    compose_down_args(args, args.remove_volumes_on_fail),
+                    timeout=args.command_timeout,
+                )
             except StudioLocalError:
                 pass
         raise
@@ -202,19 +229,19 @@ def command_start(args: argparse.Namespace) -> int:
 
 def command_stop(args: argparse.Namespace) -> int:
     require_binary("docker")
-    run_command(compose_down_args(args))
+    run_command(compose_down_args(args), timeout=args.command_timeout)
     return 0
 
 
 def command_status(args: argparse.Namespace) -> int:
     require_binary("docker")
-    run_command(compose_args(args) + ["ps"])
+    run_command(compose_args(args) + ["ps"], timeout=args.command_timeout)
     return 0
 
 
 def command_logs(args: argparse.Namespace) -> int:
     require_binary("docker")
-    run_command(compose_args(args) + ["logs", "--tail", str(args.tail)])
+    run_command(compose_args(args) + ["logs", "--tail", str(args.tail)], timeout=args.command_timeout)
     return 0
 
 
@@ -228,6 +255,12 @@ def add_common(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--port", type=int, default=3900)
     parser.add_argument("--studio-url", default="http://127.0.0.1:3900")
     parser.add_argument("--timeout", type=int, default=3)
+    parser.add_argument(
+        "--command-timeout",
+        type=int,
+        default=900,
+        help="Seconds before Docker/Git commands are aborted; set 0 to disable",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -100,3 +100,5 @@ Use `python scripts/omnivoice-studio-local.py start --no-fetch --no-build --pull
 for a local-only startup probe that will not pull or build Docker images.
 Failed startup attempts clean up containers and networks by default while
 preserving volumes unless `--remove-volumes-on-fail` is explicitly set.
+Docker/Git commands are bounded by `--command-timeout` seconds, defaulting to
+900, so a stalled image pull or build does not block a heartbeat indefinitely.

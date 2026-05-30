@@ -23,7 +23,10 @@ WAV through `scripts/test-omnivoice-tts.sh`. English designed voices are also
 validated against OmniVoice's supported design tag set before model startup.
 The packaged Python API adapter now imports the installed package's actual
 `omnivoice.models.omnivoice.OmniVoice` class and has generated a valid
-temporary WAV through the same command-provider wrapper path.
+temporary WAV through the same command-provider wrapper path. The local
+OmniVoice-Studio Docker helper validates loopback-only Compose config and now
+bounds Docker/Git subprocesses so a stalled pull or build cannot block a
+heartbeat indefinitely.
 
 ## Previous heartbeat
 
@@ -1174,7 +1177,7 @@ temporary WAV through the same command-provider wrapper path.
     a loopback Studio service or locate the real Hermes Agent source for schema
     verification.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 08:30 America/New_York
 - Completed:
@@ -1235,6 +1238,83 @@ temporary WAV through the same command-provider wrapper path.
     on a loopback OmniVoice-Studio live smoke or actual Hermes Agent source
     discovery.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 09:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `353ac1b`.
+  - Revalidated OmniVoice-Studio's cached Compose config from
+    `/tmp/omnivoice-studio-src`; the CPU profile publishes only
+    `127.0.0.1:3900:3900`.
+  - Confirmed nothing was listening on local port 3900 and no Studio Docker
+    image or container was already present.
+  - Attempted a loopback-only Studio startup using the published image path
+    with `--no-fetch --no-build --pull missing`.
+  - Stopped the startup after the Docker pull made no observable progress for
+    several minutes and no image/container appeared.
+  - Confirmed cleanup left no `omnivoice-studio` container or Docker Compose
+    process running.
+  - Added `--command-timeout` to `scripts/omnivoice-studio-local.py` so Docker
+    and Git subprocesses are bounded; default is 900 seconds, `0` disables it
+    for deliberate manual runs.
+  - Verified a one-second bounded startup fails cleanly with a timeout error
+    and leaves no Studio process/container behind.
+  - Updated Studio setup/bridge docs with the timeout behavior.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `sed -n ... scripts/omnivoice-studio-local.py`
+  - `ls -la /tmp/omnivoice-studio-src`
+  - `docker ps --format ...`
+  - `docker images --format ... | rg -i 'omnivoice|studio'`
+  - `python3 scripts/omnivoice-studio-local.py check --studio-dir /tmp/omnivoice-studio-src --json`
+  - `docker compose -f /tmp/omnivoice-studio-src/deploy/docker-compose.yml --profile cpu config --format json`
+  - `lsof -nP -iTCP:3900 -sTCP:LISTEN`
+  - `docker volume ls --format ... | rg 'omnivoice|deploy_omnivoice'`
+  - `python3 scripts/omnivoice-studio-local.py start --studio-dir /tmp/omnivoice-studio-src --no-fetch --no-build --pull missing`
+  - `docker system df`
+  - `ps ax -o pid,ppid,stat,etime,command | rg 'docker compose|omnivoice-studio|ghcr.io/debpalash'`
+  - `docker events --since 5m --until 1s --filter image=ghcr.io/debpalash/omnivoice-studio:latest`
+  - `kill ...`
+  - `docker compose -f /tmp/omnivoice-studio-src/deploy/docker-compose.yml --profile cpu down`
+  - `python3 scripts/omnivoice-studio-local.py start --studio-dir /tmp/omnivoice-studio-src --no-fetch --no-build --pull missing --command-timeout 1`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioLocalTests -v`
+  - `python3 -m py_compile scripts/omnivoice-studio-local.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - `python3 scripts/omnivoice-studio-local.py check --studio-dir /tmp/omnivoice-studio-src --json`:
+    PASS; Compose loopback validation ok, health unreachable as expected.
+  - Published-image startup attempt: BLOCKED; Docker pull stayed silent for
+    several minutes and produced no image/container.
+  - Bounded startup with `--command-timeout 1`: expected FAIL with a clear
+    timeout error.
+  - Post-timeout process/container check: PASS; no Studio process or container
+    remained.
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioLocalTests -v`: PASS,
+    6 tests.
+  - `python3 -m py_compile ...`: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 64 tests with 1
+    expected real-backend integration skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+- Blockers:
+  - Published OmniVoice-Studio image pull did not make observable progress in
+    this heartbeat, so no live Studio `/profiles` or `/generate` smoke was run.
+  - Running the Studio backend directly from source appears heavier than the
+    installed OmniVoice inference venv because Studio declares many API,
+    dubbing, ASR, translation, and UI dependencies.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - A bounded Docker image pull/build is safer for heartbeat automation than an
+    unbounded Compose startup, even though manual runs can opt out with
+    `--command-timeout 0`.
+  - The cached `/tmp/omnivoice-studio-src` source remains adequate for
+    loopback Compose validation and API-shape evidence.
+- Next action:
+  - Commit the Studio helper timeout hardening, then either retry a bounded
+    Studio image pull/build window or locate the actual Hermes Agent source for
+    schema verification.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -1286,6 +1366,8 @@ temporary WAV through the same command-provider wrapper path.
   vocabulary before model startup to avoid expensive late failures.
 - Import the Python API adapter from `omnivoice.models.omnivoice` and keep
   device detection local, matching the installed upstream package layout.
+- Bound local Studio Docker/Git subprocesses by default so automation cannot
+  hang indefinitely on a stalled image pull or build.
 
 ## Open follow-ups
 

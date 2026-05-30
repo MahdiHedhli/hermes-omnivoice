@@ -1221,6 +1221,13 @@ class StudioLocalTests(unittest.TestCase):
         self.assertIn("--pull", command)
         self.assertIn("never", command)
 
+    def test_run_command_timeout_fails_cleanly(self) -> None:
+        with self.assertRaisesRegex(studio_local.StudioLocalError, "timed out"):
+            studio_local.run_command(
+                [sys.executable, "-c", "import time; time.sleep(5)"],
+                timeout=1,
+            )
+
     def test_down_args_can_remove_volumes(self) -> None:
         args = unittest.mock.Mock()
         args.studio_dir = Path("/tmp/omnivoice-studio-src")
