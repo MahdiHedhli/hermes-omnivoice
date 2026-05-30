@@ -8,6 +8,7 @@ This repo is intentionally conservative:
 - Voice samples, generated audio, model weights, caches, and local config stay
   out of git.
 - Cloned voices require `consent.status: confirmed`.
+- Cloned voice reference files are validated as readable WAV audio before use.
 - OmniVoice-Studio is treated as loopback-only by default because it has no
   built-in authentication.
 - The first integration path is a command provider, not a native Hermes patch,

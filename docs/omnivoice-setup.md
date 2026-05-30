@@ -33,7 +33,9 @@ python scripts/create-omnivoice-voice.py clone marvin \
 ```
 
 The clone command copies the reference sample into the local registry as
-`ref.wav`. Keep that registry outside the repo.
+`ref.wav`, validates that the sample is a readable WAV file, and refuses to
+write over an existing voice directory unless `--force` is set. Keep that
+registry outside the repo.
 
 Example clone profile:
 
@@ -169,7 +171,8 @@ python scripts/import-omnivoice-studio-voice.py \
 The importer reads Studio through `GET /profiles/{id}` and
 `GET /profiles/{id}/audio`, then writes
 `~/.hermes/voices/omnivoice/<voice_id>/voice.yaml` and `ref.wav` when reference
-audio is available.
+audio is available. It refuses existing non-empty voice directories unless
+`--force` is set, and downloaded reference audio must be a valid WAV.
 
 ## Inspect And Preview Voices
 

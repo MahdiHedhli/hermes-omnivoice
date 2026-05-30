@@ -4,14 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
-import os
 from pathlib import Path
 import re
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import wave
 
 
 VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
@@ -36,6 +37,14 @@ def resolve_voice_dir(voices_dir: Path, voice_id: str) -> Path:
     except ValueError as exc:
         raise ImportErrorWithContext("voice directory escapes the voices root") from exc
     return resolved_child
+
+
+def prepare_voice_dir(voices_dir: Path, voice_id: str, force: bool) -> Path:
+    voice_dir = resolve_voice_dir(voices_dir, voice_id)
+    if voice_dir.exists() and any(voice_dir.iterdir()) and not force:
+        raise ImportErrorWithContext(f"voice directory already contains files: {voice_dir}")
+    voice_dir.mkdir(parents=True, exist_ok=True)
+    return voice_dir
 
 
 def validate_studio_url(url: str, allow_remote: bool = False) -> str:
@@ -66,6 +75,14 @@ def request_bytes(url: str, timeout: int) -> bytes:
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return response.read()
+
+
+def validate_wav_bytes(audio_bytes: bytes) -> None:
+    try:
+        with wave.open(io.BytesIO(audio_bytes), "rb") as wav:
+            wav.getparams()
+    except wave.Error as exc:
+        raise ImportErrorWithContext("downloaded Studio reference audio is not a valid WAV") from exc
 
 
 def yaml_scalar(value: object) -> str:
@@ -129,6 +146,11 @@ def run(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Allow a non-loopback Studio URL only when it is protected by auth",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing local voice directory",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -136,12 +158,10 @@ def run(argv: list[str] | None = None) -> int:
             raise ImportErrorWithContext("refusing import without --confirm-consent")
         voice_id = args.voice_id or args.profile_id
         validate_voice_id(voice_id)
+        voice_dir = prepare_voice_dir(args.voices_dir, voice_id, args.force)
 
         base_url = validate_studio_url(args.studio_url, args.allow_remote_studio)
         profile = request_json(f"{base_url}/profiles/{urllib.parse.quote(args.profile_id)}", args.timeout)
-
-        voice_dir = resolve_voice_dir(args.voices_dir, voice_id)
-        voice_dir.mkdir(parents=True, exist_ok=True)
 
         audio_bytes = b""
         try:
@@ -156,6 +176,7 @@ def run(argv: list[str] | None = None) -> int:
         has_instruct = bool(str(profile.get("instruct") or "").strip())
         mode = "clone" if audio_bytes else "design"
         if mode == "clone":
+            validate_wav_bytes(audio_bytes)
             (voice_dir / "ref.wav").write_bytes(audio_bytes)
         elif not has_instruct:
             raise ImportErrorWithContext(

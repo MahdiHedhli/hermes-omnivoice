@@ -217,6 +217,16 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "ref_audio is missing"):
                 omnivoice.validate_voice_profile(profile, voice_dir)
 
+    def test_invalid_ref_audio_wav_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp)
+            voice_dir = write_voice(voices_root, ref_audio="bad.wav")
+            (voice_dir / "bad.wav").write_text("not a wav", encoding="utf-8")
+            profile, resolved_dir = omnivoice.load_voice_profile(voices_root, "marvin")
+
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "valid WAV"):
+                omnivoice.validate_voice_profile(profile, resolved_dir)
+
     def test_command_failure_returns_nonzero(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -398,6 +408,36 @@ class StudioImportTests(unittest.TestCase):
             with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "escapes"):
                 studio_import.resolve_voice_dir(root / "voices", "escape")
 
+    def test_importer_rejects_existing_voice_without_force_before_network(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voice_dir = root / "voices" / "marvin"
+            voice_dir.mkdir(parents=True)
+            (voice_dir / "voice.yaml").write_text("id: marvin\n", encoding="utf-8")
+            errors = io.StringIO()
+
+            with contextlib.redirect_stderr(errors):
+                result = studio_import.run(
+                    [
+                        "--studio-url",
+                        "http://127.0.0.1:3900",
+                        "--profile-id",
+                        "studio-123",
+                        "--voice-id",
+                        "marvin",
+                        "--voices-dir",
+                        str(root / "voices"),
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("already contains files", errors.getvalue())
+
+    def test_importer_rejects_invalid_downloaded_wav(self) -> None:
+        with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "valid WAV"):
+            studio_import.validate_wav_bytes(b"not a wav")
+
     def test_importer_writes_registry_yaml_compatible_with_wrapper(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -475,6 +515,30 @@ class CreateVoiceTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertFalse((root / "voices" / "marvin" / "voice.yaml").exists())
 
+    def test_create_clone_voice_rejects_invalid_wav(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bad_ref = root / "bad.wav"
+            bad_ref.write_text("not a wav", encoding="utf-8")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(root / "voices"),
+                        "clone",
+                        "marvin",
+                        "--ref-audio",
+                        str(bad_ref),
+                        "--ref-text",
+                        "Reference transcript.",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertFalse((root / "voices" / "marvin" / "voice.yaml").exists())
+
     def test_create_clone_voice_copies_wav_and_validates(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -518,6 +582,28 @@ class CreateVoiceTests(unittest.TestCase):
                         tmp,
                         "design",
                         "..",
+                        "--instruct",
+                        "calm voice",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+
+    def test_create_voice_refuses_existing_directory_without_force(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            existing = root / "voices" / "narrator"
+            existing.mkdir(parents=True)
+            (existing / "voice.yaml").write_text("id: narrator\n", encoding="utf-8")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(root / "voices"),
+                        "design",
+                        "narrator",
                         "--instruct",
                         "calm voice",
                         "--confirm-consent",

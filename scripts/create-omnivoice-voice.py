@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import shutil
 import sys
+import wave
 
 
 VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
@@ -56,10 +57,18 @@ def prepare_voice_dir(voices_dir: Path, voice_id: str, force: bool) -> Path:
         voice_dir.relative_to(voices_root)
     except ValueError as exc:
         raise CreateVoiceError("voice directory escapes the voices root") from exc
-    if (voice_dir / "voice.yaml").exists() and not force:
-        raise CreateVoiceError(f"voice already exists: {voice_dir}")
+    if voice_dir.exists() and any(voice_dir.iterdir()) and not force:
+        raise CreateVoiceError(f"voice directory already contains files: {voice_dir}")
     voice_dir.mkdir(parents=True, exist_ok=True)
     return voice_dir
+
+
+def validate_wav_file(path: Path) -> None:
+    try:
+        with wave.open(str(path), "rb") as wav:
+            wav.getparams()
+    except wave.Error as exc:
+        raise CreateVoiceError(f"reference audio is not a valid WAV file: {path}") from exc
 
 
 def write_voice_yaml(
@@ -140,6 +149,7 @@ def command_clone(args: argparse.Namespace) -> int:
         raise CreateVoiceError("clone reference audio must be a WAV file")
     if not ref_audio.is_file():
         raise CreateVoiceError(f"reference audio not found: {ref_audio}")
+    validate_wav_file(ref_audio)
     ref_text = args.ref_text.strip()
     if not ref_text:
         raise CreateVoiceError("clone voice requires --ref-text")

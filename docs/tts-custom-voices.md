@@ -72,6 +72,7 @@ python scripts/create-omnivoice-voice.py clone marvin \
 
 - Store voice profiles outside the repo under `~/.hermes/voices/omnivoice`.
 - Keep generated media and reference samples out of git.
+- Use readable WAV reference samples for cloned voices.
 - Use local synthesis only unless a separate security review approves a remote
   service.
 - Treat cloned voice consent as a hard gate, not a documentation-only field.

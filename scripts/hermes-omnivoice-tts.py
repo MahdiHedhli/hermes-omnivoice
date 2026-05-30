@@ -183,6 +183,9 @@ def validate_voice_profile(profile: dict, voice_dir: Path) -> dict:
         ref_audio_path = _safe_child_path(voice_dir, ref_audio)
         if not ref_audio_path.is_file():
             raise OmniVoiceConfigError(f"clone voice ref_audio is missing: {ref_audio_path}")
+        if ref_audio_path.suffix.lower() != ".wav":
+            raise OmniVoiceConfigError("clone voice ref_audio must be a WAV file")
+        validate_audio_file(ref_audio_path)
         resolved["ref_audio_path"] = str(ref_audio_path)
     elif not str(profile.get("instruct", "")).strip():
         raise OmniVoiceConfigError("design voice requires instruct")
