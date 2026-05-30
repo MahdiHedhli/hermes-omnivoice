@@ -2273,7 +2273,7 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Commit the installer `.gitignore` safety option, then keep the branch clean
     for handoff or install into the real Hermes Agent checkout once found.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 18:00 America/New_York
 - Completed:
@@ -2331,6 +2331,67 @@ local backend path, validation state, blockers, security notes, and next steps.
 - Next action:
   - Commit the `.env.*` installer ignore hardening, then keep the branch clean
     for handoff or install into the real Hermes Agent checkout once found.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 18:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `6712828`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready.
+  - Fixed installer handling for existing managed target `.gitignore` blocks:
+    if the managed block is stale, `--update-gitignore` now refreshes it in
+    place instead of treating it as complete.
+  - Added coverage for refreshing an older managed block and proving reruns stay
+    idempotent.
+  - Updated README, setup, and MVP handoff docs to document managed block
+    refresh behavior.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `sed -n ... scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.InstallerTests -v`
+  - `python3 -m py_compile scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py`
+  - `python3 scripts/install-hermes-omnivoice-bridge.py --target-root /tmp/hermes-omnivoice-install-check --dry-run --json`
+  - `python3 scripts/install-hermes-omnivoice-bridge.py --target-root /tmp/hermes-omnivoice-install-check --dry-run --update-gitignore --json`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `git diff --check`
+  - `find . -type f (...) -print`
+  - `find . -type d -name __pycache__ -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - Targeted installer tests: PASS, 7 tests.
+  - Python py_compile for installer and tests: PASS.
+  - Installer dry-run without `.gitignore` update: PASS; reports review action
+    for missing local-artifact patterns without writing.
+  - Installer dry-run with `--update-gitignore`: PASS; reports append action for
+    a target without a managed block.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 81 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`.
+  - Repo artifact scan: PASS; no generated audio, model weights, env files, or
+    local voice selection state found in the repo.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Managed target `.gitignore` blocks may need future refresh as ignore
+    patterns evolve; the installer should handle that idempotently.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Commit the managed `.gitignore` refresh fix, then keep the branch clean for
+    handoff or install into the real Hermes Agent checkout once found.
 
 ## Decision log
 
@@ -2418,6 +2479,8 @@ local backend path, validation state, blockers, security notes, and next steps.
   target checkout.
 - Include `.env.*` in target `.gitignore` safety coverage so environment-specific
   local config is protected after bridge installation.
+- Refresh existing managed target `.gitignore` blocks when the installer pattern
+  list changes, instead of treating any marked block as complete forever.
 
 ## Open follow-ups
 

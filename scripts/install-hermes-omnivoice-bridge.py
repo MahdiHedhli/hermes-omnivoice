@@ -120,6 +120,17 @@ def build_gitignore_block() -> str:
     return "\n".join(lines) + "\n"
 
 
+def replace_gitignore_block(existing: str) -> str:
+    start = existing.index(GITIGNORE_START)
+    end = existing.index(GITIGNORE_END, start)
+    end_line = existing.find("\n", end)
+    if end_line == -1:
+        end_line = len(existing)
+    else:
+        end_line += 1
+    return existing[:start] + build_gitignore_block() + existing[end_line:]
+
+
 def update_gitignore(*, target_root: Path, dry_run: bool, requested: bool) -> dict:
     target = resolve_target(target_root, ".gitignore")
     existing = read_gitignore(target)
@@ -132,9 +143,19 @@ def update_gitignore(*, target_root: Path, dry_run: bool, requested: bool) -> di
         "action": "none",
         "status": "covered" if not missing else "missing_patterns",
     }
-    if GITIGNORE_START in existing and GITIGNORE_END in existing:
+    managed = GITIGNORE_START in existing and GITIGNORE_END in existing
+    if managed and not missing:
         report["status"] = "managed"
-        report["missing_patterns"] = []
+        return report
+    if managed:
+        report["status"] = "managed_missing_patterns"
+        if not requested:
+            report["action"] = "review"
+            return report
+        report["action"] = "would_update" if dry_run else "update"
+        if dry_run:
+            return report
+        target.write_text(replace_gitignore_block(existing), encoding="utf-8")
         return report
     if not requested:
         report["action"] = "review"

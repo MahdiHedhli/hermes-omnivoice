@@ -1895,6 +1895,46 @@ class InstallerTests(unittest.TestCase):
                 1,
             )
 
+    def test_installer_can_update_managed_gitignore_safety_block(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            target.mkdir()
+            old_block = "\n".join(
+                [
+                    installer.GITIGNORE_START,
+                    "# Generated audio, local voices, model files, caches, and local config.",
+                    "*.wav",
+                    ".env",
+                    installer.GITIGNORE_END,
+                    "",
+                ]
+            )
+            (target / ".gitignore").write_text(f"node_modules/\n\n{old_block}", encoding="utf-8")
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                result = installer.run(["--target-root", str(target), "--update-gitignore", "--json"])
+
+            report = json.loads(output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertEqual(report["gitignore"]["status"], "managed_missing_patterns")
+            self.assertEqual(report["gitignore"]["action"], "update")
+            gitignore = (target / ".gitignore").read_text(encoding="utf-8")
+            self.assertIn(".env.*", gitignore)
+            self.assertIn("*.safetensors", gitignore)
+            self.assertEqual(gitignore.count(installer.GITIGNORE_START), 1)
+
+            second = io.StringIO()
+            with contextlib.redirect_stdout(second):
+                rerun = installer.run(
+                    ["--target-root", str(target), "--update-gitignore", "--force", "--json"]
+                )
+
+            second_report = json.loads(second.getvalue())
+            self.assertEqual(rerun, 0)
+            self.assertEqual(second_report["gitignore"]["status"], "managed")
+            self.assertEqual(second_report["gitignore"]["missing_patterns"], [])
+
     def test_installer_dry_run_reports_gitignore_append_without_writing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "hermes"

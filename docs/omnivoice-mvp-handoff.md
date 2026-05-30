@@ -97,7 +97,8 @@ Then rerun without `--dry-run`. Existing files are not overwritten unless
 voice templates.
 Review the `.gitignore` status in the installer report. Add
 `--update-gitignore` when you want the installer to append the managed
-OmniVoice local-artifact block to the target checkout.
+OmniVoice local-artifact block to the target checkout or refresh an existing
+managed block to the current pattern list.
 
 ## Configure A Real Backend
 

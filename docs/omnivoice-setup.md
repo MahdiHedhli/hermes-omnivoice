@@ -302,7 +302,8 @@ config and safe voice templates copied too.
 The installer reports missing target `.gitignore` coverage for local voice
 material, generated audio, model weights, caches, and local config. Add
 `--update-gitignore` only after reviewing the dry-run output; it appends a
-managed block and is idempotent.
+managed block and is idempotent. If a managed block already exists but is
+missing newer patterns, `--update-gitignore` refreshes that block in place.
 
 Run the smoke test only after configuring a real backend command, Studio URL,
 or opt-in CLI backend:
