@@ -1383,6 +1383,41 @@ class HermesSourceFinderTests(unittest.TestCase):
             self.assertEqual(report["candidate_count"], 1)
             self.assertTrue(report["truncated"])
 
+    def test_discovery_inspects_known_candidate_after_discovery_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "hermes-agent"
+            (repo / ".git").mkdir(parents=True)
+            (repo / "docs").mkdir()
+            (repo / "docs" / "tts.md").write_text("Hermes TTS provider", encoding="utf-8")
+            (repo / "pyproject.toml").write_text(
+                "[project]\nname='hermes-agent'\n",
+                encoding="utf-8",
+            )
+
+            with unittest.mock.patch.object(
+                source_finder,
+                "find_candidate_roots",
+                return_value=([repo], True),
+            ), unittest.mock.patch.object(
+                source_finder.time,
+                "monotonic",
+                side_effect=[0, 10, 10, *([10.1] * 50)],
+            ):
+                report = source_finder.discover(
+                    argparse_namespace(
+                        root=[Path(tmp)],
+                        max_depth=3,
+                        max_candidates=50,
+                        max_files=100,
+                        max_file_bytes=2048,
+                        scan_timeout=5,
+                    )
+                )
+
+            self.assertTrue(report["truncated"])
+            self.assertEqual(report["candidate_count"], 1)
+            self.assertEqual(report["likely_count"], 1)
+
 
 def argparse_namespace(**kwargs):
     return types.SimpleNamespace(**kwargs)

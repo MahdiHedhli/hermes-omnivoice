@@ -34,6 +34,10 @@ reading sensitive-named files and correctly marks this bridge repo separately
 from an actual Hermes Agent source tree. The acceptance summary now reports
 static MVP readiness, real backend readiness, and Hermes source readiness as
 separate gates, with opt-in strict flags for the runtime and source checks.
+Source discovery now retains already-discovered candidates through a small
+bounded inspection grace window when a later broad root consumes the scan
+timeout, so acceptance evidence stays useful without unbounded filesystem
+traversal.
 
 ## Previous heartbeat
 
@@ -1447,7 +1451,7 @@ separate gates, with opt-in strict flags for the runtime and source checks.
     pull/build window or use the finder output as the durable source-discovery
     evidence until the real Hermes checkout appears.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 11:30 America/New_York
 - Completed:
@@ -1503,6 +1507,63 @@ separate gates, with opt-in strict flags for the runtime and source checks.
   - Commit the acceptance-source gate checkpoint, then continue with a bounded
     Studio startup retry or prepare final handoff notes around the remaining
     external blockers.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 12:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `53bcc00`.
+  - Ran acceptance with both the narrow Hermes root and broad Coding root. The
+    broad root consumed the source scan timeout before any candidate inspection,
+    which made the source-discovery evidence unstable.
+  - Updated `scripts/find-hermes-source.py` so candidate roots discovered before
+    timeout still get a small bounded inspection grace window.
+  - Added a regression test proving an already-known candidate is inspected even
+    when discovery reports truncation.
+  - Re-ran acceptance with the same roots; it now retains this bridge repo as a
+    candidate, marks it `is_bridge_repo: true`, reports `likely_count: 0`, and
+    keeps `hermes_source_ready: false`.
+  - Rechecked runtime state; no Studio URL, backend command, OmniVoice CLI, or
+    persistent local voice registry is configured in the default environment.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/omnivoice-acceptance.py --source-root /Users/mhedhli/Documents/Coding/hermes --source-root /Users/mhedhli/Documents/Coding --source-scan-timeout 5 --source-max-candidates 20 --json`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `sed -n ... scripts/omnivoice-studio-local.py`
+  - `tail -n 190 HEARTBEAT.md`
+  - `ls -la /Users/mhedhli/Documents/Coding/hermes /Users/mhedhli/Documents/Coding/hermes/omnivoice-studio-plugin`
+  - `python3 scripts/find-hermes-source.py --root /Users/mhedhli/Documents/Coding/hermes --max-depth 5 --max-candidates 20 --scan-timeout 5 --json`
+  - `python3 scripts/find-hermes-source.py --root /Users/mhedhli/Documents/Coding/hermes/omnivoice-studio-plugin --max-depth 1 --max-candidates 20 --scan-timeout 5 --json`
+  - `sed -n ... scripts/find-hermes-source.py`
+  - `rg -n "find-hermes-source|source discovery|Hermes source" README.md docs scripts tests HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.HermesSourceFinderTests tests.test_omnivoice_tts.AcceptanceTests -v`
+  - `python3 -m py_compile scripts/find-hermes-source.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+- Tests:
+  - Focused source/acceptance tests: PASS, 11 tests.
+  - `python3 -m py_compile scripts/find-hermes-source.py tests/test_omnivoice_tts.py`:
+    PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 72 tests with 1
+    expected opt-in real-backend skip, py_compile, fake-backend smoke,
+    unconfigured smoke skip, secret-pattern scan, and `git diff --check`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under `/Users/mhedhli/Documents/Coding/hermes`.
+  - Published OmniVoice-Studio image pull remains unresolved, so no live Studio
+    `/profiles` or `/generate` smoke has run.
+  - No persistent local voice profiles exist under
+    `~/.hermes/voices/omnivoice`; real smokes continue to use temporary
+    consented profiles.
+- Assumptions:
+  - Truncated source searches should still report already-discovered candidates
+    rather than dropping useful evidence at the deadline.
+  - The broad Coding root is useful for discovery but should not be allowed to
+    erase the narrower Hermes-root evidence.
+- Next action:
+  - Commit the source-discovery timeout stability fix, then either retry
+    loopback Studio startup with the bounded helper or prepare final handoff
+    notes around the remaining external blockers.
 
 ## Decision log
 
@@ -1563,6 +1624,8 @@ separate gates, with opt-in strict flags for the runtime and source checks.
   unrelated repos with generic TTS text are not marked as Hermes Agent.
 - Track Hermes source readiness as a separate acceptance gate from real backend
   readiness; both are external to the standalone bridge repo.
+- Preserve already-discovered Hermes source candidates when a later broad scan
+  hits its timeout; a truncated search should degrade the report, not erase it.
 
 ## Open follow-ups
 

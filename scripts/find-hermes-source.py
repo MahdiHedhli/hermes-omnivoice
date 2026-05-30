@@ -60,6 +60,7 @@ TEXT_SUFFIXES = {
 }
 TTS_NAME_TERMS = ("tts", "speech", "voice", "audio", "provider")
 CONTENT_TERMS = ("tts", "text-to-speech", "speech", "voice", "provider")
+EXPIRED_CANDIDATE_INSPECTION_GRACE_SECONDS = 1.0
 
 
 def safe_resolve(path: Path) -> Path:
@@ -243,10 +244,13 @@ def discover(args: argparse.Namespace) -> dict:
     )
     candidates = []
     for path in candidate_roots:
+        active_deadline = deadline
         if deadline is not None and time.monotonic() > deadline:
             truncated = True
-            break
-        candidate = inspect_candidate(path, args.max_files, args.max_file_bytes, deadline)
+            if candidates:
+                break
+            active_deadline = time.monotonic() + EXPIRED_CANDIDATE_INSPECTION_GRACE_SECONDS
+        candidate = inspect_candidate(path, args.max_files, args.max_file_bytes, active_deadline)
         if "scan:truncated" in candidate["indicators"]:
             truncated = True
         candidates.append(candidate)
