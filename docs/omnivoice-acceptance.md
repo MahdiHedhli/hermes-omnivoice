@@ -23,6 +23,10 @@ python scripts/install-hermes-omnivoice-bridge.py \
   --dry-run
 ```
 
+Use `docs/omnivoice-mvp-handoff.md` for the current package state, live
+blockers, install path, and the commands needed to move from static acceptance
+to real synthesis acceptance.
+
 For a strict live-runtime check:
 
 ```bash

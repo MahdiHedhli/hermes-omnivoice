@@ -21,6 +21,7 @@ BASE_MANIFEST = [
     "scripts/omnivoice-acceptance.py",
     "scripts/test-omnivoice-tts.sh",
     "docs/omnivoice-integration-notes.md",
+    "docs/omnivoice-mvp-handoff.md",
     "docs/omnivoice-setup.md",
     "docs/omnivoice-studio-bridge.md",
     "docs/omnivoice-acceptance.md",

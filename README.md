@@ -122,6 +122,7 @@ shell quoting hazards.
 ## More Detail
 
 - [Setup](docs/omnivoice-setup.md)
+- [MVP handoff](docs/omnivoice-mvp-handoff.md)
 - [Studio bridge](docs/omnivoice-studio-bridge.md)
 - [Acceptance checklist](docs/omnivoice-acceptance.md)
 - [Integration notes](docs/omnivoice-integration-notes.md)

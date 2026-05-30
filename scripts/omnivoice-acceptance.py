@@ -24,6 +24,7 @@ REQUIRED_FILES = [
     "scripts/test-omnivoice-tts.sh",
     "scripts/validate-omnivoice-bridge.sh",
     "docs/omnivoice-integration-notes.md",
+    "docs/omnivoice-mvp-handoff.md",
     "docs/omnivoice-setup.md",
     "docs/omnivoice-studio-bridge.md",
     "docs/omnivoice-acceptance.md",

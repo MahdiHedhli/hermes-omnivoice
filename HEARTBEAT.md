@@ -9,7 +9,8 @@ writes valid WAV output through a local backend contract. It also includes a
 standalone voice helper for listing, inspecting, previewing, and printing Hermes
 command-provider config for local voices. A single validation script now reruns
 the full local bridge contract, including a mocked localhost Studio `/generate`
-path. Top-level handoff docs and example configs are now present.
+path. Top-level handoff docs, an MVP package handoff, and example configs are
+now present.
 
 ## Previous heartbeat
 
@@ -673,7 +674,7 @@ path. Top-level handoff docs and example configs are now present.
   - Commit the voice-selection helper checkpoint, then continue with final
     package polish or a bounded live Studio/backend attempt.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 05:00 America/New_York
 - Completed:
@@ -736,6 +737,67 @@ path. Top-level handoff docs and example configs are now present.
     whether to start the full Studio image pull/build or keep polishing final
     handoff docs.
 
+## Latest heartbeat
+
+- Time: 2026-05-30 05:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `a196c53`.
+  - Confirmed acceptance still reports static MVP readiness PASS and live
+    backend readiness BLOCKED.
+  - Added `docs/omnivoice-mvp-handoff.md`, a concise operator handoff covering
+    current ready state, validation commands, install flow, backend setup,
+    voice creation/selection commands, live blockers, and security invariants.
+  - Added the handoff doc to the static acceptance required-file list and the
+    dry-run-first Hermes install manifest.
+  - Linked the handoff from README, acceptance docs, and integration notes.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -15`
+  - `sed -n ... README.md`
+  - `sed -n ... scripts/omnivoice-acceptance.py`
+  - `sed -n ... HEARTBEAT.md`
+  - `rg --files docs scripts tests examples | sort`
+  - `sed -n ... docs/omnivoice-acceptance.md`
+  - `sed -n ... docs/omnivoice-setup.md`
+  - `sed -n ... docs/omnivoice-studio-bridge.md`
+  - `sed -n ... scripts/validate-omnivoice-bridge.sh`
+  - `rg -n "acceptance|REQUIRED_FILES|omnivoice-acceptance|More Detail|mvp" tests README.md docs scripts`
+  - `sed -n ... scripts/install-hermes-omnivoice-bridge.py`
+  - `sed -n ... tests/test_omnivoice_tts.py`
+  - `sed -n ... docs/omnivoice-integration-notes.md`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `git diff --stat`
+  - `git diff -- README.md docs/omnivoice-mvp-handoff.md docs/omnivoice-acceptance.md scripts/omnivoice-acceptance.py scripts/install-hermes-omnivoice-bridge.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `find . -type d -name __pycache__ -print`
+  - `find . -type f \( -name '*.wav' -o -name '*.mp3' -o -name '*.flac' -o -name '*.onnx' -o -name '*.pt' -o -name '*.pth' -o -name '*.safetensors' -o -name '.env' -o -name '.env.*' -o -name 'omnivoice-selection.json' \) -print`
+  - `git diff --check`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `git add .`
+  - `git diff --cached --stat`
+  - `git diff --cached --check`
+  - `git commit -m "docs: add OmniVoice MVP handoff"`
+- Tests:
+  - `python3 scripts/omnivoice-acceptance.py --json`: PASS; static MVP ready
+    with 19 required files, real backend not ready.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - Validation includes 51 unit tests PASS with 1 real-backend integration
+    skip, py_compile PASS, fake-backend smoke PASS, unconfigured smoke SKIP as
+    expected, secret-pattern scan PASS, and `git diff --check` PASS.
+- Blockers:
+  - Studio image is not present locally, and no Studio container is running on
+    `127.0.0.1:3900`.
+  - No real OmniVoice backend command or `omnivoice` CLI is configured.
+  - No local voice profiles exist under `~/.hermes/voices/omnivoice`.
+  - Actual Hermes Agent source is still not present locally, so native provider
+    and in-app `/voice` command wiring remain deferred.
+- Assumptions:
+  - The most useful next operator artifact is a concise handoff that separates
+    what is ready from what still needs a real local backend and Hermes source.
+- Next action:
+  - Commit the MVP handoff checkpoint, then decide whether to start a full
+    Studio image pull/build or wait for a real Hermes Agent source/backend path.
+
 ## Decision log
 
 - Use a command-provider bridge first because the scheduled workspace was empty.
@@ -773,6 +835,8 @@ path. Top-level handoff docs and example configs are now present.
   writing selection metadata.
 - Use local-only Studio startup probes before downloading or building large
   model-backed containers.
+- Keep a single MVP handoff page in the package so install and live-readiness
+  work does not depend on reading the full heartbeat history.
 
 ## Open follow-ups
 

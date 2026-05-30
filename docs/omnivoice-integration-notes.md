@@ -60,6 +60,8 @@ not confirmed.
 Use `scripts/validate-omnivoice-bridge.sh` for deterministic local contract
 tests, then `scripts/omnivoice-acceptance.py` to summarize whether the static
 MVP is present and whether a real local backend plus voice profile are ready.
+See `docs/omnivoice-mvp-handoff.md` for the current operator handoff and live
+runtime blockers.
 
 ## Voice UX Bridge
 
