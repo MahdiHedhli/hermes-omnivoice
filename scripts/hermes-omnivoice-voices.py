@@ -329,7 +329,11 @@ def build_parser() -> argparse.ArgumentParser:
 def run(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+        print(f"hermes-omnivoice-voices: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

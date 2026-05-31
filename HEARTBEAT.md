@@ -131,6 +131,9 @@ synthesis behavior from drifting.
 Acceptance now catches runtime/source diagnostic failures and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks for malformed operator
 runtime config.
+The standalone voice helper now catches local filesystem and subprocess
+failures at the CLI boundary and reports concise `hermes-omnivoice-voices:`
+errors instead of tracebacks for operator-facing selection/config commands.
 
 ## Previous heartbeat
 
@@ -3990,6 +3993,58 @@ runtime config.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 13:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `4d06934`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited operator-facing helper entrypoints for uncaught local errors.
+  - Updated `scripts/hermes-omnivoice-voices.py` to catch local filesystem,
+    runtime, and subprocess failures at the CLI boundary and return a concise
+    `hermes-omnivoice-voices:` stderr line with exit 1.
+  - Added regression coverage for a blocked selection-file write path, proving
+    `set` fails without a traceback.
+  - Updated custom-voice docs, MVP handoff, weekend summary, and heartbeat
+    status for the new 128-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|TBD|Next action|Open follow-ups|Remaining Blockers|Next Steps|native provider|Hermes Agent source|traceback|error instead|INCOMPLETE|BLOCKED|SKIP" README.md docs scripts tests examples HEARTBEAT.md`
+  - `rg -n "argparse|parse_args|run\\(|def main|except|RuntimeError|OSError|print\\(f\\\".*:" scripts/*.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.VoiceCliTests -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+- Tests:
+  - Voice helper focused suite: PASS, 17 tests.
+  - Full bridge validator: PASS, 128 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Voice helper commands are operator-facing and should convert local I/O
+    failures into actionable stderr rather than surfacing Python internals.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the voice helper diagnostic boundary if final hygiene checks stay
+    clean, then keep the branch ready for real Hermes Agent source wiring once
+    that checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 12:30 America/New_York
 - Completed:

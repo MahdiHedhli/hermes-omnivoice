@@ -3172,6 +3172,33 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertEqual(mode, 0o600)
 
+    def test_set_command_reports_selection_write_error_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            blocked_parent = root / "not-a-directory"
+            blocked_parent.write_text("occupied", encoding="utf-8")
+            selection_file = blocked_parent / "selection.json"
+            write_voice(voices_root, "marvin")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--selection-file",
+                        str(selection_file),
+                        "set",
+                        "marvin",
+                    ]
+                )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertIn("hermes-omnivoice-voices:", error)
+            self.assertNotIn("Traceback", error)
+
     def test_selection_file_write_cleans_temp_file_on_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             selection_file = Path(tmp) / "selection.json"
