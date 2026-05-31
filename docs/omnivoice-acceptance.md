@@ -45,8 +45,10 @@ blockers, install path, and the commands needed to move from static acceptance
 to real synthesis acceptance.
 
 The acceptance command runs source discovery by default with a short timeout.
-Keep `--source-scan-timeout` greater than zero; invalid values fail before
-source discovery starts. To point it at an explicit checkout root:
+Keep `--source-scan-timeout`, `--source-max-candidates`, `--source-max-files`,
+and `--source-max-file-bytes` greater than zero, and keep
+`--source-max-depth` non-negative; invalid values fail before source discovery
+starts. To point it at an explicit checkout root:
 
 ```bash
 python scripts/omnivoice-acceptance.py \

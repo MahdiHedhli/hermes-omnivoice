@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 19:00 America/New_York on branch
+Status as of 2026-05-31 19:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 150 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 152 tests with 1 expected
   opt-in real-backend skip.
 - Validator interpreter alignment: PASS. The fake-backend smoke command now
   uses the configured `PYTHON_BIN` instead of hardcoded `python3`, so full
@@ -58,9 +58,10 @@ sample and contains explicit confirmed consent metadata.
 - Acceptance diagnostic failure handling: PASS. Malformed runtime command
   configuration now makes `scripts/omnivoice-acceptance.py` exit cleanly with a
   concise error instead of a traceback.
-- Source discovery timeout validation: PASS. `scripts/find-hermes-source.py`
-  and acceptance source discovery reject non-positive scan timeouts before
-  walking the filesystem, keeping automation bounded.
+- Source discovery bounds validation: PASS. `scripts/find-hermes-source.py`
+  and acceptance source discovery reject non-positive scan timeouts,
+  candidate/file limits, and negative max-depth values before walking the
+  filesystem, keeping automation bounded.
 - Voice helper diagnostic failure handling: PASS. Local filesystem and
   subprocess failures in `scripts/hermes-omnivoice-voices.py` now exit with a
   concise helper-prefixed error instead of a traceback.

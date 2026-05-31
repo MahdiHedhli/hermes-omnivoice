@@ -73,6 +73,18 @@ def validate_scan_timeout(value: int) -> int:
     return value
 
 
+def validate_positive_bound(value: int, name: str) -> int:
+    if value <= 0:
+        raise SourceDiscoveryError(f"{name} must be greater than 0")
+    return value
+
+
+def validate_max_depth(value: int) -> int:
+    if value < 0:
+        raise SourceDiscoveryError("max depth must be at least 0")
+    return value
+
+
 def safe_resolve(path: Path) -> Path:
     return path.expanduser().resolve()
 
@@ -245,12 +257,16 @@ def inspect_candidate(
 
 def discover(args: argparse.Namespace) -> dict:
     roots = args.root or DEFAULT_ROOTS
+    max_depth = validate_max_depth(args.max_depth)
+    max_candidates = validate_positive_bound(args.max_candidates, "max candidates")
+    max_files = validate_positive_bound(args.max_files, "max files")
+    max_file_bytes = validate_positive_bound(args.max_file_bytes, "max file bytes")
     scan_timeout = validate_scan_timeout(args.scan_timeout)
     deadline = time.monotonic() + scan_timeout
     candidate_roots, truncated = find_candidate_roots(
         roots,
-        args.max_depth,
-        args.max_candidates,
+        max_depth,
+        max_candidates,
         deadline,
     )
     candidates = []
@@ -261,7 +277,7 @@ def discover(args: argparse.Namespace) -> dict:
             if candidates:
                 break
             active_deadline = time.monotonic() + EXPIRED_CANDIDATE_INSPECTION_GRACE_SECONDS
-        candidate = inspect_candidate(path, args.max_files, args.max_file_bytes, active_deadline)
+        candidate = inspect_candidate(path, max_files, max_file_bytes, active_deadline)
         if "scan:truncated" in candidate["indicators"]:
             truncated = True
         candidates.append(candidate)

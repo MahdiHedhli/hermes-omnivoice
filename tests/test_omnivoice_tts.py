@@ -2543,6 +2543,27 @@ class HermesSourceFinderTests(unittest.TestCase):
                 )
             )
 
+    def test_discovery_refuses_invalid_scan_bounds(self) -> None:
+        cases = [
+            ("max_depth", -1, "max depth must be at least 0"),
+            ("max_candidates", 0, "max candidates must be greater than 0"),
+            ("max_files", 0, "max files must be greater than 0"),
+            ("max_file_bytes", 0, "max file bytes must be greater than 0"),
+        ]
+        for field, value, message in cases:
+            with self.subTest(field=field):
+                kwargs = {
+                    "root": [Path("/tmp/missing-hermes-source")],
+                    "max_depth": 3,
+                    "max_candidates": 50,
+                    "max_files": 100,
+                    "max_file_bytes": 2048,
+                    "scan_timeout": 20,
+                }
+                kwargs[field] = value
+                with self.assertRaisesRegex(source_finder.SourceDiscoveryError, message):
+                    source_finder.discover(argparse_namespace(**kwargs))
+
     def test_discovery_cli_invalid_scan_timeout_fails_without_traceback(self) -> None:
         stdout = io.StringIO()
         stderr = io.StringIO()
@@ -2917,6 +2938,31 @@ class AcceptanceTests(unittest.TestCase):
             self.assertEqual(stdout.getvalue(), "")
             self.assertIn("omnivoice-acceptance:", error)
             self.assertIn("scan timeout must be greater than 0", error)
+            self.assertNotIn("Traceback", error)
+
+    def test_acceptance_invalid_source_scan_bound_fails_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                result = acceptance.run(
+                    [
+                        "--voices-dir",
+                        str(Path(tmp) / "missing"),
+                        "--source-root",
+                        str(Path(tmp) / "source"),
+                        "--source-max-candidates",
+                        "0",
+                        "--json",
+                    ],
+                    env={},
+                )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertIn("omnivoice-acceptance:", error)
+            self.assertIn("max candidates must be greater than 0", error)
             self.assertNotIn("Traceback", error)
 
     def test_acceptance_reports_missing_hermes_source_by_default(self) -> None:

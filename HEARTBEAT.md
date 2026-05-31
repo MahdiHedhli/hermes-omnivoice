@@ -160,8 +160,9 @@ overrides before spawning the wrapper subprocess.
 The local Studio helper now rejects non-positive health probe timeouts while
 preserving `--command-timeout 0` as an explicit unbounded manual escape hatch
 for Docker/Git commands.
-Source discovery and acceptance source readiness now reject non-positive scan
-timeouts before walking the filesystem, preserving bounded automation runs.
+Source discovery and acceptance source readiness now reject invalid scan
+timeouts and traversal bounds before walking the filesystem, preserving bounded
+automation runs.
 
 ## Previous heartbeat
 
@@ -4021,6 +4022,61 @@ timeouts before walking the filesystem, preserving bounded automation runs.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 19:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `08f9a5c`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited source discovery traversal bounds beyond `--scan-timeout`.
+  - Added source discovery validation for negative `--max-depth`,
+    non-positive `--max-candidates`, non-positive `--max-files`, and
+    non-positive `--max-file-bytes`.
+  - Added focused source finder and acceptance coverage proving invalid bounds
+    fail before traversal and return concise helper-prefixed errors.
+  - Updated acceptance, setup, MVP handoff, weekend summary, and heartbeat docs
+    for the new 152-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|Next action|Open follow-ups|source-scan-timeout|scan-timeout|max-depth|max-candidates|max-files|max-file-bytes|argparse|positive|greater than 0|less than" HEARTBEAT.md README.md docs scripts tests examples`
+  - `python3 -m unittest tests.test_omnivoice_tts.HermesSourceFinderTests.test_discovery_refuses_invalid_scan_bounds tests.test_omnivoice_tts.HermesSourceFinderTests.test_discovery_refuses_non_positive_scan_timeout tests.test_omnivoice_tts.HermesSourceFinderTests.test_discovery_cli_invalid_scan_timeout_fails_without_traceback tests.test_omnivoice_tts.AcceptanceTests.test_acceptance_invalid_source_scan_bound_fails_without_traceback tests.test_omnivoice_tts.AcceptanceTests.test_acceptance_invalid_source_scan_timeout_fails_without_traceback tests.test_omnivoice_tts.HermesSourceFinderTests.test_scores_likely_hermes_source_with_tts_files -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Source discovery bounds focused suite: PASS, 6 tests.
+  - Full bridge validator: PASS, 152 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Repo artifact scan and whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Source discovery should reject invalid traversal bounds rather than produce
+    weak no-op source evidence in acceptance output.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Continue bounded MVP hardening or install the bridge into the real Hermes
+    Agent checkout once that source path is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 19:00 America/New_York
 - Completed:

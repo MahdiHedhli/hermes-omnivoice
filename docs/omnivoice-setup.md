@@ -306,8 +306,9 @@ python scripts/install-hermes-omnivoice-bridge.py \
 `find-hermes-source.py` is read-only. It reports candidate source trees and TTS
 indicators, skips secret-named files, and marks this bridge repo separately
 from a real Hermes Agent checkout.
-Keep `--scan-timeout` greater than zero so discovery remains bounded in
-automation.
+Keep `--scan-timeout`, `--max-candidates`, `--max-files`, and
+`--max-file-bytes` greater than zero, and keep `--max-depth` non-negative so
+discovery remains bounded and useful in automation.
 Prefer explicit candidate roots or the bounded source finder over broad content
 grep across a whole development tree. Generic terms such as `provider`, `voice`,
 and `tts` appear in many unrelated repositories and are not sufficient evidence

@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 19:00 America/New_York on branch
+As of 2026-05-31 19:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 150 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 152 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -58,8 +58,9 @@ As of 2026-05-31 19:00 America/New_York on branch
   failures and exits with a concise `omnivoice-acceptance:` error instead of a
   traceback when operator runtime config is malformed.
 - `scripts/find-hermes-source.py` and acceptance source discovery now reject
-  non-positive scan timeouts before walking the filesystem, keeping automated
-  source readiness checks bounded.
+  non-positive scan timeouts, candidate/file limits, and negative max-depth
+  values before walking the filesystem, keeping automated source readiness
+  checks bounded.
 - `scripts/hermes-omnivoice-voices.py` now catches local filesystem and
   subprocess failures at the CLI boundary and exits with a concise
   `hermes-omnivoice-voices:` error instead of a traceback.
