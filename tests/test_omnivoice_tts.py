@@ -2455,6 +2455,51 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0)
             self.assertIn("PASS: generated", completed.stdout)
 
+    def test_installed_smoke_script_uses_private_temp_output_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = installer.run(["--target-root", str(target)])
+            self.assertEqual(result, 0)
+
+            backend_code = "\n".join(
+                [
+                    "import pathlib",
+                    "import stat",
+                    "import sys",
+                    "import wave",
+                    "out = pathlib.Path(sys.argv[1])",
+                    "mode = stat.S_IMODE(out.stat().st_mode)",
+                    "if out.name == 'hermes-output.wav' or not out.name.startswith('.hermes-output.wav.') or mode != 0o600:",
+                    "    print(f'unsafe output path: {{out}} mode={{mode:o}}', file=sys.stderr)",
+                    "    sys.exit(2)",
+                    "with wave.open(str(out), 'wb') as wav:",
+                    "    wav.setnchannels(1)",
+                    "    wav.setsampwidth(2)",
+                    "    wav.setframerate(16000)",
+                    "    wav.writeframes(b'\\x00\\x00' * 160)",
+                ]
+            )
+            command = [sys.executable, "-c", backend_code, "{out}"]
+            env = os.environ.copy()
+            env["HERMES_OMNIVOICE_COMMAND_JSON"] = json.dumps(command)
+            env.pop("HERMES_OMNIVOICE_COMMAND", None)
+            env.pop("HERMES_OMNIVOICE_STUDIO_URL", None)
+            env.pop("HERMES_OMNIVOICE_AUTO_CLI", None)
+            env["PYTHON_BIN"] = sys.executable
+
+            completed = subprocess.run(
+                [str(target / "scripts" / "test-omnivoice-tts.sh")],
+                cwd=target,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertIn("PASS: generated", completed.stdout)
+
     def test_installer_can_include_examples(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "hermes"

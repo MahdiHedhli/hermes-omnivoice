@@ -111,6 +111,8 @@ Generated TTS output is now hardened too: the wrapper removes existing output
 symlinks before backend synthesis, leaves successful output audio as `0600`,
 passes command backends a private temporary output path, and validates command
 or Studio API output before atomic replacement.
+Installed smoke-script coverage now proves that copied Hermes checkouts retain
+that private temporary output-path contract before the final output is replaced.
 
 ## Previous heartbeat
 
@@ -3970,6 +3972,77 @@ or Studio API output before atomic replacement.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 09:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `8a88e91`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the installer runtime manifest already includes the current setup,
+    handoff, weekend summary, acceptance, and custom-voice docs.
+  - Added installed-checkout regression coverage proving a copied smoke script
+    still gives command backends a private wrapper-owned temporary output path
+    instead of the final `hermes-output.wav` path.
+  - The new installed backend also verifies the wrapper-created temporary output
+    starts with `.hermes-output.wav.` and has `0600` permissions before writing
+    a valid WAV.
+  - Updated MVP handoff, weekend summary, and heartbeat state for the new
+    116-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `sed -n ... scripts/install-hermes-omnivoice-bridge.py`
+  - `sed -n ... scripts/omnivoice-acceptance.py scripts/test-omnivoice-tts.sh scripts/hermes-omnivoice-tts.py tests/test_omnivoice_tts.py`
+  - `rg -n "omnivoice-mvp-handoff|weekend-summary|tts-custom-voices|README|omnivoice-setup|REQUIRED_FILES|BRIDGE_FILES|INSTALL|private|temp|0600|output" scripts/omnivoice-acceptance.py scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py docs README.md HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.InstallerTests.test_installed_smoke_script_uses_private_temp_output_path -v`
+  - `python3 -m unittest tests.test_omnivoice_tts.InstallerTests tests.test_omnivoice_tts.AcceptanceTests -v`
+  - `python3 -m py_compile tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rg -n "09:00 America/New_York|115 tests|Installed smoke configured-backend behavior|Generated audio writes|command backends a private" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md HEARTBEAT.md`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `find . -type d -name __pycache__ -print`
+  - `git diff --check`
+  - `rg -n "09:30 America/New_York|116 tests|115 tests|09:00 America/New_York" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+- Tests:
+  - Installed smoke private-temp regression: PASS, 1 test.
+  - Installer plus acceptance targeted suite: PASS, 25 tests.
+  - Python py_compile for the tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 116 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Real-backend smoke script after evaluating generated shell exports: PASS;
+    generated a valid temporary WAV from the required smoke text.
+  - Stale handoff snapshot scan: PASS; no 09:00/115-test summary state remains
+    in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, local selection state, or pycache directories found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Installed smoke coverage is the right next contract guard because the MVP is
+    intended to be copied into an external Hermes checkout before native-provider
+    work.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the installed-checkout temp-output regression and keep the branch
+    clean for handoff, or install the bridge into the real Hermes Agent checkout
+    once the source path is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 09:00 America/New_York
 - Completed:

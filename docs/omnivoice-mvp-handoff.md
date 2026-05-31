@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 09:00 America/New_York on branch
+As of 2026-05-31 09:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 115 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 116 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
@@ -89,6 +89,9 @@ As of 2026-05-31 09:00 America/New_York on branch
 - Installed smoke testing also passes when `HERMES_OMNIVOICE_COMMAND_JSON`
   points at an explicit local backend, proving the default install can exercise
   the wrapper contract without package-only test helpers.
+- Installed smoke testing now also proves the copied wrapper gives command
+  backends a private `.hermes-output.wav.*` temporary file with `0600`
+  permissions, rather than the final `hermes-output.wav` path.
 - Installed `--with-examples` voice templates validate through the copied voice
   helper: `narrator` is ready as a designed voice, while `marvin` remains
   invalid until a user supplies the consented `ref.wav` reference sample.
