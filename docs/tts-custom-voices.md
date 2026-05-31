@@ -117,6 +117,8 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
 - Use readable WAV reference samples for cloned voices.
 - Use local synthesis only unless a separate security review approves a remote
   service.
+- Do not put credentials in Studio URLs; wrapper, importer, and runtime
+  diagnostics reject URL userinfo.
 - Treat cloned voice consent as a hard gate, not a documentation-only field.
 - Use the profile helpers for local registry writes. They create voice profile
   directories with `0700` permissions and write `voice.yaml` plus copied or

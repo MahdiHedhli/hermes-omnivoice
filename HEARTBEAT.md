@@ -140,6 +140,9 @@ input cannot reshape stored consent metadata.
 The TTS wrapper now redacts common credential-shaped values from command
 backend stderr, Studio API failure detail, and final wrapper errors before
 printing failures while preserving useful failure context.
+Studio URL validation now rejects URL userinfo in the TTS wrapper, Studio
+profile importer, and runtime diagnostics so credential-bearing Studio URLs do
+not become local config, diagnostics, or log material.
 
 ## Previous heartbeat
 
@@ -3999,6 +4002,60 @@ printing failures while preserving useful failure context.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 15:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `27e5eba`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited Studio URL handling for credential-bearing URL userinfo.
+  - Updated the TTS wrapper, Studio profile importer, and runtime diagnostics to
+    reject Studio URLs containing userinfo.
+  - Added focused tests proving all three URL validators reject userinfo before
+    Studio access.
+  - Updated Studio bridge, custom-voice, MVP handoff, weekend summary, and
+    heartbeat docs for the new 135-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|TBD|unsafe|security|consent|allowed_use|allowed_uses|source-root|root=|HERMES|remote|allow_remote|urlopen|subprocess\\.run|shell=True|eval|token|secret|Traceback|traceback|redact|command|timeout|http://|https://" scripts tests docs README.md examples HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_studio_url_rejects_userinfo tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_studio_url_userinfo tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_rejects_studio_url_userinfo -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Studio URL userinfo focused suite: PASS, 3 tests.
+  - Full bridge validator: PASS, 135 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Repo artifact scan and whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Studio authentication, if needed later, should not be passed through URL
+    userinfo because that form is easy to leak through process/config/log
+    surfaces.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the Studio URL userinfo guard if the reviewed diff is clean.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 14:30 America/New_York
 - Completed:

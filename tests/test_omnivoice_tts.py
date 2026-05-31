@@ -912,6 +912,10 @@ consent:
             "http://127.0.0.1:3900",
         )
 
+    def test_studio_url_rejects_userinfo(self) -> None:
+        with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "userinfo"):
+            omnivoice.validate_studio_url("http://user:cred@127.0.0.1:3900", {})
+
     def test_studio_url_allows_remote_with_explicit_override(self) -> None:
         self.assertEqual(
             omnivoice.validate_studio_url(
@@ -1359,6 +1363,10 @@ class StudioImportTests(unittest.TestCase):
     def test_importer_refuses_remote_studio_by_default(self) -> None:
         with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "non-loopback"):
             studio_import.validate_studio_url("http://10.0.0.5:3900")
+
+    def test_importer_rejects_studio_url_userinfo(self) -> None:
+        with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "userinfo"):
+            studio_import.validate_studio_url("http://user:cred@127.0.0.1:3900")
 
     def test_importer_rejects_dot_segment_voice_id_before_network(self) -> None:
         errors = io.StringIO()
@@ -1885,6 +1893,10 @@ class RuntimeCheckTests(unittest.TestCase):
     def test_runtime_check_rejects_remote_studio_by_default(self) -> None:
         with self.assertRaisesRegex(runtime_check.RuntimeCheckError, "non-loopback"):
             runtime_check.validate_studio_url("http://10.0.0.5:3900")
+
+    def test_runtime_check_rejects_studio_url_userinfo(self) -> None:
+        with self.assertRaisesRegex(runtime_check.RuntimeCheckError, "userinfo"):
+            runtime_check.validate_studio_url("http://user:cred@127.0.0.1:3900")
 
     def test_runtime_check_accepts_loopback_studio_profiles(self) -> None:
         with mock_studio_server() as (studio_url, requests):

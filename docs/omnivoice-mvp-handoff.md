@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 14:30 America/New_York on branch
+As of 2026-05-31 15:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 132 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 135 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -65,6 +65,9 @@ As of 2026-05-31 14:30 America/New_York on branch
 - `scripts/hermes-omnivoice-tts.py` now redacts common credential-shaped values
   from command backend stderr, Studio API failure detail, and final wrapper
   errors before printing failures while preserving useful failure context.
+- Wrapper, importer, and runtime diagnostics now reject Studio URLs containing
+  userinfo, preventing credential-bearing URLs from becoming local config,
+  diagnostics, or log material.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
   shell environment because no backend command is exported there.
@@ -348,3 +351,4 @@ python scripts/hermes-omnivoice-voices.py preview narrator --out /tmp/narrator.w
   synthesis evidence.
 - Keep Studio on loopback by default and prefer HTTP APIs or import/export over
   direct SQLite coupling.
+- Do not put credentials in Studio URLs; bridge tools reject URL userinfo.

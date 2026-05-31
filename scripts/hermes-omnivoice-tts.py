@@ -465,6 +465,8 @@ def validate_studio_url(url: str, env: dict[str, str]) -> str:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise OmniVoiceConfigError("Studio URL must be an absolute http(s) URL")
+    if parsed.username or parsed.password:
+        raise OmniVoiceConfigError("Studio URL must not include userinfo")
     host = parsed.hostname or ""
     allow_remote = env.get("HERMES_OMNIVOICE_ALLOW_REMOTE_STUDIO") == "1"
     if host not in LOOPBACK_HOSTS and not host.endswith(".localhost") and not allow_remote:

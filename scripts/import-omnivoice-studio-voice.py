@@ -92,6 +92,8 @@ def validate_studio_url(url: str, allow_remote: bool = False) -> str:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ImportErrorWithContext("Studio URL must be an absolute http(s) URL")
+    if parsed.username or parsed.password:
+        raise ImportErrorWithContext("Studio URL must not include userinfo")
     host = parsed.hostname or ""
     if host not in LOOPBACK_HOSTS and not host.endswith(".localhost") and not allow_remote:
         raise ImportErrorWithContext(
