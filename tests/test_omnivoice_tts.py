@@ -1297,6 +1297,26 @@ class StudioImportTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn("already contains files", errors.getvalue())
 
+    def test_importer_rejects_empty_allowed_use_before_network(self) -> None:
+        with unittest.mock.patch.object(studio_import, "request_json") as request_json:
+            errors = io.StringIO()
+            with contextlib.redirect_stderr(errors):
+                result = studio_import.run(
+                    [
+                        "--studio-url",
+                        "http://127.0.0.1:3900",
+                        "--profile-id",
+                        "studio-123",
+                        "--allowed-use",
+                        "  ",
+                        "--confirm-consent",
+                    ]
+                )
+
+        self.assertEqual(result, 1)
+        self.assertIn("allowed uses cannot be empty", errors.getvalue())
+        request_json.assert_not_called()
+
     def test_importer_rejects_invalid_downloaded_wav(self) -> None:
         with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "valid WAV"):
             studio_import.validate_wav_bytes(b"not a wav")
@@ -1328,6 +1348,36 @@ class StudioImportTests(unittest.TestCase):
             self.assertEqual(validated["studio_profile_id"], "studio-123")
             self.assertEqual(validated["consent"]["status"], "confirmed")
             self.assertEqual(path_mode(voice_dir / "voice.yaml"), 0o600)
+
+    def test_importer_quotes_allowed_uses_in_yaml(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voice_dir = root / "narrator"
+            voice_dir.mkdir()
+            profile = {
+                "id": "studio-123",
+                "name": "Narrator",
+                "instruct": "male, american accent, moderate pitch",
+                "language": "en",
+            }
+
+            studio_import.write_voice_yaml(
+                voice_dir / "voice.yaml",
+                profile,
+                "narrator",
+                "design",
+                ["local: generation", "review # internal"],
+            )
+            loaded, resolved_dir = omnivoice.load_voice_profile(root, "narrator")
+            validated = omnivoice.validate_voice_profile(loaded, resolved_dir)
+
+            self.assertEqual(
+                validated["consent"]["allowed_uses"],
+                ["local: generation", "review # internal"],
+            )
+            yaml_text = (voice_dir / "voice.yaml").read_text(encoding="utf-8")
+            self.assertIn('    - "local: generation"', yaml_text)
+            self.assertIn('    - "review # internal"', yaml_text)
 
     def test_importer_writes_private_profile_material(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

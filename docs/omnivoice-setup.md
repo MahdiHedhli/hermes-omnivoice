@@ -372,7 +372,9 @@ The importer reads Studio through `GET /profiles/{id}` and
 `GET /profiles/{id}/audio`, then writes
 `~/.hermes/voices/omnivoice/<voice_id>/voice.yaml` and `ref.wav` when reference
 audio is available. It refuses existing non-empty voice directories unless
-`--force` is set, and downloaded reference audio must be a valid WAV.
+`--force` is set, rejects empty `--allowed-use` values before network access,
+quotes allowed-use values in `voice.yaml`, and downloaded reference audio must
+be a valid WAV.
 
 ## Inspect And Preview Voices
 

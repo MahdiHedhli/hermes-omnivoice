@@ -21,6 +21,7 @@ VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 PRIVATE_DIR_MODE = 0o700
 PRIVATE_FILE_MODE = 0o600
+DEFAULT_ALLOWED_USES = ["personal_assistant", "local_generation"]
 
 
 class ImportErrorWithContext(RuntimeError):
@@ -30,6 +31,17 @@ class ImportErrorWithContext(RuntimeError):
 def validate_voice_id(voice_id: str) -> None:
     if not VOICE_ID_RE.fullmatch(voice_id) or voice_id in {".", ".."}:
         raise ImportErrorWithContext("voice id contains unsupported characters")
+
+
+def validate_allowed_uses(values: list[str] | None) -> list[str]:
+    allowed_uses = values or DEFAULT_ALLOWED_USES
+    clean: list[str] = []
+    for value in allowed_uses:
+        item = value.strip()
+        if not item:
+            raise ImportErrorWithContext("allowed uses cannot be empty")
+        clean.append(item)
+    return clean
 
 
 def resolve_voice_dir(voices_dir: Path, voice_id: str) -> Path:
@@ -148,7 +160,7 @@ def write_voice_yaml(path: Path, profile: dict, voice_id: str, mode: str, allowe
         ]
     )
     for use in allowed_uses:
-        lines.append(f"    - {use}")
+        lines.append(f"    - {yaml_scalar(use)}")
     replace_private_file(path, "w", "\n".join(lines) + "\n")
 
 
@@ -187,6 +199,7 @@ def run(argv: list[str] | None = None) -> int:
             raise ImportErrorWithContext("refusing import without --confirm-consent")
         voice_id = args.voice_id or args.profile_id
         validate_voice_id(voice_id)
+        allowed_uses = validate_allowed_uses(args.allowed_use)
         voice_dir = prepare_voice_dir(args.voices_dir, voice_id, args.force)
 
         base_url = validate_studio_url(args.studio_url, args.allow_remote_studio)
@@ -217,7 +230,7 @@ def run(argv: list[str] | None = None) -> int:
             profile,
             voice_id,
             mode,
-            args.allowed_use or ["personal_assistant", "local_generation"],
+            allowed_uses,
         )
         print(f"Imported Studio profile {args.profile_id} as {voice_id} in {voice_dir}")
     except (OSError, urllib.error.URLError, json.JSONDecodeError, ImportErrorWithContext) as exc:

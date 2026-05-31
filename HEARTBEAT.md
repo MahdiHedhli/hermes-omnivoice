@@ -134,6 +134,9 @@ runtime config.
 The standalone voice helper now catches local filesystem and subprocess
 failures at the CLI boundary and reports concise `hermes-omnivoice-voices:`
 errors instead of tracebacks for operator-facing selection/config commands.
+Studio profile import now validates empty consent `allowed_uses` before
+network access and quotes imported allowed-use values in `voice.yaml` so CLI
+input cannot reshape stored consent metadata.
 
 ## Previous heartbeat
 
@@ -3993,6 +3996,58 @@ errors instead of tracebacks for operator-facing selection/config commands.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 13:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `2aa760f`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited local voice create/import metadata writing paths for YAML-scalar and
+    consent metadata consistency.
+  - Updated `scripts/import-omnivoice-studio-voice.py` so empty
+    `--allowed-use` values fail before Studio network access.
+  - Updated Studio imports to quote each consent `allowed_uses` value in
+    `voice.yaml`, matching the safer local voice creator path.
+  - Added regression coverage for the pre-network empty allowed-use rejection
+    and quoted YAML storage of special allowed-use values.
+  - Updated setup, Studio bridge, MVP handoff, weekend summary, and heartbeat
+    docs for the new 130-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|TBD|follow-up|follow up|unsafe|security|consent|remote|allow_remote|urlopen|chmod|mkstemp|NamedTemporaryFile|replace\\(|unlink\\(|write_text\\(|write_bytes\\(|copy2|copyfile|subprocess\\.run|shell=True|eval|token|secret|Traceback|traceback" scripts tests docs README.md examples HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioImportTests -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+- Tests:
+  - Studio import focused suite: PASS, 11 tests.
+  - Full bridge validator: PASS, 130 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Imported consent metadata is security-sensitive and should be validated
+    before network access and serialized as unambiguous YAML scalars.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Complete hygiene checks, then commit the Studio import allowed-use
+    hardening if clean.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 13:00 America/New_York
 - Completed:

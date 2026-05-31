@@ -73,7 +73,9 @@ The importer writes only metadata and user-confirmed reference audio into
 `~/.hermes/voices/omnivoice/<voice_id>/`. It refuses non-loopback Studio URLs
 unless explicitly overridden. It also refuses to overwrite an existing non-empty
 voice directory without `--force` and validates downloaded reference audio as
-WAV before writing it into the registry.
+WAV before writing it into the registry. Import consent `allowed_uses` are
+validated before network access and written as quoted YAML scalars so CLI input
+cannot reshape the stored registry metadata.
 
 ## Validation
 
