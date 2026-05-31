@@ -349,9 +349,8 @@ def chmod_private_file(path: Path) -> None:
     path.chmod(PRIVATE_FILE_MODE)
 
 
-def write_private_audio_file(path: Path, payload: bytes) -> None:
+def create_private_output_temp(path: Path) -> Path:
     fd = -1
-    tmp_path: Path | None = None
     try:
         fd, tmp_name = tempfile.mkstemp(
             prefix=f".{path.name}.",
@@ -360,14 +359,29 @@ def write_private_audio_file(path: Path, payload: bytes) -> None:
         )
         tmp_path = Path(tmp_name)
         os.chmod(tmp_path, PRIVATE_FILE_MODE)
-        with os.fdopen(fd, "wb") as handle:
-            fd = -1
-            handle.write(payload)
-        validate_audio_file(tmp_path)
-        os.replace(tmp_path, path)
+        os.close(fd)
+        return tmp_path
     except Exception:
         if fd != -1:
             os.close(fd)
+        raise
+
+
+def replace_validated_audio_file(source: Path, destination: Path) -> None:
+    validate_audio_file(source)
+    chmod_private_file(source)
+    os.replace(source, destination)
+
+
+def write_private_audio_file(path: Path, payload: bytes) -> None:
+    tmp_path: Path | None = None
+    try:
+        tmp_path = create_private_output_temp(path)
+        with tmp_path.open("wb") as handle:
+            handle.write(payload)
+        replace_validated_audio_file(tmp_path, path)
+        tmp_path = None
+    except Exception:
         if tmp_path is not None:
             tmp_path.unlink(missing_ok=True)
         raise
@@ -522,30 +536,36 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
                 timeout=args.timeout,
             )
         else:
-            command = build_backend_command(
-                env=runtime_env,
-                profile=profile,
-                voice_id=args.voice,
-                voice_dir=voice_dir,
-                text_file=text_file,
-                output_path=output_path,
-                speed=speed,
-            )
-            completed = subprocess.run(
-                command,
-                check=False,
-                text=True,
-                capture_output=True,
-                timeout=args.timeout,
-            )
-            if completed.returncode != 0:
-                if completed.stderr:
-                    print(completed.stderr.strip(), file=sys.stderr)
-                raise OmniVoiceConfigError(
-                    f"OmniVoice backend failed with exit code {completed.returncode}"
+            tmp_output_path: Path | None = None
+            try:
+                tmp_output_path = create_private_output_temp(output_path)
+                command = build_backend_command(
+                    env=runtime_env,
+                    profile=profile,
+                    voice_id=args.voice,
+                    voice_dir=voice_dir,
+                    text_file=text_file,
+                    output_path=tmp_output_path,
+                    speed=speed,
                 )
-            validate_audio_file(output_path)
-            chmod_private_file(output_path)
+                completed = subprocess.run(
+                    command,
+                    check=False,
+                    text=True,
+                    capture_output=True,
+                    timeout=args.timeout,
+                )
+                if completed.returncode != 0:
+                    if completed.stderr:
+                        print(completed.stderr.strip(), file=sys.stderr)
+                    raise OmniVoiceConfigError(
+                        f"OmniVoice backend failed with exit code {completed.returncode}"
+                    )
+                replace_validated_audio_file(tmp_output_path, output_path)
+                tmp_output_path = None
+            finally:
+                if tmp_output_path is not None:
+                    tmp_output_path.unlink(missing_ok=True)
     except (OSError, subprocess.SubprocessError, OmniVoiceConfigError) as exc:
         print(f"hermes-omnivoice-tts: {exc}", file=sys.stderr)
         return 1

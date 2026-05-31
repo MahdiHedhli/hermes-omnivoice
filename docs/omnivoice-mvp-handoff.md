@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 08:30 America/New_York on branch
+As of 2026-05-31 09:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 113 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 115 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
@@ -128,9 +128,9 @@ As of 2026-05-31 08:30 America/New_York on branch
   same-directory temporary files and replace existing material symlinks instead
   of following them.
 - `scripts/hermes-omnivoice-tts.py` removes an existing output symlink before
-  invoking a backend, makes successful generated output audio `0600`, and
-  validates Studio API response audio in a private same-directory temp file
-  before atomically replacing the requested output.
+  synthesis, passes command backends a private same-directory temp output path,
+  makes successful generated output audio `0600`, and validates command or
+  Studio response audio before atomically replacing the requested output.
 
 ## Validate
 

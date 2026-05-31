@@ -201,10 +201,10 @@ python scripts/hermes-omnivoice-tts.py \
 The wrapper exits non-zero if the profile is invalid, consent is missing, the
 reference audio is missing, the backend command fails, or the output WAV is not
 valid. It removes an existing output-file symlink before synthesis so local
-backends do not follow it, and successful generated audio is left with `0600`
-permissions. The built-in Studio API path first validates the response in a
-private same-directory temporary file and then atomically replaces the requested
-output file.
+backends do not follow it, passes command backends a private same-directory
+temporary output path, and leaves successful generated audio with `0600`
+permissions. Command backend output and built-in Studio API responses are
+validated before the wrapper atomically replaces the requested output file.
 
 ## Smoke Test
 

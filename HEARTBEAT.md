@@ -109,8 +109,8 @@ same-directory temporary files and replace existing material symlinks rather
 than following them.
 Generated TTS output is now hardened too: the wrapper removes existing output
 symlinks before backend synthesis, leaves successful output audio as `0600`,
-and validates Studio API response audio in a private temp file before atomic
-replacement.
+passes command backends a private temporary output path, and validates command
+or Studio API output before atomic replacement.
 
 ## Previous heartbeat
 
@@ -3971,6 +3971,71 @@ replacement.
 
 ## Latest heartbeat
 
+- Time: 2026-05-31 09:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `5ca2723`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Closed the remaining command-backend output gap by passing command
+    backends a private same-directory temporary output path instead of the
+    requested final output path.
+  - Kept the final output replacement atomic after validation and preserved
+    `0600` permissions for successful generated audio.
+  - Added regression coverage proving command backends receive the temp path,
+    the temp file is removed after success, invalid backend output does not
+    replace the final file, and no temp output is left behind.
+  - Updated README, setup docs, custom voice docs, MVP handoff, and weekend
+    summary to document validated command/Studio output replacement.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `sed -n '300,560p' scripts/hermes-omnivoice-tts.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-tts.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rg -n "08:30 America/New_York|08:00 America/New_York|113 tests|111 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__ && python3 scripts/check-omnivoice-artifacts.py --json`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__ && find . -type d -name __pycache__ -print`
+- Tests:
+  - Targeted wrapper registry tests: PASS, 20 tests.
+  - Python py_compile for the wrapper and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 115 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Real-backend smoke script after evaluating generated shell exports: PASS;
+    generated a valid temporary WAV from the required smoke text.
+  - Stale handoff snapshot scan: PASS; no 08:30/113-test or older summary state
+    remains in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, local selection state, or pycache directories found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Custom command backends should not need the final output path; `{out}` can
+    safely point at a wrapper-owned temporary file because Hermes receives the
+    final requested output after validation.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the command-output temp-path hardening and keep the branch clean for
+    handoff, or install the bridge into the real Hermes Agent checkout once the
+    source path is available.
+
+## Previous heartbeat
+
 - Time: 2026-05-31 08:30 America/New_York
 - Completed:
   - Rechecked repo state; branch was clean at commit `a056cec`.
@@ -4321,6 +4386,9 @@ replacement.
 - Validate Studio API response audio in a private temp file before replacing
   the requested output path, so invalid response payloads do not become the
   final output.
+- Pass command backends a wrapper-owned temporary output path and atomically
+  replace the requested output only after validation, so custom backends cannot
+  directly write through a final-path symlink or leave invalid final audio.
 
 ## Open follow-ups
 

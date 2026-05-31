@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 08:30 America/New_York on branch
+Status as of 2026-05-31 09:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 113 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 115 tests with 1 expected
   opt-in real-backend skip.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
@@ -101,9 +101,9 @@ sample and contains explicit confirmed consent metadata.
   `ref.wav` material with `0600` permissions. Forced rewrites replace existing
   material symlinks instead of following them.
 - Generated audio writes: PASS. The wrapper removes an existing output symlink
-  before backend synthesis, leaves successful output audio with `0600`
-  permissions, and validates Studio API response audio in a private temporary
-  file before atomic replacement.
+  before backend synthesis, passes command backends a private temporary output
+  path, leaves successful output audio with `0600` permissions, and validates
+  command or Studio response audio before atomic replacement.
 
 ## Remaining Blockers
 

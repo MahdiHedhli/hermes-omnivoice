@@ -502,6 +502,86 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
 
+    def test_command_backend_receives_private_temp_output_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            captured_out = root / "captured-out.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            command = [
+                sys.executable,
+                "-c",
+                (
+                    "import sys, wave; "
+                    "open(sys.argv[2], 'w', encoding='utf-8').write(sys.argv[1]); "
+                    "wav=wave.open(sys.argv[1], 'wb'); "
+                    "wav.setnchannels(1); wav.setsampwidth(2); wav.setframerate(16000); "
+                    "wav.writeframes(b'\\x00\\x00' * 160); wav.close()"
+                ),
+                "{out}",
+                str(captured_out),
+            ]
+
+            result = omnivoice.run(
+                [
+                    "--voices-dir",
+                    str(voices_root),
+                    "--text-file",
+                    str(text_file),
+                    "--out",
+                    str(out_file),
+                    "--voice",
+                    "marvin",
+                ],
+                env={"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(command)},
+            )
+
+            self.assertEqual(result, 0)
+            backend_out = Path(captured_out.read_text(encoding="utf-8"))
+            self.assertNotEqual(backend_out, out_file)
+            self.assertEqual(backend_out.parent.resolve(), out_file.parent.resolve())
+            self.assertTrue(backend_out.name.startswith(f".{out_file.name}."))
+            self.assertFalse(backend_out.exists())
+            self.assertEqual(path_mode(out_file), 0o600)
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertGreater(wav.getnframes(), 0)
+
+    def test_command_backend_invalid_temp_output_does_not_replace_final(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            command = [
+                sys.executable,
+                "-c",
+                "import pathlib, sys; pathlib.Path(sys.argv[1]).write_text('not a wav')",
+                "{out}",
+            ]
+
+            result = omnivoice.run(
+                [
+                    "--voices-dir",
+                    str(voices_root),
+                    "--text-file",
+                    str(text_file),
+                    "--out",
+                    str(out_file),
+                    "--voice",
+                    "marvin",
+                ],
+                env={"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(command)},
+            )
+
+            self.assertEqual(result, 1)
+            self.assertFalse(out_file.exists())
+            self.assertEqual(list(out_file.parent.glob(f".{out_file.name}.*")), [])
+
     def test_auto_cli_builds_official_clone_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
