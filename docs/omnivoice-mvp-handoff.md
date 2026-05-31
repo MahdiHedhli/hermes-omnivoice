@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-30 23:30 America/New_York on branch
+As of 2026-05-31 00:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 88 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 89 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
@@ -74,6 +74,9 @@ As of 2026-05-30 23:30 America/New_York on branch
 - Human acceptance output now marks missing package-only extras as
   `INCOMPLETE`, not as default-install blockers; strict package validation still
   uses `--require-package-files`.
+- Strict package-file acceptance is covered after a default runtime install: the
+  copied acceptance script still exits failed with `--require-package-files`
+  when package-only helpers are absent.
 
 ## Validate
 

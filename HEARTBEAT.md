@@ -58,6 +58,9 @@ adapter command with `--check-only --shell`.
 local backend path, validation state, blockers, security notes, and next steps.
 The artifact checker now also rejects top-level cache, model, and local voice
 artifact directories while preserving safe nested example voice templates.
+Acceptance output keeps package-only handoff files visible without treating
+their expected default-install absence as a blocker, and strict package-file
+validation still fails when explicitly required.
 Top-level local sample directories such as `samples/`, `voice-samples/`, and
 `reference-audio/` are now covered by both the repo artifact checker and the
 installer-managed `.gitignore` safety block.
@@ -2945,7 +2948,7 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   - Keep the branch clean for handoff, or install the bridge into the real
     Hermes Agent checkout once the source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 23:30 America/New_York
 - Completed:
@@ -2996,6 +2999,63 @@ extras as `INCOMPLETE`, while strict package validation remains available with
 - Assumptions:
   - Package-only files are useful in this bridge repo but expected to be absent
     after a default runtime install into Hermes.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Keep the branch clean for handoff, or install the bridge into the real
+    Hermes Agent checkout once the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 00:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `3501811`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready and can provide
+    shell exports for the real OmniVoice adapter command.
+  - Added regression coverage proving `--require-package-files` still fails
+    after a default runtime install omits package-only validation helpers.
+  - Kept human acceptance output non-blocking for the same expected default
+    install absence by labeling package-only extras `INCOMPLETE`.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 00:00/89-test validation state.
+- Commands run:
+  - `git status --short --branch`
+  - `git diff -- tests/test_omnivoice_tts.py`
+  - `rg -n "23:30 America/New_York|88 tests|Latest heartbeat|Decision log|Open follow-ups" HEARTBEAT.md docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.AcceptanceTests -v`
+  - `python3 -m py_compile scripts/omnivoice-acceptance.py tests/test_omnivoice_tts.py`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rg -n "23:30 America/New_York|88 tests|23:00 America/New_York|87 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `git status --short`
+- Tests:
+  - Targeted acceptance tests: PASS, 10 tests.
+  - Python py_compile for acceptance and tests: PASS.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 89 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Default runtime installs should stay lightweight and omit package-only
+    validation helpers, while package completeness remains explicitly checkable
+    in this bridge repo with `--require-package-files`.
   - Native-provider work still waits on the actual Hermes Agent source.
 - Next action:
   - Keep the branch clean for handoff, or install the bridge into the real
@@ -3105,6 +3165,9 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   installer `.gitignore` coverage through tests.
 - Keep package-only handoff files visible in human acceptance output without
   labeling their expected default-install absence as a blocker.
+- Keep strict package-file validation failing after default runtime installs so
+  local package completeness cannot be silently downgraded by the human
+  non-blocking output label.
 
 ## Open follow-ups
 

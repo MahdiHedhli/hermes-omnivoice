@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-30 23:30 America/New_York on branch
+Status as of 2026-05-31 00:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 88 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 89 tests with 1 expected
   opt-in real-backend skip.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
@@ -57,6 +57,9 @@ sample and contains explicit confirmed consent metadata.
   Hermes checkout by default.
 - Installed-checkout acceptance clarity: PASS. Human output now labels missing
   package-only extras as `INCOMPLETE` rather than a default-install blocker.
+- Strict installed-checkout package gate: PASS. The copied acceptance script
+  still exits failed with `--require-package-files` after a default runtime
+  install omits package-only helpers.
 
 ## Remaining Blockers
 
