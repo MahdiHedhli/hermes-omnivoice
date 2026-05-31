@@ -125,6 +125,9 @@ wrapper config errors instead of raw Python exceptions.
 Runtime diagnostics now validate that same command-template placeholder
 contract before reporting an exported backend command as configured, so
 acceptance readiness stays fail-closed when operator command config is malformed.
+The wrapper and runtime diagnostics now expose the same command-template
+placeholder allowlist, and tests pin the two together to prevent readiness and
+synthesis behavior from drifting.
 
 ## Previous heartbeat
 
@@ -3984,6 +3987,59 @@ acceptance readiness stays fail-closed when operator command config is malformed
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 12:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `79f5b67`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Added an explicit wrapper `COMMAND_PLACEHOLDERS` allowlist and made wrapper
+    template validation reject unknown placeholders before formatting.
+  - Added regression coverage that pins runtime diagnostic placeholders to the
+    wrapper placeholder contract.
+  - Updated MVP handoff, weekend summary, and heartbeat docs for the new
+    126-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|Open follow-ups|Next action|Remaining Blockers|Next Steps|source discovery|install into|acceptance|runtime|template|native provider|Hermes Agent source" README.md docs scripts tests examples HEARTBEAT.md`
+  - `sed -n ... scripts/hermes-omnivoice-tts.py scripts/check-omnivoice-runtime.py tests/test_omnivoice_tts.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests tests.test_omnivoice_tts.RuntimeCheckTests tests.test_omnivoice_tts.AcceptanceTests -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+- Tests:
+  - Wrapper, runtime diagnostic, and acceptance focused suite: PASS, 44 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 126 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Real-backend smoke script after evaluating generated shell exports: PASS;
+    generated a valid temporary WAV from the required smoke text.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - The command-template placeholder allowlist is part of the bridge contract
+    and should not drift between synthesis and read-only diagnostics.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Run full validation and strict real-backend smoke, then commit the
+    placeholder contract drift guard if clean.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 11:30 America/New_York
 - Completed:

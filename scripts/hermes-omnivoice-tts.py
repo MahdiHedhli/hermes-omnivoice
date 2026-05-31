@@ -25,6 +25,21 @@ VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 PRIVATE_FILE_MODE = 0o600
 COMMAND_FORMATTER = string.Formatter()
+COMMAND_PLACEHOLDERS = {
+    "text_file",
+    "input_path",
+    "text",
+    "out",
+    "output_path",
+    "voice",
+    "voice_id",
+    "voice_dir",
+    "speed",
+    "language",
+    "ref_audio",
+    "ref_text",
+    "instruct",
+}
 OMNIVOICE_ENGLISH_INSTRUCT_ITEMS = {
     "american accent",
     "australian accent",
@@ -244,18 +259,21 @@ def validate_design_instruct(instruct: str) -> None:
 def format_command_template(value: str, mapping: dict[str, str], source: str) -> str:
     try:
         for _, field_name, _, _ in COMMAND_FORMATTER.parse(value):
-            if field_name and any(part in field_name for part in (".", "[", "]")):
+            if field_name is None:
+                continue
+            if not field_name:
+                raise OmniVoiceConfigError(f"{source} uses unsupported positional placeholder")
+            if any(part in field_name for part in (".", "[", "]")):
                 raise OmniVoiceConfigError(
                     f"{source} uses unsupported placeholder access {{{field_name}}}"
+                )
+            if field_name not in COMMAND_PLACEHOLDERS:
+                raise OmniVoiceConfigError(
+                    f"{source} references unknown placeholder {{{field_name}}}"
                 )
         return value.format_map(mapping)
     except OmniVoiceConfigError:
         raise
-    except KeyError as exc:
-        missing = str(exc).strip("'")
-        raise OmniVoiceConfigError(
-            f"{source} references unknown placeholder {{{missing}}}"
-        ) from exc
     except ValueError as exc:
         raise OmniVoiceConfigError(
             f"{source} has invalid placeholder syntax: {exc}"

@@ -1659,6 +1659,9 @@ class CreateVoiceTests(unittest.TestCase):
 
 
 class RuntimeCheckTests(unittest.TestCase):
+    def test_runtime_check_placeholders_match_wrapper_contract(self) -> None:
+        self.assertEqual(runtime_check.COMMAND_PLACEHOLDERS, omnivoice.COMMAND_PLACEHOLDERS)
+
     def test_runtime_check_reports_missing_backend_without_failing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = io.StringIO()
