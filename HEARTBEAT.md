@@ -2446,7 +2446,7 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Keep the branch clean for handoff, or install the bridge into the real
     Hermes Agent checkout once the source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 19:30 America/New_York
 - Completed:
@@ -2498,6 +2498,72 @@ local backend path, validation state, blockers, security notes, and next steps.
 - Assumptions:
   - The packaged handoff docs should be treated as first-read operator artifacts
     because the installer copies them into a real Hermes checkout.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Keep the branch clean for handoff, or install the bridge into the real
+    Hermes Agent checkout once the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 20:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `c693538`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready and can provide
+    shell exports for the real OmniVoice adapter command.
+  - Improved the installer non-JSON `.gitignore` output so handoff users see
+    readable review, append, and refresh messages instead of raw action codes
+    such as `would_append`.
+  - Added installer coverage for human-readable `.gitignore` review, append,
+    and refresh messages.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 20:00/82-test validation state and documented that JSON keeps exact
+    action codes for automation.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `rg -n "TODO|FIXME|77 tests|16:00|Next action|Open follow-ups|source path|install into|dry-run|package handoff|weekend summary|\\.gitignore" README.md docs scripts tests examples HEARTBEAT.md`
+  - `sed -n ... scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py`
+  - `python3 scripts/install-hermes-omnivoice-bridge.py --target-root /tmp/hermes-omnivoice-install-human --dry-run`
+  - `python3 scripts/install-hermes-omnivoice-bridge.py --target-root /tmp/hermes-omnivoice-install-human --dry-run --update-gitignore`
+  - `python3 -m unittest tests.test_omnivoice_tts.InstallerTests -v`
+  - `python3 -m py_compile scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rg -n "81 tests|19:30|82 tests|20:00" docs HEARTBEAT.md README.md`
+  - `git diff -- scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py`
+  - `git diff --check`
+  - `find . -type f (...) -print`
+  - `find . -type d -name __pycache__ -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - Targeted installer tests: PASS, 8 tests.
+  - Python py_compile for installer and tests: PASS.
+  - Installer human dry-run output: PASS; default path prints review guidance
+    and `--update-gitignore --dry-run` prints a readable append action.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 82 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`.
+  - Repo artifact scan: PASS; no generated audio, model weights, env files, or
+    local voice selection state found in the repo.
+  - Whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; source discovery
+    sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Non-JSON installer output is what a human operator will see during a
+    dry-run-first handoff, so it should be readable without decoding JSON action
+    names.
   - Native-provider work still waits on the actual Hermes Agent source.
 - Next action:
   - Keep the branch clean for handoff, or install the bridge into the real
@@ -2591,6 +2657,8 @@ local backend path, validation state, blockers, security notes, and next steps.
   local config is protected after bridge installation.
 - Refresh existing managed target `.gitignore` blocks when the installer pattern
   list changes, instead of treating any marked block as complete forever.
+- Keep installer JSON exact for automation but make non-JSON `.gitignore`
+  messages readable for human dry-run handoffs.
 
 ## Open follow-ups
 

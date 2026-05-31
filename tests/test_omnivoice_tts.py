@@ -1955,6 +1955,46 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(report["gitignore"]["action"], "would_append")
             self.assertFalse((target / ".gitignore").exists())
 
+    def test_installer_prints_human_gitignore_actions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                result = installer.run(["--target-root", str(target), "--dry-run"])
+
+            self.assertEqual(result, 0)
+            self.assertIn("Review target .gitignore: missing", output.getvalue())
+
+            append_output = io.StringIO()
+            with contextlib.redirect_stdout(append_output):
+                append_result = installer.run(
+                    ["--target-root", str(target), "--update-gitignore", "--dry-run"]
+                )
+
+            self.assertEqual(append_result, 0)
+            self.assertIn("Would append target .gitignore", append_output.getvalue())
+
+            target.mkdir()
+            old_block = "\n".join(
+                [
+                    installer.GITIGNORE_START,
+                    "*.wav",
+                    installer.GITIGNORE_END,
+                    "",
+                ]
+            )
+            (target / ".gitignore").write_text(old_block, encoding="utf-8")
+            refresh_output = io.StringIO()
+
+            with contextlib.redirect_stdout(refresh_output):
+                refresh_result = installer.run(
+                    ["--target-root", str(target), "--update-gitignore", "--dry-run"]
+                )
+
+            self.assertEqual(refresh_result, 0)
+            self.assertIn("Would refresh target .gitignore", refresh_output.getvalue())
+
     def test_installer_rejects_target_escape(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(installer.InstallError, "escapes"):

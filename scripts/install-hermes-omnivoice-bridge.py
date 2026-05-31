@@ -175,6 +175,27 @@ def update_gitignore(*, target_root: Path, dry_run: bool, requested: bool) -> di
     return report
 
 
+def describe_gitignore(gitignore: dict, *, requested: bool) -> str | None:
+    status = gitignore["status"]
+    action = gitignore["action"]
+    if status != "covered" and not requested:
+        return (
+            "Review target .gitignore: missing OmniVoice local-artifact patterns; "
+            "rerun with --update-gitignore after reviewing the dry-run output."
+        )
+    if action in {"append", "would_append"}:
+        verb = "Would append" if action == "would_append" else "Appended"
+        return f"{verb} target .gitignore OmniVoice safety block."
+    if action in {"update", "would_update"}:
+        verb = "Would refresh" if action == "would_update" else "Refreshed"
+        return f"{verb} target .gitignore OmniVoice safety block."
+    if status == "managed":
+        return "Target .gitignore already has the managed OmniVoice safety block."
+    if status == "covered":
+        return "Target .gitignore already covers OmniVoice local-artifact patterns."
+    return None
+
+
 def run(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Install Hermes OmniVoice bridge files")
     parser.add_argument("--target-root", required=True, type=Path)
@@ -217,10 +238,9 @@ def run(argv: list[str] | None = None) -> int:
     else:
         mode = "Would install" if args.dry_run else "Installed"
         print(f"{mode} {len(actions)} Hermes OmniVoice bridge files into {report['target_root']}")
-        if gitignore["status"] != "covered" and not args.update_gitignore:
-            print("Review target .gitignore for OmniVoice local artifact patterns.")
-        elif gitignore["action"] in {"append", "would_append"}:
-            print(f"{gitignore['action']} target .gitignore OmniVoice safety block.")
+        gitignore_message = describe_gitignore(gitignore, requested=args.update_gitignore)
+        if gitignore_message:
+            print(gitignore_message)
     return 0
 
 
