@@ -34,6 +34,9 @@ FORBIDDEN_ROOT_DIRS = {
     "models",
     "omnivoice-cache",
     "omnivoice-output",
+    "reference-audio",
+    "samples",
+    "voice-samples",
     "voices",
 }
 SKIP_DIRS = {
@@ -85,7 +88,10 @@ def run(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps({"matches": matches, "ok": not matches}, indent=2, sort_keys=True))
     if matches:
-        print("generated audio, model, env, or local selection artifacts found:", file=sys.stderr)
+        print(
+            "generated audio, model, cache, env, local voice/sample, or selection artifacts found:",
+            file=sys.stderr,
+        )
         for match in matches:
             print(match, file=sys.stderr)
         return 1

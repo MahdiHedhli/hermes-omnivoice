@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-30 22:00 America/New_York on branch
+Status as of 2026-05-30 22:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -47,8 +47,8 @@ sample and contains explicit confirmed consent metadata.
   non-JSON installer output now uses human-readable review, append, and refresh
   messages instead of raw action codes.
 - Repo artifact scan: PASS, no generated audio, model weights, top-level
-  artifact/cache/local voice directories, env files, or local voice selection
-  state found in the repo. This check is now enforced by
+  artifact/cache/local voice or sample directories, env files, or local voice
+  selection state found in the repo. This check is now enforced by
   `scripts/check-omnivoice-artifacts.py` through the standard validator.
 - Default installer payload boundary: PASS. Package-only validation helpers
   such as `scripts/check-omnivoice-artifacts.py` are not copied into a real

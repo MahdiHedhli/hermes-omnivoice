@@ -13,6 +13,9 @@ venv/
 *.ogg
 *.m4a
 /voices/
+/samples/
+/voice-samples/
+/reference-audio/
 .hermes/
 
 # Model weights and inference caches.

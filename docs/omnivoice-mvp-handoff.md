@@ -31,7 +31,7 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-30 22:00 America/New_York on branch
+As of 2026-05-30 22:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
 - `scripts/validate-omnivoice-bridge.sh` passes with 86 tests and 1 expected
@@ -64,7 +64,7 @@ As of 2026-05-30 22:00 America/New_York on branch
   user-owned rules. Human installer output uses readable review, append, and
   refresh messages; JSON output retains exact action codes for automation.
 - The standard validator now calls `scripts/check-omnivoice-artifacts.py` so
-  generated audio, model files, top-level artifact/cache/local voice
+  generated audio, model files, top-level artifact/cache/local voice or sample
   directories, `.env*`, and local voice selection state fail validation before
   commit.
 - Package-only validation helpers, including the artifact checker and validator,

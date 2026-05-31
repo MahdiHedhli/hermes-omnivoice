@@ -1708,6 +1708,12 @@ class ArtifactCheckTests(unittest.TestCase):
             (root / ".hermes" / "voices.json").write_text("{}", encoding="utf-8")
             (root / "voices").mkdir()
             (root / "voices" / "local.yaml").write_text("id: local", encoding="utf-8")
+            (root / "samples").mkdir()
+            (root / "samples" / "transcript.txt").write_text("sample transcript", encoding="utf-8")
+            (root / "voice-samples").mkdir()
+            (root / "voice-samples" / "metadata.json").write_text("{}", encoding="utf-8")
+            (root / "reference-audio").mkdir()
+            (root / "reference-audio" / "readme.txt").write_text("local only", encoding="utf-8")
             (root / "examples" / "voices" / "narrator").mkdir(parents=True)
             (root / "examples" / "voices" / "narrator" / "voice.yaml").write_text(
                 "id: narrator",
@@ -1716,7 +1722,18 @@ class ArtifactCheckTests(unittest.TestCase):
 
             matches = artifact_check.find_forbidden_artifacts(root)
 
-            self.assertEqual(matches, [".cache/", ".hermes/", "models/", "voices/"])
+            self.assertEqual(
+                matches,
+                [
+                    ".cache/",
+                    ".hermes/",
+                    "models/",
+                    "reference-audio/",
+                    "samples/",
+                    "voice-samples/",
+                    "voices/",
+                ],
+            )
 
 
 class AcceptanceTests(unittest.TestCase):
@@ -1950,6 +1967,9 @@ class InstallerTests(unittest.TestCase):
             gitignore = (target / ".gitignore").read_text(encoding="utf-8")
             self.assertIn(installer.GITIGNORE_START, gitignore)
             self.assertIn("*.wav", gitignore)
+            self.assertIn("/samples/", gitignore)
+            self.assertIn("/voice-samples/", gitignore)
+            self.assertIn("/reference-audio/", gitignore)
             self.assertIn("*.safetensors", gitignore)
             self.assertIn(".env.*", gitignore)
             self.assertIn(".env.local", gitignore)
@@ -1997,6 +2017,9 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(report["gitignore"]["action"], "update")
             gitignore = (target / ".gitignore").read_text(encoding="utf-8")
             self.assertIn(".env.*", gitignore)
+            self.assertIn("/samples/", gitignore)
+            self.assertIn("/voice-samples/", gitignore)
+            self.assertIn("/reference-audio/", gitignore)
             self.assertIn("*.safetensors", gitignore)
             self.assertIn("node_modules/", gitignore)
             self.assertIn("dist/", gitignore)

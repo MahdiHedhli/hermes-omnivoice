@@ -41,8 +41,8 @@ This repo is intentionally conservative:
   including unit tests, smoke checks, secret scanning, artifact scanning, and
   whitespace checks.
 - `scripts/check-omnivoice-artifacts.py`: validates that generated audio,
-  model files, env files, and local voice selection state are absent from the
-  repo.
+  model files, local sample directories, env files, and local voice selection
+  state are absent from the repo.
 - `docs/`: setup, Studio bridge notes, integration findings, and custom voice
   usage.
 - `examples/`: sample Hermes config and voice registry templates.
