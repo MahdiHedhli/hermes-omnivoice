@@ -175,6 +175,12 @@ def command_current(args: argparse.Namespace) -> int:
     except (OSError, json.JSONDecodeError) as exc:
         print(f"Selection is not readable JSON: {exc}", file=sys.stderr)
         return 1
+    if not isinstance(payload, dict):
+        print("Selection JSON must be an object", file=sys.stderr)
+        return 1
+    if payload.get("provider") != "omnivoice":
+        print("Selection provider is not omnivoice", file=sys.stderr)
+        return 1
     voice = payload.get("voice", "")
     if not isinstance(voice, str) or not voice:
         print("Selection is missing voice id", file=sys.stderr)

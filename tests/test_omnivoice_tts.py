@@ -2601,6 +2601,33 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn("Selection has invalid voices_dir", stderr.getvalue())
 
+    def test_current_command_refuses_non_object_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            selection_file = Path(tmp) / "selection.json"
+            selection_file.write_text(json.dumps(["omnivoice", "marvin"]), encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = voices_cli.run(["--selection-file", str(selection_file), "current"])
+
+            self.assertEqual(result, 1)
+            self.assertIn("Selection JSON must be an object", stderr.getvalue())
+
+    def test_current_command_refuses_wrong_provider_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            selection_file = Path(tmp) / "selection.json"
+            selection_file.write_text(
+                json.dumps({"provider": "other", "voice": "marvin"}),
+                encoding="utf-8",
+            )
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = voices_cli.run(["--selection-file", str(selection_file), "current"])
+
+            self.assertEqual(result, 1)
+            self.assertIn("Selection provider is not omnivoice", stderr.getvalue())
+
     def test_set_command_refuses_invalid_voice(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
