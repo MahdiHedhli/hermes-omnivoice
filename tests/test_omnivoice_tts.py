@@ -1697,6 +1697,27 @@ class ArtifactCheckTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn(".env", stderr.getvalue())
 
+    def test_artifact_check_reports_repo_local_artifact_dirs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "models").mkdir()
+            (root / "models" / "config.json").write_text("{}", encoding="utf-8")
+            (root / ".cache").mkdir()
+            (root / ".cache" / "blob").write_text("cache", encoding="utf-8")
+            (root / ".hermes").mkdir()
+            (root / ".hermes" / "voices.json").write_text("{}", encoding="utf-8")
+            (root / "voices").mkdir()
+            (root / "voices" / "local.yaml").write_text("id: local", encoding="utf-8")
+            (root / "examples" / "voices" / "narrator").mkdir(parents=True)
+            (root / "examples" / "voices" / "narrator" / "voice.yaml").write_text(
+                "id: narrator",
+                encoding="utf-8",
+            )
+
+            matches = artifact_check.find_forbidden_artifacts(root)
+
+            self.assertEqual(matches, [".cache/", ".hermes/", "models/", "voices/"])
+
 
 class AcceptanceTests(unittest.TestCase):
     def test_acceptance_required_files_are_present(self) -> None:

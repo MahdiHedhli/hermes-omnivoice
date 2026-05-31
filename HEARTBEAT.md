@@ -56,6 +56,8 @@ The Python environment helper can now print shell-safe exports for the prepared
 adapter command with `--check-only --shell`.
 `docs/omnivoice-weekend-summary.md` now captures the delivered MVP, proven
 local backend path, validation state, blockers, security notes, and next steps.
+The artifact checker now also rejects top-level cache, model, and local voice
+artifact directories while preserving safe nested example voice templates.
 
 ## Previous heartbeat
 
@@ -2696,7 +2698,7 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Keep the branch clean for handoff, or install the bridge into the real
     Hermes Agent checkout once the source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 21:30 America/New_York
 - Completed:
@@ -2756,6 +2758,64 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Package-only validation helpers should remain available for this bridge repo
     while staying out of the default runtime install into Hermes.
   - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Keep the branch clean for handoff, or install the bridge into the real
+    Hermes Agent checkout once the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 22:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `fe7fc23`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready and can provide
+    shell exports for the real OmniVoice adapter command.
+  - Hardened `scripts/check-omnivoice-artifacts.py` so top-level artifact,
+    cache, model, and local voice directories fail validation even when their
+    contents do not use forbidden file extensions.
+  - Added unit coverage proving top-level `.cache/`, `.hermes/`, `models/`, and
+    `voices/` are rejected while nested `examples/voices/` templates remain
+    allowed.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 22:00/86-test validation state.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `rg -n "85 tests|21:30|package-only|default install|check-omnivoice-artifacts|validation helpers|TODO|FIXME|Open follow-ups|Next action" README.md docs scripts tests HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.AcceptanceTests tests.test_omnivoice_tts.InstallerTests -v`
+  - `python3 -m py_compile tests/test_omnivoice_tts.py scripts/install-hermes-omnivoice-bridge.py scripts/omnivoice-acceptance.py`
+  - `python3 scripts/install-hermes-omnivoice-bridge.py --target-root /tmp/hermes-omnivoice-install-check --dry-run --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.ArtifactCheckTests tests.test_omnivoice_tts.AcceptanceTests -v`
+  - `python3 -m py_compile scripts/check-omnivoice-artifacts.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+- Tests:
+  - Targeted artifact and acceptance tests: PASS, 11 tests.
+  - Python py_compile for artifact checker and tests: PASS.
+  - Direct artifact checker: PASS; `ok: true`, `matches: []`.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 86 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Top-level local artifact directories are unsafe repo roots, even when their
+    current contents are extension-neutral.
+  - Nested sample templates such as `examples/voices/` are safe to keep because
+    they do not contain committed voice samples or generated audio.
 - Next action:
   - Keep the branch clean for handoff, or install the bridge into the real
     Hermes Agent checkout once the source path is available.
@@ -2856,6 +2916,8 @@ local backend path, validation state, blockers, security notes, and next steps.
   shell validator remains the single operator entrypoint.
 - Keep package-only validation helpers out of the default Hermes runtime install
   payload; install should copy bridge runtime files and handoff docs by default.
+- Treat top-level artifact/cache/local voice directories as forbidden repo state
+  while preserving nested example templates that contain no local voice samples.
 
 ## Open follow-ups
 

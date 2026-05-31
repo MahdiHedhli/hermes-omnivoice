@@ -26,6 +26,16 @@ FORBIDDEN_NAMES = {
     ".env",
     "omnivoice-selection.json",
 }
+FORBIDDEN_ROOT_DIRS = {
+    ".cache",
+    ".hermes",
+    "cache",
+    "checkpoints",
+    "models",
+    "omnivoice-cache",
+    "omnivoice-output",
+    "voices",
+}
 SKIP_DIRS = {
     ".git",
 }
@@ -44,8 +54,18 @@ def find_forbidden_artifacts(root: Path) -> list[str]:
     root = root.resolve()
     matches: list[str] = []
     for current_root, dirnames, filenames in os.walk(root):
-        dirnames[:] = [dirname for dirname in dirnames if dirname not in SKIP_DIRS]
         current = Path(current_root)
+        allowed_dirnames: list[str] = []
+        for dirname in dirnames:
+            if dirname in SKIP_DIRS:
+                continue
+            path = current / dirname
+            relative = path.relative_to(root)
+            if len(relative.parts) == 1 and dirname in FORBIDDEN_ROOT_DIRS:
+                matches.append(f"{relative.as_posix()}/")
+                continue
+            allowed_dirnames.append(dirname)
+        dirnames[:] = allowed_dirnames
         for filename in filenames:
             path = current / filename
             if is_forbidden_artifact(path):
