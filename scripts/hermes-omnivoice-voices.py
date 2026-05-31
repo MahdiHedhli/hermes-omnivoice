@@ -151,23 +151,25 @@ def _selection_payload(voices_dir: Path, voice: str, summary: dict) -> dict:
 
 def write_selection_file(path: Path, payload: dict) -> None:
     selection_path = path.expanduser()
-    selection_path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        "w",
-        dir=str(selection_path.parent),
-        encoding="utf-8",
-        prefix=f".{selection_path.name}.",
-        suffix=".tmp",
-        delete=False,
-    ) as handle:
-        temp_path = Path(handle.name)
-        handle.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    selection_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    temp_path = None
     try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            dir=str(selection_path.parent),
+            encoding="utf-8",
+            prefix=f".{selection_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temp_path = Path(handle.name)
+            handle.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
         temp_path.chmod(0o600)
         temp_path.replace(selection_path)
         selection_path.chmod(0o600)
     except Exception:
-        temp_path.unlink(missing_ok=True)
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
         raise
 
 

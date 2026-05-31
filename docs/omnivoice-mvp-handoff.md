@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 07:00 America/New_York on branch
+As of 2026-05-31 07:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 106 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 107 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
@@ -119,7 +119,8 @@ As of 2026-05-31 07:00 America/New_York on branch
   stale selection metadata.
 - `scripts/hermes-omnivoice-voices.py set` now writes selection metadata through
   a private `0600` same-directory temporary file and atomic replace, replacing a
-  destination symlink instead of following it.
+  destination symlink instead of following it. Failed temp writes are cleaned up
+  before the error is returned.
 
 ## Validate
 

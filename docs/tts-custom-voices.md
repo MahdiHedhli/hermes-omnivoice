@@ -138,6 +138,7 @@ same local Studio URL or backend command configuration as Hermes TTS. The
 `set` command validates consent and writes `~/.hermes/omnivoice-selection.json`
 for user-level selection state using a private `0600` atomic same-directory
 replace. Existing destination symlinks are replaced instead of followed. The
+helper cleans up failed temporary writes before returning the error. The
 `current` command revalidates that selected profile before reporting it, so
 stale or invalid local selection state fails closed, including malformed
 registry pointer metadata and non-OmniVoice selection records. It reports

@@ -2577,6 +2577,17 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertEqual(mode, 0o600)
 
+    def test_selection_file_write_cleans_temp_file_on_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            selection_file = Path(tmp) / "selection.json"
+
+            with self.assertRaises(TypeError):
+                voices_cli.write_selection_file(selection_file, {"bad": object()})
+
+            leftovers = list(Path(tmp).glob(".selection.json.*.tmp"))
+            self.assertFalse(selection_file.exists())
+            self.assertEqual(leftovers, [])
+
     def test_set_command_replaces_selection_symlink_without_touching_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
