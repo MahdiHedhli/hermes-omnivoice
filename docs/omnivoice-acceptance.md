@@ -23,6 +23,10 @@ scripts/validate-omnivoice-bridge.sh
 python scripts/omnivoice-acceptance.py
 ```
 
+The validation script runs the deterministic test suite, smoke checks,
+secret-pattern scanning, generated-artifact scanning for audio/model/env/local
+selection files, and whitespace checks.
+
 For handoff into a real Hermes checkout, dry-run the installer first:
 
 ```bash

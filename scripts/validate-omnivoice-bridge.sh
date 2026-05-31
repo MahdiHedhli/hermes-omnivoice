@@ -59,4 +59,27 @@ if command -v rg >/dev/null 2>&1; then
   fi
 fi
 
+artifact_matches="$(
+  find . -path './.git' -prune -o -type f \( \
+    -name '*.wav' -o \
+    -name '*.mp3' -o \
+    -name '*.flac' -o \
+    -name '*.ogg' -o \
+    -name '*.m4a' -o \
+    -name '*.ckpt' -o \
+    -name '*.pt' -o \
+    -name '*.pth' -o \
+    -name '*.onnx' -o \
+    -name '*.safetensors' -o \
+    -name '.env' -o \
+    -name '.env.*' -o \
+    -name 'omnivoice-selection.json' \
+  \) -print
+)"
+if [[ -n "$artifact_matches" ]]; then
+  echo "generated audio, model, env, or local selection artifacts found:" >&2
+  printf '%s\n' "$artifact_matches" >&2
+  exit 1
+fi
+
 git diff --check

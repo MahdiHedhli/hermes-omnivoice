@@ -37,7 +37,9 @@ This repo is intentionally conservative:
   stopping, and inspecting loopback-only OmniVoice-Studio with Docker Compose.
 - `scripts/omnivoice-acceptance.py`: summarizes static MVP readiness and live
   backend readiness.
-- `scripts/validate-omnivoice-bridge.sh`: deterministic local validation.
+- `scripts/validate-omnivoice-bridge.sh`: deterministic local validation,
+  including unit tests, smoke checks, secret scanning, artifact scanning, and
+  whitespace checks.
 - `docs/`: setup, Studio bridge notes, integration findings, and custom voice
   usage.
 - `examples/`: sample Hermes config and voice registry templates.

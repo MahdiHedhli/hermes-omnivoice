@@ -2503,7 +2503,7 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Keep the branch clean for handoff, or install the bridge into the real
     Hermes Agent checkout once the source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 20:00 America/New_York
 - Completed:
@@ -2564,6 +2564,66 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Non-JSON installer output is what a human operator will see during a
     dry-run-first handoff, so it should be readable without decoding JSON action
     names.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Keep the branch clean for handoff, or install the bridge into the real
+    Hermes Agent checkout once the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 20:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `cc9c2c7`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready and can provide
+    shell exports for the real OmniVoice adapter command.
+  - Re-ran bounded source discovery across the Hermes, Projects, and Coding
+    roots; it still finds only this bridge repo and no likely Hermes Agent
+    checkout.
+  - Moved the generated-audio/model/env/local-selection artifact scan into
+    `scripts/validate-omnivoice-bridge.sh`, so the standard validator now
+    enforces the safety check that previous heartbeats ran manually.
+  - Updated README, acceptance docs, and integration notes to document that the
+    validator includes safety scans.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `python3 scripts/find-hermes-source.py --root /Users/mhedhli/Documents/Coding/hermes --root /Users/mhedhli/Documents/Coding/Projects --root /Users/mhedhli/Documents/Coding --max-candidates 30 --scan-timeout 8 --json`
+  - `bash -n scripts/validate-omnivoice-bridge.sh`
+  - `rg -n "secret-pattern|artifact scan|generated audio|validate-omnivoice-bridge" docs README.md HEARTBEAT.md`
+  - `sed -n ... docs/omnivoice-acceptance.md README.md docs/omnivoice-integration-notes.md`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `git diff --check`
+  - `find . -path './.git' -prune -o -type f (...) -print`
+  - `find . -type d -name __pycache__ -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - Source discovery: PASS as a bounded negative check; `likely_count: 0`,
+    `candidate_count: 1`, bridge repo marked `likely_hermes_agent: false`.
+  - Shell syntax check for `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 82 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`.
+  - Repo artifact scan: PASS; no generated audio, model weights, env files, or
+    local voice selection state found in the repo.
+  - Whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Generated audio, model files, `.env*`, and local voice selection state
+    should be validator-enforced because they are security-sensitive artifacts.
   - Native-provider work still waits on the actual Hermes Agent source.
 - Next action:
   - Keep the branch clean for handoff, or install the bridge into the real
@@ -2659,6 +2719,8 @@ local backend path, validation state, blockers, security notes, and next steps.
   list changes, instead of treating any marked block as complete forever.
 - Keep installer JSON exact for automation but make non-JSON `.gitignore`
   messages readable for human dry-run handoffs.
+- Enforce generated-audio, model, env, and local selection artifact absence in
+  the standard validation script instead of relying on manual heartbeat scans.
 
 ## Open follow-ups
 
