@@ -136,12 +136,13 @@ python scripts/hermes-omnivoice-voices.py config narrator
 The preview command uses `scripts/hermes-omnivoice-tts.py`, so it requires the
 same local Studio URL or backend command configuration as Hermes TTS. The
 `set` command validates consent and writes `~/.hermes/omnivoice-selection.json`
-for user-level selection state. The `current` command revalidates that selected
-profile before reporting it, so stale or invalid local selection state fails
-closed, including malformed registry pointer metadata and non-OmniVoice
-selection records. It reports profile-derived speed and registry path instead
-of trusting stale values from the selection file. The `config` command prints a
-command-provider YAML example for the selected voice and includes the
-configured `--voices-dir` path in the generated wrapper command. It refuses
-missing or invalid profiles instead of printing config that Hermes would fail
-at runtime.
+for user-level selection state using a private `0600` atomic same-directory
+replace. Existing destination symlinks are replaced instead of followed. The
+`current` command revalidates that selected profile before reporting it, so
+stale or invalid local selection state fails closed, including malformed
+registry pointer metadata and non-OmniVoice selection records. It reports
+profile-derived speed and registry path instead of trusting stale values from
+the selection file. The `config` command prints a command-provider YAML example
+for the selected voice and includes the configured `--voices-dir` path in the
+generated wrapper command. It refuses missing or invalid profiles instead of
+printing config that Hermes would fail at runtime.

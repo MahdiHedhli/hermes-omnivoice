@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import stat
 import subprocess
 import sys
 import tempfile
@@ -2552,6 +2553,56 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(payload["voice"], "marvin")
             self.assertEqual(current["voice"], "marvin")
             self.assertEqual(current["status"], "ready")
+
+    def test_set_command_writes_selection_file_with_private_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            selection_file = root / "selection.json"
+            write_voice(voices_root, "marvin")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--selection-file",
+                        str(selection_file),
+                        "set",
+                        "marvin",
+                    ]
+                )
+
+            mode = stat.S_IMODE(selection_file.stat().st_mode)
+            self.assertEqual(result, 0)
+            self.assertEqual(mode, 0o600)
+
+    def test_set_command_replaces_selection_symlink_without_touching_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            selection_file = root / "selection.json"
+            target = root / "target.json"
+            write_voice(voices_root, "marvin")
+            target.write_text("sentinel", encoding="utf-8")
+            os.symlink(target, selection_file)
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--selection-file",
+                        str(selection_file),
+                        "set",
+                        "marvin",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            self.assertEqual(target.read_text(encoding="utf-8"), "sentinel")
+            self.assertFalse(selection_file.is_symlink())
+            self.assertEqual(json.loads(selection_file.read_text(encoding="utf-8"))["voice"], "marvin")
 
     def test_current_command_reports_profile_speed_not_stale_selection_speed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

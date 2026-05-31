@@ -100,6 +100,8 @@ treated as current consent/profile readiness. Malformed local selection JSON is
 also rejected before it can act as a registry pointer, including non-object
 payloads and non-OmniVoice provider values. `current` reports profile-derived
 speed and voice registry path instead of trusting stale selection-file values.
+Selection writes now use a private `0600` same-directory temporary file and
+atomic replace, replacing destination symlinks rather than following them.
 
 ## Previous heartbeat
 
@@ -3833,7 +3835,7 @@ speed and voice registry path instead of trusting stale selection-file values.
     handoff, or install the bridge into the real Hermes Agent checkout once the
     source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-31 06:30 America/New_York
 - Completed:
@@ -3895,6 +3897,68 @@ speed and voice registry path instead of trusting stale selection-file values.
   - Commit the profile-derived current-state guard and keep the branch clean for
     handoff, or install the bridge into the real Hermes Agent checkout once the
     source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 07:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `de2936e`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Reviewed selection-file write handling after the live current-state guard.
+  - Added `write_selection_file()` so `scripts/hermes-omnivoice-voices.py set`
+    writes through a same-directory temporary file, applies `0600`
+    permissions, and atomically replaces the destination.
+  - Stopped resolving the final selection path before write, so an existing
+    destination symlink is replaced instead of followed.
+  - Added regression coverage for private selection-file permissions and for
+    replacing a destination symlink without modifying its target.
+  - Updated custom voice docs, the packaged MVP handoff, and weekend summary to
+    document private atomic selection-state writes.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "write_text\\(|selection_path|selection-file|omnivoice-selection|chmod|permission|atomic|replace\\(" scripts tests docs README.md HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.VoiceCliTests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-voices.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `rg -n "06:30 America/New_York|06:00 America/New_York|05:30 America/New_York|104 tests|103 tests|101 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Targeted voice helper tests: PASS, 15 tests.
+  - Python py_compile for the voice helper and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 106 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Stale handoff snapshot scan: PASS; no 06:30/104-test or older summary state
+    remains in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Local selection metadata is user-level state and should be written
+    defensively even though it should not contain secrets.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the private atomic selection-write guard and keep the branch clean
+    for handoff, or install the bridge into the real Hermes Agent checkout once
+    the source path is available.
 
 ## Decision log
 
@@ -4036,6 +4100,8 @@ speed and voice registry path instead of trusting stale selection-file values.
   can be treated as selected OmniVoice voice state.
 - Report selected voice current-state fields from the revalidated profile
   context rather than trusting cached selection-file fields.
+- Write local voice selection state via private same-directory atomic replace
+  and avoid following destination symlinks.
 
 ## Open follow-ups
 

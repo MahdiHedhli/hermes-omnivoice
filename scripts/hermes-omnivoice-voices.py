@@ -149,15 +149,36 @@ def _selection_payload(voices_dir: Path, voice: str, summary: dict) -> dict:
     }
 
 
+def write_selection_file(path: Path, payload: dict) -> None:
+    selection_path = path.expanduser()
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        "w",
+        dir=str(selection_path.parent),
+        encoding="utf-8",
+        prefix=f".{selection_path.name}.",
+        suffix=".tmp",
+        delete=False,
+    ) as handle:
+        temp_path = Path(handle.name)
+        handle.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    try:
+        temp_path.chmod(0o600)
+        temp_path.replace(selection_path)
+        selection_path.chmod(0o600)
+    except Exception:
+        temp_path.unlink(missing_ok=True)
+        raise
+
+
 def command_set(args: argparse.Namespace) -> int:
     summary = _profile_summary(args.voices_dir, args.voice)
     if summary["status"] != "ready":
         print(f"Voice {args.voice} is invalid: {summary['error']}", file=sys.stderr)
         return 1
-    selection_path = args.selection_file.expanduser().resolve()
-    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selection_path = args.selection_file.expanduser()
     payload = _selection_payload(args.voices_dir, args.voice, summary)
-    selection_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_selection_file(selection_path, payload)
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
