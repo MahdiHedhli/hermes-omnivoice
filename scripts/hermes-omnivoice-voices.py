@@ -175,13 +175,32 @@ def command_current(args: argparse.Namespace) -> int:
     except (OSError, json.JSONDecodeError) as exc:
         print(f"Selection is not readable JSON: {exc}", file=sys.stderr)
         return 1
+    voice = payload.get("voice", "")
+    if not isinstance(voice, str) or not voice:
+        print("Selection is missing voice id", file=sys.stderr)
+        return 1
+    if "voices_dir" in payload and payload.get("voices_dir") is not None:
+        voices_dir_value = payload.get("voices_dir")
+    else:
+        voices_dir_value = str(args.voices_dir)
+    if not isinstance(voices_dir_value, str) or not voices_dir_value:
+        print("Selection has invalid voices_dir", file=sys.stderr)
+        return 1
+    voices_dir = Path(voices_dir_value).expanduser()
+    summary = _profile_summary(voices_dir, voice)
+    if summary["status"] != "ready":
+        print(f"Selected OmniVoice voice {voice} is invalid: {summary['error']}", file=sys.stderr)
+        return 1
     if args.json:
+        payload = dict(payload)
+        payload["status"] = "ready"
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0
     print(f"Voice: {payload.get('voice', '')}")
     print(f"Provider: {payload.get('provider', '')}")
     print(f"Voices dir: {payload.get('voices_dir', '')}")
     print(f"Speed: {payload.get('speed', '')}")
+    print("Status: ready")
     return 0
 
 

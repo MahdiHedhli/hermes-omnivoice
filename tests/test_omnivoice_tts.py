@@ -2551,6 +2551,55 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(payload["provider"], "omnivoice")
             self.assertEqual(payload["voice"], "marvin")
             self.assertEqual(current["voice"], "marvin")
+            self.assertEqual(current["status"], "ready")
+
+    def test_current_command_refuses_stale_invalid_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            selection_file = root / "selection.json"
+            write_voice(voices_root, "marvin")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                set_result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--selection-file",
+                        str(selection_file),
+                        "set",
+                        "marvin",
+                    ]
+                )
+            (voices_root / "marvin" / "ref.wav").unlink()
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                current_result = voices_cli.run(
+                    [
+                        "--selection-file",
+                        str(selection_file),
+                        "current",
+                    ]
+                )
+
+            self.assertEqual(set_result, 0)
+            self.assertEqual(current_result, 1)
+            self.assertIn("Selected OmniVoice voice marvin is invalid", stderr.getvalue())
+
+    def test_current_command_refuses_malformed_selection_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            selection_file = Path(tmp) / "selection.json"
+            selection_file.write_text(
+                json.dumps({"provider": "omnivoice", "voice": "marvin", "voices_dir": []}),
+                encoding="utf-8",
+            )
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = voices_cli.run(["--selection-file", str(selection_file), "current"])
+
+            self.assertEqual(result, 1)
+            self.assertIn("Selection has invalid voices_dir", stderr.getvalue())
 
     def test_set_command_refuses_invalid_voice(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

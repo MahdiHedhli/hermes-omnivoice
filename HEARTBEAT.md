@@ -94,6 +94,10 @@ extras as `INCOMPLETE`, while strict package validation remains available with
 Generated and static command-provider config fields are now regression-pinned
 for `output_format`, `timeout`, `voice_compatible`, `max_text_length`, and
 explicit timeout/max-text-length overrides.
+The standalone voice helper now revalidates selected voice state before
+`current` reports it, preventing stale local selection metadata from being
+treated as current consent/profile readiness. Malformed local selection JSON is
+also rejected before it can act as a registry pointer.
 
 ## Previous heartbeat
 
@@ -3633,7 +3637,7 @@ explicit timeout/max-text-length overrides.
     or install the bridge into the real Hermes Agent checkout once the source
     path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-31 05:00 America/New_York
 - Completed:
@@ -3699,6 +3703,72 @@ explicit timeout/max-text-length overrides.
   - Commit the config surface coverage and keep the branch clean for handoff,
     or install the bridge into the real Hermes Agent checkout once the source
     path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 05:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `80dfa35`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Reviewed the remaining voice UX bridge docs and helper behavior because the
+    real Hermes command/plugin source is still absent.
+  - Updated `scripts/hermes-omnivoice-voices.py current` to revalidate the
+    selected profile against its recorded voice registry before reporting it.
+  - Added regression coverage that a stale selected clone voice fails closed
+    after its consented reference WAV is removed.
+  - Added malformed selection-shape handling so invalid local selection JSON
+    fails with a clear error instead of an uncaught exception.
+  - Updated custom voice docs, the packaged MVP handoff, and weekend summary to
+    document selection-state revalidation.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "Latest heartbeat|Open follow-ups|Next action|Remaining Blockers|Next Steps|Phase 6|voice list|voice set|voice preview|voice info|native provider|TODO|FIXME" HEARTBEAT.md README.md docs scripts tests examples`
+  - `sed -n '70,110p' docs/omnivoice-integration-notes.md`
+  - `sed -n '1,180p' README.md`
+  - `sed -n '1,220p' docs/tts-custom-voices.md`
+  - `sed -n '1,220p' scripts/hermes-omnivoice-voices.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.VoiceCliTests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-voices.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `rg -n "05:00 America/New_York|04:30 America/New_York|04:00 America/New_York|100 tests|99 tests|98 tests|96 tests|95 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Targeted voice helper tests: PASS, 10 tests.
+  - Python py_compile for the voice helper and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 101 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Stale handoff snapshot scan: PASS; no 05:00/100-test or older summary
+    state remains in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - User-level selection state is a pointer to a voice profile, not independent
+    evidence that the profile still has valid consent inputs.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the selection-state validation guard and keep the branch clean for
+    handoff, or install the bridge into the real Hermes Agent checkout once the
+    source path is available.
 
 ## Decision log
 
@@ -3832,6 +3902,10 @@ explicit timeout/max-text-length overrides.
 - Pin command-provider config fields in tests because the real Hermes TTS schema
   is still unverified and handoff examples are currently the integration
   contract.
+- Treat local voice selection metadata as non-authoritative; helpers should
+  revalidate the referenced profile before reporting readiness.
+- Reject malformed local selection metadata with explicit errors rather than
+  allowing raw JSON shape problems to surface as Python exceptions.
 
 ## Open follow-ups
 
