@@ -2390,37 +2390,59 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(by_id["bad"]["status"], "invalid")
 
     def test_config_command_prints_command_provider_yaml(self) -> None:
-        output = io.StringIO()
-        with contextlib.redirect_stdout(output):
-            result = voices_cli.run(["config", "marvin"])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_design_voice(root, "narrator")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = voices_cli.run(["--voices-dir", str(root), "config", "narrator"])
 
-        self.assertEqual(result, 0)
-        self.assertIn("provider: omnivoice", output.getvalue())
-        self.assertIn("voice: marvin", output.getvalue())
-        self.assertIn("--voices-dir", output.getvalue())
+            self.assertEqual(result, 0)
+            self.assertIn("provider: omnivoice", output.getvalue())
+            self.assertIn("voice: narrator", output.getvalue())
+            self.assertIn("--voices-dir", output.getvalue())
 
     def test_config_command_includes_custom_voices_dir_and_quotes_paths(self) -> None:
-        output = io.StringIO()
-        voices_dir = Path("/tmp/hermes voice roots/omnivoice")
-        script_path = "/tmp/hermes bridge/hermes-omnivoice-tts.py"
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_dir = Path(tmp) / "hermes voice roots" / "omnivoice"
+            write_design_voice(voices_dir, "narrator")
+            script_path = "/tmp/hermes bridge/hermes-omnivoice-tts.py"
+            output = io.StringIO()
 
-        with contextlib.redirect_stdout(output):
-            result = voices_cli.run(
-                [
-                    "--voices-dir",
-                    str(voices_dir),
-                    "config",
-                    "narrator",
-                    "--script-path",
-                    script_path,
-                ]
+            with contextlib.redirect_stdout(output):
+                result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(voices_dir),
+                        "config",
+                        "narrator",
+                        "--script-path",
+                        script_path,
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            config = output.getvalue()
+            self.assertIn(f"--voices-dir {shlex.quote(str(voices_dir))}", config)
+            self.assertIn(shlex.quote(script_path), config)
+            self.assertIn("voice: narrator", config)
+
+    def test_config_command_refuses_invalid_voice(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            invalid = root / "bad"
+            invalid.mkdir()
+            (invalid / "voice.yaml").write_text(
+                "id: bad\nname: Bad\nengine: omnivoice\nmode: clone\n",
+                encoding="utf-8",
             )
+            stderr = io.StringIO()
 
-        self.assertEqual(result, 0)
-        config = output.getvalue()
-        self.assertIn(f"--voices-dir {shlex.quote(str(voices_dir))}", config)
-        self.assertIn(shlex.quote(script_path), config)
-        self.assertIn("voice: narrator", config)
+            with contextlib.redirect_stderr(stderr):
+                result = voices_cli.run(["--voices-dir", str(root), "config", "bad"])
+
+            self.assertEqual(result, 1)
+            self.assertIn("Voice bad is invalid", stderr.getvalue())
 
     def test_preview_generates_audio_with_fake_backend(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2530,6 +2552,13 @@ class VoiceCliTests(unittest.TestCase):
 
 
 class ExampleFileTests(unittest.TestCase):
+    def test_tts_config_example_uses_ready_design_voice(self) -> None:
+        config = (EXAMPLES_DIR / "hermes-tts-omnivoice.yaml").read_text(encoding="utf-8")
+
+        self.assertIn("--voices-dir ~/.hermes/voices/omnivoice", config)
+        self.assertIn("voice: narrator", config)
+        self.assertNotIn("voice: marvin", config)
+
     def test_design_voice_example_validates(self) -> None:
         loaded, voice_dir = omnivoice.load_voice_profile(EXAMPLES_DIR / "voices", "narrator")
         validated = omnivoice.validate_voice_profile(loaded, voice_dir)

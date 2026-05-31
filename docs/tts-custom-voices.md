@@ -11,8 +11,8 @@ tts:
   providers:
     omnivoice:
       type: command
-      command: "python scripts/hermes-omnivoice-tts.py --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
-      voice: marvin
+      command: "python scripts/hermes-omnivoice-tts.py --voices-dir ~/.hermes/voices/omnivoice --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
+      voice: narrator
       output_format: wav
       timeout: 180
       voice_compatible: true
@@ -46,8 +46,8 @@ tts:
   providers:
     omnivoice:
       type: command
-      command: "python scripts/hermes-omnivoice-tts.py --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
-      voice: marvin
+      command: "python scripts/hermes-omnivoice-tts.py --voices-dir ~/.hermes/voices/omnivoice --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
+      voice: narrator
       output_format: wav
       timeout: 180
 ```
@@ -128,7 +128,7 @@ python scripts/hermes-omnivoice-voices.py info marvin
 python scripts/hermes-omnivoice-voices.py set marvin
 python scripts/hermes-omnivoice-voices.py current
 python scripts/hermes-omnivoice-voices.py preview marvin --out /tmp/marvin-preview.wav
-python scripts/hermes-omnivoice-voices.py config marvin
+python scripts/hermes-omnivoice-voices.py config narrator
 ```
 
 The preview command uses `scripts/hermes-omnivoice-tts.py`, so it requires the
@@ -136,4 +136,5 @@ same local Studio URL or backend command configuration as Hermes TTS. The
 `set` command validates consent and writes `~/.hermes/omnivoice-selection.json`
 for user-level selection state. The `config` command prints a command-provider
 YAML example for the selected voice and includes the configured `--voices-dir`
-path in the generated wrapper command.
+path in the generated wrapper command. It refuses missing or invalid profiles
+instead of printing config that Hermes would fail at runtime.

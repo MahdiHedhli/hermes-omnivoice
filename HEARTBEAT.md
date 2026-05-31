@@ -77,6 +77,9 @@ Generated Hermes command-provider config now includes the selected
 not silently fall back to the default user registry.
 Installed command-provider config generation now proves copied checkouts emit
 copied wrapper paths and target voice-registry paths after `--with-examples`.
+Voice helper config generation now validates the requested profile before
+printing Hermes config, and the shipped Hermes TTS example defaults to the ready
+`narrator` design profile.
 Top-level local sample directories such as `samples/`, `voice-samples/`, and
 `reference-audio/` are now covered by both the repo artifact checker and the
 installer-managed `.gitignore` safety block.
@@ -3439,7 +3442,7 @@ extras as `INCOMPLETE`, while strict package validation remains available with
     for handoff, or install the bridge into the real Hermes Agent checkout once
     the source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-31 03:30 America/New_York
 - Completed:
@@ -3493,6 +3496,71 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   - Native-provider work still waits on the actual Hermes Agent source.
 - Next action:
   - Commit the installed config-generation relocation guard and keep the branch
+    clean for handoff, or install the bridge into the real Hermes Agent checkout
+    once the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 04:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `ab84a3a`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Inspected the voice helper config path, current command-provider docs, and
+    static Hermes TTS example.
+  - Updated `scripts/hermes-omnivoice-voices.py config` to validate the
+    requested profile before printing Hermes config, reusing the same consent
+    and profile checks as `info`, `set`, and `preview`.
+  - Switched the shipped Hermes TTS config example and docs from the incomplete
+    clone template to the ready `narrator` design profile.
+  - Added regression coverage for refusing invalid config profiles and keeping
+    the static config example on the ready design voice with explicit
+    `--voices-dir`.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 04:00/98-test validation state.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "Latest heartbeat|Open follow-ups|Next action|acceptance|install|config|Hermes Agent|source|TODO|FIXME|schema|provider" HEARTBEAT.md README.md docs scripts tests examples`
+  - `sed -n '1,285p' scripts/hermes-omnivoice-voices.py`
+  - `sed -n '2350,2425p' tests/test_omnivoice_tts.py`
+  - `rg -n "config marvin|voice: marvin|config narrator|voice: narrator|hermes-tts-omnivoice" README.md docs examples tests`
+  - `python3 -m unittest tests.test_omnivoice_tts.VoiceCliTests tests.test_omnivoice_tts.ExampleFileTests tests.test_omnivoice_tts.InstallerTests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-voices.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `rg -n "03:30 America/New_York|96 tests|03:00 America/New_York|95 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+- Tests:
+  - Targeted voice helper, example, and installer tests: PASS, 23 tests.
+  - Python py_compile for voice helper and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 98 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Stale handoff snapshot scan: PASS; no 03:30/96-test or older summary state
+    remains in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Printing Hermes config for invalid profiles is a handoff bug even though the
+    runtime wrapper would fail closed later.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Commit the config validation and ready-example guard and keep the branch
     clean for handoff, or install the bridge into the real Hermes Agent checkout
     once the source path is available.
 
@@ -3621,6 +3689,8 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   relying on wrapper defaults can route Hermes to the wrong local profile root.
 - Verify generated config from installed checkouts too, because source-repo
   paths in copied Hermes configs would be a subtle handoff failure.
+- Refuse to print Hermes config for invalid profiles; configuration handoffs
+  should be consent-checked before runtime, not only at synthesis time.
 
 ## Open follow-ups
 

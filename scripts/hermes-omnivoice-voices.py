@@ -186,6 +186,10 @@ def command_current(args: argparse.Namespace) -> int:
 
 
 def command_config(args: argparse.Namespace) -> int:
+    summary = _profile_summary(args.voices_dir, args.voice)
+    if summary["status"] != "ready":
+        print(f"Voice {args.voice} is invalid: {summary['error']}", file=sys.stderr)
+        return 1
     script_path = args.script_path or WRAPPER_PATH
     voices_dir = args.voices_dir.expanduser()
     command = (

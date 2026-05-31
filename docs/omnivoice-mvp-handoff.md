@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 03:30 America/New_York on branch
+As of 2026-05-31 04:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 96 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 98 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
@@ -99,6 +99,10 @@ As of 2026-05-31 03:30 America/New_York on branch
 - Installed `--with-examples` config generation is covered after a real target
   copy: the copied voice helper emits the copied wrapper path and target
   example registry path rather than source-repo paths.
+- `scripts/hermes-omnivoice-voices.py config` now validates the requested voice
+  before printing Hermes config, and the shipped Hermes TTS config example
+  defaults to the ready `narrator` design profile instead of the clone template
+  that intentionally lacks reference audio.
 
 ## Validate
 

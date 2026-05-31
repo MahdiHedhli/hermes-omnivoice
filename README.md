@@ -120,11 +120,12 @@ python scripts/hermes-omnivoice-voices.py preview marvin --out /tmp/marvin-previ
 Print a Hermes command-provider config for a selected voice:
 
 ```bash
-python scripts/hermes-omnivoice-voices.py config marvin
+python scripts/hermes-omnivoice-voices.py config narrator
 ```
 
 Pass `--voices-dir` before `config` when generating config for a non-default
-registry; the emitted command includes that registry path.
+registry; the emitted command includes that registry path. The voice must be a
+valid profile with confirmed consent.
 
 ## Backend Options
 

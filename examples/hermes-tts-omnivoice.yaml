@@ -6,7 +6,7 @@ tts:
     omnivoice:
       type: command
       command: "python /absolute/path/to/scripts/hermes-omnivoice-tts.py --voices-dir ~/.hermes/voices/omnivoice --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
-      voice: marvin
+      voice: narrator
       output_format: wav
       timeout: 180
       voice_compatible: true

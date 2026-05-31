@@ -388,8 +388,9 @@ python scripts/hermes-omnivoice-voices.py preview marvin --out /tmp/marvin-previ
 Print a Hermes command-provider config example:
 
 ```bash
-python scripts/hermes-omnivoice-voices.py config marvin
+python scripts/hermes-omnivoice-voices.py config narrator
 ```
 
 Use `--voices-dir` before `config` when printing config for a custom registry;
-the generated command includes the same registry path.
+the generated command includes the same registry path. The voice must validate
+successfully before config is printed.
