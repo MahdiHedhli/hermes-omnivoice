@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 10:30 America/New_York on branch
+Status as of 2026-05-31 11:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,13 +35,18 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 118 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 122 tests with 1 expected
   opt-in real-backend skip.
 - Validator interpreter alignment: PASS. The fake-backend smoke command now
   uses the configured `PYTHON_BIN` instead of hardcoded `python3`, so full
   validation runs stay on the selected interpreter.
 - Product-name terminology guard: PASS. Shipped README, docs, examples, and
   scripts are scanned so handoff copy keeps the OmniVoice-Studio name.
+- Command-template error handling: PASS. Unknown placeholders, unsupported
+  placeholder access, and malformed brace syntax in
+  `HERMES_OMNIVOICE_COMMAND_JSON` or
+  `HERMES_OMNIVOICE_COMMAND` now return wrapper config errors instead of raw
+  Python exceptions.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
 - `scripts/test-omnivoice-tts.sh` with the generated adapter exports: PASS,
@@ -112,6 +117,9 @@ sample and contains explicit confirmed consent metadata.
   before backend synthesis, passes command backends a private temporary output
   path, leaves successful output audio with `0600` permissions, and validates
   command or Studio response audio before atomic replacement.
+- Command templates fail closed on unknown placeholders, unsupported
+  placeholder access, or malformed brace syntax before backend startup; literal
+  braces should be escaped as `{{` and `}}`.
 
 ## Remaining Blockers
 

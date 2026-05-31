@@ -143,8 +143,10 @@ Use exactly one of these local backend paths:
 Prefer `HERMES_OMNIVOICE_COMMAND_JSON` for custom adapters because it avoids
 shell quoting hazards. Use `scripts/setup-omnivoice-python-env.py --shell` to
 print safely quoted exports for the packaged Python adapter. The auto CLI path
-is opt-in because the first
-`omnivoice-infer` run may download model files.
+is opt-in because the first `omnivoice-infer` run may download model files.
+Unknown placeholders, unsupported placeholder access, and invalid brace syntax
+are treated as wrapper configuration errors before any backend command is
+invoked; escape literal braces in command templates as `{{` and `}}`.
 
 ## Current Limits
 

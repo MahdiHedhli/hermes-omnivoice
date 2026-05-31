@@ -31,16 +31,21 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 10:30 America/New_York on branch
+As of 2026-05-31 11:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 118 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 122 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
   not silently fall back to `python3` for the wrapper smoke path.
 - Shipped README, docs, examples, and scripts are regression-checked for the
   correct OmniVoice-Studio product name in handoff copy.
+- Command-template configuration errors are now covered: unknown placeholders,
+  unsupported placeholder access, and malformed brace syntax in
+  `HERMES_OMNIVOICE_COMMAND_JSON` or
+  `HERMES_OMNIVOICE_COMMAND` return wrapper config errors instead of raw Python
+  exceptions.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
   shell environment because no backend command is exported there.
@@ -139,6 +144,9 @@ As of 2026-05-31 10:30 America/New_York on branch
   synthesis, passes command backends a private same-directory temp output path,
   makes successful generated output audio `0600`, and validates command or
   Studio response audio before atomically replacing the requested output.
+- Command templates fail closed on unknown placeholders, unsupported
+  placeholder access, or malformed brace syntax before backend startup; literal
+  braces should be written as `{{` and `}}`.
 
 ## Validate
 

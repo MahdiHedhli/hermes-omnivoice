@@ -118,6 +118,10 @@ configured `PYTHON_BIN` interpreter instead of falling back to a literal
 `python3`.
 The shipped README, docs, examples, and scripts now have a terminology
 regression guard so handoff copy keeps the OmniVoice-Studio product name.
+Command-template configuration errors now fail closed before backend startup:
+unknown placeholders, unsupported placeholder access, and malformed brace
+syntax in `HERMES_OMNIVOICE_COMMAND_JSON` or `HERMES_OMNIVOICE_COMMAND` return
+wrapper config errors instead of raw Python exceptions.
 
 ## Previous heartbeat
 
@@ -3977,6 +3981,65 @@ regression guard so handoff copy keeps the OmniVoice-Studio product name.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 11:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `63fb209`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Hardened `HERMES_OMNIVOICE_COMMAND_JSON` and
+    `HERMES_OMNIVOICE_COMMAND` template handling so unknown placeholders,
+    unsupported placeholder access, and malformed brace syntax return wrapper
+    config errors before any backend process starts.
+  - Added regression coverage for JSON command templates, shell-style command
+    templates, malformed braces, and unsupported placeholder access.
+  - Updated README, integration notes, MVP handoff, weekend summary, and
+    heartbeat status for the new 122-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "COMMAND_JSON|COMMAND|format_map|KeyError|placeholder|invalid JSON|command.*invalid|build_backend_command" scripts/hermes-omnivoice-tts.py tests/test_omnivoice_tts.py docs README.md HEARTBEAT.md`
+  - `sed -n ... scripts/hermes-omnivoice-tts.py tests/test_omnivoice_tts.py README.md docs/omnivoice-integration-notes.md docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 - <<'PY' ...`
+  - `git diff -- scripts/hermes-omnivoice-tts.py tests/test_omnivoice_tts.py README.md docs/omnivoice-integration-notes.md docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md HEARTBEAT.md`
+  - `rg -n "10:30 America/New_York|118 tests|121 tests|122 tests|11:00 America/New_York|command-template|unsupported placeholder|unknown placeholder|invalid placeholder" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-integration-notes.md HEARTBEAT.md`
+- Tests:
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests -v`:
+    PASS, 24 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 122 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Real-backend smoke script after evaluating generated shell exports: PASS;
+    generated a valid temporary WAV from the required smoke text.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Command-template syntax is operator-controlled config and should fail as a
+    wrapper configuration problem, not as a raw Python exception.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Keep the branch clean for handoff, or install the bridge into the real
+    Hermes Agent checkout once the source path is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 10:30 America/New_York
 - Completed:

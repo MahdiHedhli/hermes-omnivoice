@@ -416,6 +416,141 @@ class OmniVoiceRegistryTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
 
+    def test_command_json_unknown_placeholder_returns_config_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--voice",
+                        "marvin",
+                    ],
+                    env={
+                        "HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(
+                            ["backend", "{missing_placeholder}"]
+                        )
+                    },
+                )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertIn("HERMES_OMNIVOICE_COMMAND_JSON", error)
+            self.assertIn("{missing_placeholder}", error)
+            self.assertIn("unknown placeholder", error)
+            self.assertNotIn("Traceback", error)
+
+    def test_command_string_unknown_placeholder_returns_config_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--voice",
+                        "marvin",
+                    ],
+                    env={"HERMES_OMNIVOICE_COMMAND": "backend {missing_placeholder}"},
+                )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertIn("HERMES_OMNIVOICE_COMMAND", error)
+            self.assertIn("{missing_placeholder}", error)
+            self.assertIn("unknown placeholder", error)
+            self.assertNotIn("Traceback", error)
+
+    def test_command_json_invalid_placeholder_syntax_returns_config_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--voice",
+                        "marvin",
+                    ],
+                    env={
+                        "HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(
+                            ["backend", "{text_file"]
+                        )
+                    },
+                )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertIn("HERMES_OMNIVOICE_COMMAND_JSON", error)
+            self.assertIn("invalid placeholder syntax", error)
+            self.assertNotIn("Traceback", error)
+
+    def test_command_json_unsupported_placeholder_access_returns_config_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--voice",
+                        "marvin",
+                    ],
+                    env={
+                        "HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(
+                            ["backend", "{text_file.name}"]
+                        )
+                    },
+                )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertIn("HERMES_OMNIVOICE_COMMAND_JSON", error)
+            self.assertIn("{text_file.name}", error)
+            self.assertIn("unsupported placeholder access", error)
+            self.assertNotIn("Traceback", error)
+
     def test_command_success_writes_valid_wav(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

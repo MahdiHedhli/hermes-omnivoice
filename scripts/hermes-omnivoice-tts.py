@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import shlex
 import shutil
+import string
 import subprocess
 import sys
 import tempfile
@@ -23,6 +24,7 @@ import wave
 VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 PRIVATE_FILE_MODE = 0o600
+COMMAND_FORMATTER = string.Formatter()
 OMNIVOICE_ENGLISH_INSTRUCT_ITEMS = {
     "american accent",
     "australian accent",
@@ -239,6 +241,27 @@ def validate_design_instruct(instruct: str) -> None:
         )
 
 
+def format_command_template(value: str, mapping: dict[str, str], source: str) -> str:
+    try:
+        for _, field_name, _, _ in COMMAND_FORMATTER.parse(value):
+            if field_name and any(part in field_name for part in (".", "[", "]")):
+                raise OmniVoiceConfigError(
+                    f"{source} uses unsupported placeholder access {{{field_name}}}"
+                )
+        return value.format_map(mapping)
+    except OmniVoiceConfigError:
+        raise
+    except KeyError as exc:
+        missing = str(exc).strip("'")
+        raise OmniVoiceConfigError(
+            f"{source} references unknown placeholder {{{missing}}}"
+        ) from exc
+    except ValueError as exc:
+        raise OmniVoiceConfigError(
+            f"{source} has invalid placeholder syntax: {exc}"
+        ) from exc
+
+
 def build_backend_command(
     *,
     env: dict[str, str],
@@ -274,12 +297,20 @@ def build_backend_command(
             raise OmniVoiceConfigError("HERMES_OMNIVOICE_COMMAND_JSON is not valid JSON") from exc
         if not isinstance(argv, list) or not all(isinstance(item, str) for item in argv):
             raise OmniVoiceConfigError("HERMES_OMNIVOICE_COMMAND_JSON must be a JSON string array")
-        return [item.format_map(mapping) for item in argv]
+        return [
+            format_command_template(item, mapping, "HERMES_OMNIVOICE_COMMAND_JSON")
+            for item in argv
+        ]
 
     string_template = env.get("HERMES_OMNIVOICE_COMMAND")
     if string_template:
         quoted = {key: shlex.quote(value) for key, value in mapping.items()}
-        return shlex.split(string_template.format_map(quoted))
+        command = format_command_template(
+            string_template,
+            quoted,
+            "HERMES_OMNIVOICE_COMMAND",
+        )
+        return shlex.split(command)
 
     omnivoice_bin = shutil.which("omnivoice-infer")
     if omnivoice_bin and env.get("HERMES_OMNIVOICE_AUTO_CLI") == "1":

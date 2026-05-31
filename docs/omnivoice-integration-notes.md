@@ -123,6 +123,11 @@ Available placeholders:
 `HERMES_OMNIVOICE_COMMAND` is also supported for a shell-style string, but the
 wrapper still executes without `shell=True`.
 
+Unknown placeholders, unsupported placeholder access, and invalid brace syntax
+fail as wrapper configuration errors before the backend starts. Use doubled
+braces, `{{` and `}}`, when a literal brace must be passed through a command
+template.
+
 The upstream OmniVoice package exposes `omnivoice-infer` as its single-item
 inference CLI. The wrapper's `HERMES_OMNIVOICE_AUTO_CLI=1` path is opt-in and
 uses that executable with `--text`, `--output`, `--speed`, optional
