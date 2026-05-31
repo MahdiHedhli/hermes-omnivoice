@@ -40,6 +40,9 @@ This repo is intentionally conservative:
 - `scripts/validate-omnivoice-bridge.sh`: deterministic local validation,
   including unit tests, smoke checks, secret scanning, artifact scanning, and
   whitespace checks.
+- `scripts/check-omnivoice-artifacts.py`: validates that generated audio,
+  model files, env files, and local voice selection state are absent from the
+  repo.
 - `docs/`: setup, Studio bridge notes, integration findings, and custom voice
   usage.
 - `examples/`: sample Hermes config and voice registry templates.

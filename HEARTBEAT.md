@@ -2569,7 +2569,7 @@ local backend path, validation state, blockers, security notes, and next steps.
   - Keep the branch clean for handoff, or install the bridge into the real
     Hermes Agent checkout once the source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 20:30 America/New_York
 - Completed:
@@ -2624,6 +2624,73 @@ local backend path, validation state, blockers, security notes, and next steps.
 - Assumptions:
   - Generated audio, model files, `.env*`, and local voice selection state
     should be validator-enforced because they are security-sensitive artifacts.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Keep the branch clean for handoff, or install the bridge into the real
+    Hermes Agent checkout once the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 21:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `34aa6d4`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready and can provide
+    shell exports for the real OmniVoice adapter command.
+  - Replaced the inline shell artifact scan with
+    `scripts/check-omnivoice-artifacts.py`, a package-only helper that reports
+    generated audio, model files, `.env*`, and local selection state.
+  - Added unit coverage for artifact detection, `.git` pruning, and CLI failure
+    on forbidden artifacts.
+  - Wired the artifact checker into package acceptance and the standard
+    validation script.
+  - Updated README, acceptance docs, integration notes, MVP handoff, and weekend
+    summary docs for the helper-backed artifact safety gate.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `sed -n ... scripts/validate-omnivoice-bridge.sh tests/test_omnivoice_tts.py`
+  - `chmod +x scripts/check-omnivoice-artifacts.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.ArtifactCheckTests tests.test_omnivoice_tts.AcceptanceTests -v`
+  - `python3 -m py_compile scripts/check-omnivoice-artifacts.py scripts/omnivoice-acceptance.py tests/test_omnivoice_tts.py`
+  - `rg -n "TOKEN|SECRET|PASSWORD|API_KEY" tests/test_omnivoice_tts.py scripts/check-omnivoice-artifacts.py README.md docs/omnivoice-acceptance.md`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+- Tests:
+  - Targeted artifact and acceptance tests: PASS, 9 tests.
+  - Python py_compile for artifact checker, acceptance, and tests: PASS.
+  - Secret-pattern fixture probe: PASS after replacing a test fixture's
+    secret-like `TOKEN` marker with a neutral local-only value.
+  - First full validation attempt: FAIL as expected after the new artifact test
+    introduced the literal `TOKEN`; the secret-pattern scan caught it before
+    commit.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS after fixture cleanup; includes
+    84 tests with 1 expected opt-in real-backend skip, py_compile, strict
+    package-file acceptance, fake-backend smoke, unconfigured smoke skip,
+    secret-pattern scan, helper-backed generated-artifact scan, and
+    `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Direct artifact checker: PASS; `ok: true`, `matches: []`.
+  - Whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - The generated-artifact rule should live in Python with unit coverage because
+    it is a security-sensitive repo hygiene gate.
   - Native-provider work still waits on the actual Hermes Agent source.
 - Next action:
   - Keep the branch clean for handoff, or install the bridge into the real
@@ -2721,6 +2788,8 @@ local backend path, validation state, blockers, security notes, and next steps.
   messages readable for human dry-run handoffs.
 - Enforce generated-audio, model, env, and local selection artifact absence in
   the standard validation script instead of relying on manual heartbeat scans.
+- Keep the generated-artifact denylist in a testable Python helper while the
+  shell validator remains the single operator entrypoint.
 
 ## Open follow-ups
 

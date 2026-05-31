@@ -37,6 +37,7 @@ BRIDGE_REQUIRED_FILES = [
 PACKAGE_REQUIRED_FILES = [
     "scripts/install-hermes-omnivoice-bridge.py",
     "scripts/validate-omnivoice-bridge.sh",
+    "scripts/check-omnivoice-artifacts.py",
     "examples/hermes-tts-omnivoice.yaml",
     "examples/voices/marvin/voice.yaml",
     "examples/voices/narrator/voice.yaml",

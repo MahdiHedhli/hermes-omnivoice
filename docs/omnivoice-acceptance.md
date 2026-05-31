@@ -12,9 +12,9 @@ This repo separates three gates:
    wiring.
 
 It also reports local package-only handoff files, such as the installer,
-validation script, examples, and heartbeat record. Those package extras are
-required in this bridge repo but are not required after a default install into a
-real Hermes checkout.
+validation script, artifact checker, examples, and heartbeat record. Those
+package extras are required in this bridge repo but are not required after a
+default install into a real Hermes checkout.
 
 Run:
 

@@ -16,6 +16,7 @@ cd "$ROOT_DIR"
   scripts/hermes-omnivoice-python-adapter.py \
   scripts/setup-omnivoice-python-env.py \
   scripts/find-hermes-source.py \
+  scripts/check-omnivoice-artifacts.py \
   scripts/create-omnivoice-voice.py \
   scripts/import-omnivoice-studio-voice.py \
   scripts/hermes-omnivoice-voices.py \
@@ -59,27 +60,6 @@ if command -v rg >/dev/null 2>&1; then
   fi
 fi
 
-artifact_matches="$(
-  find . -path './.git' -prune -o -type f \( \
-    -name '*.wav' -o \
-    -name '*.mp3' -o \
-    -name '*.flac' -o \
-    -name '*.ogg' -o \
-    -name '*.m4a' -o \
-    -name '*.ckpt' -o \
-    -name '*.pt' -o \
-    -name '*.pth' -o \
-    -name '*.onnx' -o \
-    -name '*.safetensors' -o \
-    -name '.env' -o \
-    -name '.env.*' -o \
-    -name 'omnivoice-selection.json' \
-  \) -print
-)"
-if [[ -n "$artifact_matches" ]]; then
-  echo "generated audio, model, env, or local selection artifacts found:" >&2
-  printf '%s\n' "$artifact_matches" >&2
-  exit 1
-fi
+"$PYTHON_BIN" scripts/check-omnivoice-artifacts.py
 
 git diff --check

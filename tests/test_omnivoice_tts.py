@@ -48,6 +48,9 @@ FIND_SOURCE_SCRIPT_PATH = (
 ACCEPTANCE_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "omnivoice-acceptance.py"
 )
+ARTIFACTS_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "check-omnivoice-artifacts.py"
+)
 FAKE_BACKEND_PATH = Path(__file__).resolve().parent / "fixtures" / "fake_omnivoice_backend.py"
 EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
 SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_tts", SCRIPT_PATH)
@@ -129,6 +132,14 @@ assert ACCEPTANCE_SPEC is not None and ACCEPTANCE_SPEC.loader is not None
 acceptance = importlib.util.module_from_spec(ACCEPTANCE_SPEC)
 sys.modules["omnivoice_acceptance"] = acceptance
 ACCEPTANCE_SPEC.loader.exec_module(acceptance)
+
+ARTIFACTS_SPEC = importlib.util.spec_from_file_location(
+    "check_omnivoice_artifacts", ARTIFACTS_SCRIPT_PATH
+)
+assert ARTIFACTS_SPEC is not None and ARTIFACTS_SPEC.loader is not None
+artifact_check = importlib.util.module_from_spec(ARTIFACTS_SPEC)
+sys.modules["check_omnivoice_artifacts"] = artifact_check
+ARTIFACTS_SPEC.loader.exec_module(artifact_check)
 
 
 def write_wav(path: Path) -> None:
@@ -1652,6 +1663,39 @@ class HermesSourceFinderTests(unittest.TestCase):
 
 def argparse_namespace(**kwargs):
     return types.SimpleNamespace(**kwargs)
+
+
+class ArtifactCheckTests(unittest.TestCase):
+    def test_artifact_check_reports_generated_and_local_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "docs").mkdir()
+            (root / "docs" / "notes.md").write_text("safe", encoding="utf-8")
+            (root / "sample.wav").write_bytes(b"not-a-real-wav")
+            (root / "model.safetensors").write_bytes(b"model")
+            (root / ".env.local").write_text("LOCAL_ONLY=redacted", encoding="utf-8")
+            (root / "omnivoice-selection.json").write_text("{}", encoding="utf-8")
+            (root / ".git").mkdir()
+            (root / ".git" / "ignored.wav").write_bytes(b"ignored")
+
+            matches = artifact_check.find_forbidden_artifacts(root)
+
+            self.assertEqual(
+                matches,
+                [".env.local", "model.safetensors", "omnivoice-selection.json", "sample.wav"],
+            )
+
+    def test_artifact_check_cli_fails_when_matches_exist(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / ".env").write_text("local-only", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = artifact_check.run(["--root", str(root)])
+
+            self.assertEqual(result, 1)
+            self.assertIn(".env", stderr.getvalue())
 
 
 class AcceptanceTests(unittest.TestCase):
