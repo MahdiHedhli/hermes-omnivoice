@@ -1710,6 +1710,12 @@ class AcceptanceTests(unittest.TestCase):
         self.assertEqual(package_report["status"], "pass")
         self.assertEqual(package_report["missing"], [])
 
+    def test_package_only_files_are_not_default_installer_payload(self) -> None:
+        package_only = set(acceptance.PACKAGE_REQUIRED_FILES)
+
+        self.assertTrue(package_only.isdisjoint(installer.BASE_MANIFEST))
+        self.assertTrue(set(installer.EXAMPLE_MANIFEST).issubset(package_only))
+
     def test_acceptance_default_succeeds_without_real_backend(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = io.StringIO()
@@ -1764,6 +1770,8 @@ class AcceptanceTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertTrue(report["mvp_static_ready"])
             self.assertEqual(report["package_files"]["status"], "fail")
+            self.assertFalse((target / "scripts" / "check-omnivoice-artifacts.py").exists())
+            self.assertFalse((target / "scripts" / "validate-omnivoice-bridge.sh").exists())
             self.assertIn(
                 "scripts/install-hermes-omnivoice-bridge.py",
                 report["package_files"]["missing"],
