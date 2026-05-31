@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 11:00 America/New_York on branch
+As of 2026-05-31 11:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 122 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 125 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -46,6 +46,9 @@ As of 2026-05-31 11:00 America/New_York on branch
   `HERMES_OMNIVOICE_COMMAND_JSON` or
   `HERMES_OMNIVOICE_COMMAND` return wrapper config errors instead of raw Python
   exceptions.
+- Runtime diagnostics now validate the same backend command-template
+  placeholder contract, so malformed command configuration does not count as
+  `real_backend_ready`.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
   shell environment because no backend command is exported there.
@@ -62,6 +65,9 @@ As of 2026-05-31 11:00 America/New_York on branch
 - `scripts/check-omnivoice-runtime.py` reports no default Studio URL, backend
   command, or auto CLI; it now sees one local designed profile under
   `~/.hermes/voices/omnivoice`.
+- If a backend command is exported, `scripts/check-omnivoice-runtime.py` now
+  rejects unknown placeholders, unsupported placeholder access, and malformed
+  brace syntax before reporting the command as configured.
 - `scripts/setup-omnivoice-python-env.py --check-only --json` reports the
   isolated venv at `~/.cache/hermes/omnivoice-python` is ready, including
   `omnivoice`, `torch`, `soundfile`, and `omnivoice-infer`.

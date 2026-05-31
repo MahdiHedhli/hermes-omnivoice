@@ -228,10 +228,11 @@ python scripts/setup-omnivoice-python-env.py --check-only
 ```
 
 The runtime check does not execute configured backend commands and does not
-print command arguments. It only reports whether a backend command is configured,
-whether a loopback Studio `/profiles` endpoint is reachable, whether an
-`omnivoice-infer` CLI is on `PATH`, whether auto CLI mode is enabled, and how
-many local registry profiles exist.
+print command arguments. It validates backend command template placeholders,
+reports whether a backend command is configured, whether a loopback Studio
+`/profiles` endpoint is reachable, whether an `omnivoice-infer` CLI is on
+`PATH`, whether auto CLI mode is enabled, and how many local registry profiles
+exist.
 
 ## Local Studio With Docker
 

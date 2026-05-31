@@ -82,6 +82,10 @@ a local OmniVoice command, by pointing `HERMES_OMNIVOICE_COMMAND_JSON` at
 `scripts/hermes-omnivoice-python-adapter.py`, or by installing `omnivoice-infer`
 and setting `HERMES_OMNIVOICE_AUTO_CLI=1`, then creating or importing at least
 one consented voice profile under `~/.hermes/voices/omnivoice`.
+Command backends must also pass placeholder validation in
+`scripts/check-omnivoice-runtime.py`; unknown placeholders, unsupported
+placeholder access, or malformed brace syntax do not count as configured
+runtime readiness.
 
 Use `python scripts/setup-omnivoice-python-env.py --dry-run` before creating
 the local Python backend environment. Use `--check-only --require-ready` after

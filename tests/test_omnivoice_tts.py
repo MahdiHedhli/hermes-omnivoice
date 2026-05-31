@@ -1685,6 +1685,28 @@ class RuntimeCheckTests(unittest.TestCase):
         self.assertIn("echo", report["executable"])
         self.assertNotIn("secret-arg", encoded)
 
+    def test_runtime_check_rejects_command_json_unknown_placeholder(self) -> None:
+        with self.assertRaisesRegex(runtime_check.RuntimeCheckError, "unknown placeholder"):
+            runtime_check.check_backend_command(
+                {
+                    "HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(
+                        ["/bin/echo", "{missing_placeholder}"]
+                    )
+                }
+            )
+
+    def test_runtime_check_rejects_command_json_invalid_placeholder_syntax(self) -> None:
+        with self.assertRaisesRegex(runtime_check.RuntimeCheckError, "invalid placeholder"):
+            runtime_check.check_backend_command(
+                {"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(["/bin/echo", "{text_file"])}
+            )
+
+    def test_runtime_check_rejects_command_string_unsupported_placeholder_access(self) -> None:
+        with self.assertRaisesRegex(runtime_check.RuntimeCheckError, "unsupported placeholder"):
+            runtime_check.check_backend_command(
+                {"HERMES_OMNIVOICE_COMMAND": "/bin/echo {text_file.name}"}
+            )
+
     def test_runtime_check_rejects_remote_studio_by_default(self) -> None:
         with self.assertRaisesRegex(runtime_check.RuntimeCheckError, "non-loopback"):
             runtime_check.validate_studio_url("http://10.0.0.5:3900")

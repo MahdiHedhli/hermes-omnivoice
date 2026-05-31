@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shlex
 import shutil
+import string
 import sys
 import urllib.error
 import urllib.parse
@@ -16,6 +17,22 @@ import urllib.request
 
 
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
+COMMAND_FORMATTER = string.Formatter()
+COMMAND_PLACEHOLDERS = {
+    "text_file",
+    "input_path",
+    "text",
+    "out",
+    "output_path",
+    "voice",
+    "voice_id",
+    "voice_dir",
+    "speed",
+    "language",
+    "ref_audio",
+    "ref_text",
+    "instruct",
+}
 
 
 class RuntimeCheckError(RuntimeError):
@@ -43,6 +60,28 @@ def _executable_hint(command: list[str]) -> dict:
     }
 
 
+def validate_command_template(value: str, source: str) -> None:
+    try:
+        parsed = COMMAND_FORMATTER.parse(value)
+        for _, field_name, _, _ in parsed:
+            if field_name is None:
+                continue
+            if not field_name:
+                raise RuntimeCheckError(f"{source} uses unsupported positional placeholder")
+            if any(part in field_name for part in (".", "[", "]")):
+                raise RuntimeCheckError(
+                    f"{source} uses unsupported placeholder access {{{field_name}}}"
+                )
+            if field_name not in COMMAND_PLACEHOLDERS:
+                raise RuntimeCheckError(
+                    f"{source} references unknown placeholder {{{field_name}}}"
+                )
+    except RuntimeCheckError:
+        raise
+    except ValueError as exc:
+        raise RuntimeCheckError(f"{source} has invalid placeholder syntax: {exc}") from exc
+
+
 def check_backend_command(env: dict[str, str]) -> dict:
     json_template = env.get("HERMES_OMNIVOICE_COMMAND_JSON", "").strip()
     if json_template:
@@ -52,10 +91,13 @@ def check_backend_command(env: dict[str, str]) -> dict:
             raise RuntimeCheckError("HERMES_OMNIVOICE_COMMAND_JSON is not valid JSON") from exc
         if not isinstance(command, list) or not all(isinstance(item, str) for item in command):
             raise RuntimeCheckError("HERMES_OMNIVOICE_COMMAND_JSON must be a JSON string array")
+        for item in command:
+            validate_command_template(item, "HERMES_OMNIVOICE_COMMAND_JSON")
         return {"status": "configured", "mode": "command_json", **_executable_hint(command)}
 
     string_template = env.get("HERMES_OMNIVOICE_COMMAND", "").strip()
     if string_template:
+        validate_command_template(string_template, "HERMES_OMNIVOICE_COMMAND")
         try:
             command = shlex.split(string_template)
         except ValueError as exc:

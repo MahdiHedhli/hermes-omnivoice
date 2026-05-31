@@ -122,6 +122,9 @@ Command-template configuration errors now fail closed before backend startup:
 unknown placeholders, unsupported placeholder access, and malformed brace
 syntax in `HERMES_OMNIVOICE_COMMAND_JSON` or `HERMES_OMNIVOICE_COMMAND` return
 wrapper config errors instead of raw Python exceptions.
+Runtime diagnostics now validate that same command-template placeholder
+contract before reporting an exported backend command as configured, so
+acceptance readiness stays fail-closed when operator command config is malformed.
 
 ## Previous heartbeat
 
@@ -3982,6 +3985,64 @@ wrapper config errors instead of raw Python exceptions.
 
 ## Latest heartbeat
 
+- Time: 2026-05-31 11:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `78ada0e`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Updated `scripts/check-omnivoice-runtime.py` to validate backend
+    command-template placeholders before reporting a command backend as
+    configured.
+  - Added regression coverage for runtime diagnostics rejecting unknown
+    placeholders, malformed braces, and unsupported placeholder access.
+  - Updated setup, acceptance, MVP handoff, weekend summary, and heartbeat docs
+    for the new 125-test validation snapshot and fail-closed runtime readiness.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|Open follow-ups|Next action|Remaining Blockers|Next Steps|source discovery|install into|acceptance|command-template|native provider|Hermes Agent source" README.md docs scripts tests examples HEARTBEAT.md`
+  - `sed -n ... scripts/test-omnivoice-tts.sh scripts/omnivoice-acceptance.py scripts/check-omnivoice-runtime.py scripts/setup-omnivoice-python-env.py tests/test_omnivoice_tts.py docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md docs/omnivoice-acceptance.md docs/omnivoice-setup.md HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.RuntimeCheckTests tests.test_omnivoice_tts.AcceptanceTests -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `HERMES_OMNIVOICE_COMMAND_JSON='["/bin/echo", "{missing_placeholder}"]' python3 scripts/check-omnivoice-runtime.py --json`
+- Tests:
+  - Runtime plus acceptance focused suite: PASS, 19 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 125 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Real-backend smoke script after evaluating generated shell exports: PASS;
+    generated a valid temporary WAV from the required smoke text.
+  - Malformed runtime command diagnostic: PASS; `check-omnivoice-runtime.py`
+    exits 1 with an explicit unknown-placeholder error.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Acceptance should not treat an exported backend command as ready unless the
+    same command-template contract enforced by the wrapper is valid.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the runtime diagnostic hardening and keep the branch clean for
+    handoff, or install the bridge into the real Hermes Agent checkout once the
+    source path is available.
+
+## Previous heartbeat
+
 - Time: 2026-05-31 11:00 America/New_York
 - Completed:
   - Rechecked repo state; branch was clean at commit `63fb209`.
@@ -4672,6 +4733,8 @@ wrapper config errors instead of raw Python exceptions.
 - Pass command backends a wrapper-owned temporary output path and atomically
   replace the requested output only after validation, so custom backends cannot
   directly write through a final-path symlink or leave invalid final audio.
+- Validate backend command-template placeholders in runtime diagnostics too, so
+  acceptance cannot treat malformed operator command config as backend-ready.
 
 ## Open follow-ups
 
