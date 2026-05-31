@@ -2553,6 +2553,44 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(current["voice"], "marvin")
             self.assertEqual(current["status"], "ready")
 
+    def test_current_command_reports_profile_speed_not_stale_selection_speed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            selection_file = root / "selection.json"
+            write_voice(voices_root, "marvin")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                set_result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--selection-file",
+                        str(selection_file),
+                        "set",
+                        "marvin",
+                    ]
+                )
+            payload = json.loads(selection_file.read_text(encoding="utf-8"))
+            payload["speed"] = 9.0
+            selection_file.write_text(json.dumps(payload), encoding="utf-8")
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                current_result = voices_cli.run(
+                    [
+                        "--selection-file",
+                        str(selection_file),
+                        "current",
+                        "--json",
+                    ]
+                )
+
+            current = json.loads(output.getvalue())
+            self.assertEqual(set_result, 0)
+            self.assertEqual(current_result, 0)
+            self.assertEqual(current["speed"], 1.0)
+
     def test_current_command_refuses_stale_invalid_selection(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

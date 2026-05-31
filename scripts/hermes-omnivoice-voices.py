@@ -197,15 +197,23 @@ def command_current(args: argparse.Namespace) -> int:
     if summary["status"] != "ready":
         print(f"Selected OmniVoice voice {voice} is invalid: {summary['error']}", file=sys.stderr)
         return 1
+    current_payload = dict(payload)
+    current_payload.update(
+        {
+            "provider": "omnivoice",
+            "voice": voice,
+            "voices_dir": str(voices_dir),
+            "speed": summary["speed"],
+            "status": "ready",
+        }
+    )
     if args.json:
-        payload = dict(payload)
-        payload["status"] = "ready"
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json.dumps(current_payload, indent=2, sort_keys=True))
         return 0
-    print(f"Voice: {payload.get('voice', '')}")
-    print(f"Provider: {payload.get('provider', '')}")
-    print(f"Voices dir: {payload.get('voices_dir', '')}")
-    print(f"Speed: {payload.get('speed', '')}")
+    print(f"Voice: {current_payload['voice']}")
+    print(f"Provider: {current_payload['provider']}")
+    print(f"Voices dir: {current_payload['voices_dir']}")
+    print(f"Speed: {current_payload['speed']}")
     print("Status: ready")
     return 0
 

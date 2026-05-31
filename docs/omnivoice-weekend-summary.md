@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 06:00 America/New_York on branch
+Status as of 2026-05-31 06:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 103 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 104 tests with 1 expected
   opt-in real-backend skip.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
@@ -89,7 +89,8 @@ sample and contains explicit confirmed consent metadata.
   current` revalidates the selected profile and fails closed if the selected
   voice no longer has valid consent/profile inputs or malformed registry
   pointer metadata, including non-object selection JSON and non-OmniVoice
-  provider values.
+  provider values. It reports profile-derived speed and registry path instead
+  of trusting stale selection metadata.
 
 ## Remaining Blockers
 

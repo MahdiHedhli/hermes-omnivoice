@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 06:00 America/New_York on branch
+As of 2026-05-31 06:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 103 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 104 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
@@ -114,7 +114,9 @@ As of 2026-05-31 06:00 America/New_York on branch
   before reporting it, so stale local selection state cannot silently stand in
   for current consent/profile readiness. It also rejects malformed local
   selection JSON, including non-object payloads and non-OmniVoice provider
-  values, instead of treating it as a valid registry pointer.
+  values, instead of treating it as a valid registry pointer. Reported speed
+  and voice registry path come from the revalidated profile context rather than
+  stale selection metadata.
 
 ## Validate
 

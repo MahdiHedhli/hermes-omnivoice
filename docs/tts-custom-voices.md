@@ -139,7 +139,9 @@ same local Studio URL or backend command configuration as Hermes TTS. The
 for user-level selection state. The `current` command revalidates that selected
 profile before reporting it, so stale or invalid local selection state fails
 closed, including malformed registry pointer metadata and non-OmniVoice
-selection records. The `config` command prints a command-provider YAML example
-for the selected voice and includes the configured `--voices-dir` path in the
-generated wrapper command. It refuses missing or invalid profiles instead of
-printing config that Hermes would fail at runtime.
+selection records. It reports profile-derived speed and registry path instead
+of trusting stale values from the selection file. The `config` command prints a
+command-provider YAML example for the selected voice and includes the
+configured `--voices-dir` path in the generated wrapper command. It refuses
+missing or invalid profiles instead of printing config that Hermes would fail
+at runtime.
