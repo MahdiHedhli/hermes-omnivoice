@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import subprocess
 import sys
 import tempfile
 import threading
@@ -2059,6 +2060,35 @@ class InstallerTests(unittest.TestCase):
                     continue
                 with self.subTest(relative_path=relative_path):
                     self.assertTrue(os.access(target / relative_path, os.X_OK))
+
+    def test_installed_smoke_script_skips_without_backend_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = installer.run(["--target-root", str(target)])
+            self.assertEqual(result, 0)
+
+            env = os.environ.copy()
+            for key in (
+                "HERMES_OMNIVOICE_COMMAND_JSON",
+                "HERMES_OMNIVOICE_COMMAND",
+                "HERMES_OMNIVOICE_STUDIO_URL",
+                "HERMES_OMNIVOICE_AUTO_CLI",
+            ):
+                env.pop(key, None)
+            env["PYTHON_BIN"] = sys.executable
+
+            completed = subprocess.run(
+                [str(target / "scripts" / "test-omnivoice-tts.sh")],
+                cwd=target,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 77)
+            self.assertIn("SKIP: set HERMES_OMNIVOICE", completed.stderr)
 
     def test_installer_can_include_examples(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

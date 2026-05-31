@@ -65,6 +65,8 @@ Acceptance tests now also pin the bridge required-file membership to the
 installer runtime payload so handoff manifests cannot drift silently.
 Installer tests now prove runtime scripts remain executable after a real target
 copy, preserving operator-facing direct invocation in installed checkouts.
+Installed smoke-script tests now also prove a default target checkout exits with
+the documented 77 skip when no backend is configured.
 Top-level local sample directories such as `samples/`, `voice-samples/`, and
 `reference-audio/` are now covered by both the repo artifact checker and the
 installer-managed `.gitignore` safety block.
@@ -3127,7 +3129,7 @@ extras as `INCOMPLETE`, while strict package validation remains available with
     install the bridge into the real Hermes Agent checkout once the source path
     is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-31 01:00 America/New_York
 - Completed:
@@ -3184,6 +3186,65 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   - Commit the executable-mode guard and keep the branch clean for handoff, or
     install the bridge into the real Hermes Agent checkout once the source path
     is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 01:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `3e95898`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Inspected installed-checkout smoke behavior for the default unconfigured
+    path.
+  - Added installer regression coverage proving a copied
+    `scripts/test-omnivoice-tts.sh` exits with the documented 77 skip when no
+    backend environment is configured.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 01:30/92-test validation state.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "TODO|FIXME|Open follow-ups|Next action|blocked|source discovery|install|acceptance|test-omnivoice|runtime|executable|smoke" README.md docs scripts tests HEARTBEAT.md`
+  - `sed -n '1,160p' scripts/test-omnivoice-tts.sh`
+  - `rg -n "subprocess|run\\(|Popen|CompletedProcess" tests/test_omnivoice_tts.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.InstallerTests -v`
+  - `python3 -m py_compile scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `rg -n "01:00 America/New_York|91 tests|00:30 America/New_York|90 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+- Tests:
+  - Targeted installer tests: PASS, 10 tests.
+  - Python py_compile for installer and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 92 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Stale handoff snapshot scan: PASS; no 01:00/91-test or older summary state
+    remains in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Installed checkouts should fail closed for smoke synthesis until a local
+    backend path is explicitly configured.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Commit the installed-smoke skip guard and keep the branch clean for handoff,
+    or install the bridge into the real Hermes Agent checkout once the source
+    path is available.
 
 ## Decision log
 
@@ -3298,6 +3359,9 @@ extras as `INCOMPLETE`, while strict package validation remains available with
 - Preserve executable modes across installer copies because direct script
   invocation is part of the documented local validation and operator handoff
   path.
+- Preserve the unconfigured smoke-test exit 77 behavior after default installs
+  so target checkouts do not accidentally attempt backend synthesis without an
+  explicit local backend configuration.
 
 ## Open follow-ups
 

@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 01:00 America/New_York on branch
+Status as of 2026-05-31 01:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 91 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 92 tests with 1 expected
   opt-in real-backend skip.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
@@ -64,6 +64,8 @@ sample and contains explicit confirmed consent metadata.
   set now must match the default installer runtime payload.
 - Installer executable-mode preservation: PASS. Runtime scripts remain directly
   executable after a default install into a target checkout.
+- Installed smoke-skip behavior: PASS. A copied smoke script exits 77 without a
+  configured backend instead of attempting synthesis.
 
 ## Remaining Blockers
 
