@@ -13,6 +13,7 @@ tts:
       type: command
       command: "python scripts/hermes-omnivoice-tts.py --voices-dir ~/.hermes/voices/omnivoice --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
       voice: narrator
+      speed: 1.0
       output_format: wav
       timeout: 180
       voice_compatible: true
@@ -48,6 +49,7 @@ tts:
       type: command
       command: "python scripts/hermes-omnivoice-tts.py --voices-dir ~/.hermes/voices/omnivoice --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
       voice: narrator
+      speed: 1.0
       output_format: wav
       timeout: 180
 ```

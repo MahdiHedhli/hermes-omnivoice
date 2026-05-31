@@ -2400,6 +2400,7 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertIn("provider: omnivoice", output.getvalue())
             self.assertIn("voice: narrator", output.getvalue())
+            self.assertIn("speed: 1.0", output.getvalue())
             self.assertIn("--voices-dir", output.getvalue())
 
     def test_config_command_includes_custom_voices_dir_and_quotes_paths(self) -> None:
@@ -2557,6 +2558,7 @@ class ExampleFileTests(unittest.TestCase):
 
         self.assertIn("--voices-dir ~/.hermes/voices/omnivoice", config)
         self.assertIn("voice: narrator", config)
+        self.assertIn("speed: 1.0", config)
         self.assertNotIn("voice: marvin", config)
 
     def test_design_voice_example_validates(self) -> None:

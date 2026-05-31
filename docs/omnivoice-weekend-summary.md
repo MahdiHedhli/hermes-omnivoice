@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 04:00 America/New_York on branch
+Status as of 2026-05-31 04:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -79,6 +79,8 @@ sample and contains explicit confirmed consent metadata.
 - Config consent/profile gate: PASS. The voice helper refuses missing or invalid
   profiles before printing config, and the static Hermes TTS example uses the
   ready `narrator` design profile.
+- Config speed field: PASS. Generated and static command-provider examples now
+  include explicit `speed: 1.0` for the selected voice.
 
 ## Remaining Blockers
 

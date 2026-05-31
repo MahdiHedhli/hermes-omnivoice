@@ -207,6 +207,7 @@ def command_config(args: argparse.Namespace) -> int:
                 "      type: command",
                 f"      command: {json.dumps(command)}",
                 f"      voice: {args.voice}",
+                f"      speed: {summary['speed']}",
                 "      output_format: wav",
                 f"      timeout: {args.timeout}",
                 "      voice_compatible: true",

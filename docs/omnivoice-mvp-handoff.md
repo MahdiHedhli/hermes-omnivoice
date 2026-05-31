@@ -31,7 +31,7 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 04:00 America/New_York on branch
+As of 2026-05-31 04:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
 - `scripts/validate-omnivoice-bridge.sh` passes with 98 tests and 1 expected
@@ -103,6 +103,9 @@ As of 2026-05-31 04:00 America/New_York on branch
   before printing Hermes config, and the shipped Hermes TTS config example
   defaults to the ready `narrator` design profile instead of the clone template
   that intentionally lacks reference audio.
+- Generated and static command-provider examples now include explicit
+  `speed: 1.0` alongside the selected voice, matching the wrapper's speed
+  argument and the documented Hermes config surface.
 
 ## Validate
 

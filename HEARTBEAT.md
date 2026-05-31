@@ -80,6 +80,8 @@ copied wrapper paths and target voice-registry paths after `--with-examples`.
 Voice helper config generation now validates the requested profile before
 printing Hermes config, and the shipped Hermes TTS example defaults to the ready
 `narrator` design profile.
+Generated and static Hermes command-provider examples now include explicit
+`speed: 1.0` alongside the selected voice.
 Top-level local sample directories such as `samples/`, `voice-samples/`, and
 `reference-audio/` are now covered by both the repo artifact checker and the
 installer-managed `.gitignore` safety block.
@@ -3499,7 +3501,7 @@ extras as `INCOMPLETE`, while strict package validation remains available with
     clean for handoff, or install the bridge into the real Hermes Agent checkout
     once the source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-31 04:00 America/New_York
 - Completed:
@@ -3563,6 +3565,70 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   - Commit the config validation and ready-example guard and keep the branch
     clean for handoff, or install the bridge into the real Hermes Agent checkout
     once the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 04:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `07a2a52`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Inspected the current config examples and voice-helper config output after
+    the 04:00 validation gate.
+  - Added an explicit `speed` field to generated Hermes command-provider config,
+    using the validated voice profile speed.
+  - Added `speed: 1.0` to the shipped static Hermes TTS config example and
+    custom-voices docs.
+  - Extended regression assertions so generated and static config examples keep
+    the speed field alongside the selected voice.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 04:30/98-test validation state.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "Latest heartbeat|Open follow-ups|Next action|config narrator|config marvin|--voices-dir|ready narrator|invalid|clone template|TODO|FIXME" HEARTBEAT.md README.md docs scripts tests examples`
+  - `python3 -m unittest tests.test_omnivoice_tts.VoiceCliTests tests.test_omnivoice_tts.ExampleFileTests tests.test_omnivoice_tts.InstallerTests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-voices.py tests/test_omnivoice_tts.py`
+  - `python3 scripts/hermes-omnivoice-voices.py --voices-dir examples/voices config narrator`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `rg -n "04:00 America/New_York|03:30 America/New_York|96 tests|03:00 America/New_York|95 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `rg -n "config marvin|voice: marvin" README.md docs examples`
+  - `git diff --check`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+- Tests:
+  - Targeted voice helper, example, and installer tests: PASS, 23 tests.
+  - Python py_compile for voice helper and tests: PASS.
+  - Generated config smoke for `examples/voices` narrator: PASS; output includes
+    `voice: narrator`, `speed: 1.0`, and the selected `--voices-dir`.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 98 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Stale handoff snapshot scan: PASS; no 04:00 or older summary state remains
+    in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Hermes command-provider examples should show both voice and speed because
+    speed is already a wrapper argument and profile-level setting.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Commit the config speed-field guard and keep the branch clean for handoff,
+    or install the bridge into the real Hermes Agent checkout once the source
+    path is available.
 
 ## Decision log
 
@@ -3691,6 +3757,8 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   paths in copied Hermes configs would be a subtle handoff failure.
 - Refuse to print Hermes config for invalid profiles; configuration handoffs
   should be consent-checked before runtime, not only at synthesis time.
+- Keep speed explicit in command-provider examples so voice selection and voice
+  pacing are handed off together.
 
 ## Open follow-ups
 
