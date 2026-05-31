@@ -390,3 +390,6 @@ Print a Hermes command-provider config example:
 ```bash
 python scripts/hermes-omnivoice-voices.py config marvin
 ```
+
+Use `--voices-dir` before `config` when printing config for a custom registry;
+the generated command includes the same registry path.

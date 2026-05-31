@@ -123,6 +123,9 @@ Print a Hermes command-provider config for a selected voice:
 python scripts/hermes-omnivoice-voices.py config marvin
 ```
 
+Pass `--voices-dir` before `config` when generating config for a non-default
+registry; the emitted command includes that registry path.
+
 ## Backend Options
 
 Use exactly one of these local backend paths:

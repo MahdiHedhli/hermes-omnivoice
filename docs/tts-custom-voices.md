@@ -135,4 +135,5 @@ The preview command uses `scripts/hermes-omnivoice-tts.py`, so it requires the
 same local Studio URL or backend command configuration as Hermes TTS. The
 `set` command validates consent and writes `~/.hermes/omnivoice-selection.json`
 for user-level selection state. The `config` command prints a command-provider
-YAML example for the selected voice.
+YAML example for the selected voice and includes the configured `--voices-dir`
+path in the generated wrapper command.

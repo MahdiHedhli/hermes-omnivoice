@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 02:30 America/New_York on branch
+As of 2026-05-31 03:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 94 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 95 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
@@ -92,6 +92,10 @@ As of 2026-05-31 02:30 America/New_York on branch
 - Installed `--with-examples` voice templates validate through the copied voice
   helper: `narrator` is ready as a designed voice, while `marvin` remains
   invalid until a user supplies the consented `ref.wav` reference sample.
+- Generated command-provider config from `scripts/hermes-omnivoice-voices.py
+  config` now includes the configured `--voices-dir` path and shell-quotes
+  static paths, so custom registries do not silently fall back to the default
+  user registry.
 
 ## Validate
 

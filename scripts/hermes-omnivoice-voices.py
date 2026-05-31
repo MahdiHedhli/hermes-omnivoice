@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import importlib.util
 import json
 from pathlib import Path
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -186,8 +187,10 @@ def command_current(args: argparse.Namespace) -> int:
 
 def command_config(args: argparse.Namespace) -> int:
     script_path = args.script_path or WRAPPER_PATH
+    voices_dir = args.voices_dir.expanduser()
     command = (
-        f"{sys.executable} {script_path} --voice {{voice}} --speed {{speed}} "
+        f"{shlex.quote(sys.executable)} {shlex.quote(str(script_path))} "
+        f"--voices-dir {shlex.quote(str(voices_dir))} --voice {{voice}} --speed {{speed}} "
         "--text-file {input_path} --out {output_path}"
     )
     print(

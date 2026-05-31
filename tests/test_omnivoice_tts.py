@@ -2367,6 +2367,30 @@ class VoiceCliTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertIn("provider: omnivoice", output.getvalue())
         self.assertIn("voice: marvin", output.getvalue())
+        self.assertIn("--voices-dir", output.getvalue())
+
+    def test_config_command_includes_custom_voices_dir_and_quotes_paths(self) -> None:
+        output = io.StringIO()
+        voices_dir = Path("/tmp/hermes voice roots/omnivoice")
+        script_path = "/tmp/hermes bridge/hermes-omnivoice-tts.py"
+
+        with contextlib.redirect_stdout(output):
+            result = voices_cli.run(
+                [
+                    "--voices-dir",
+                    str(voices_dir),
+                    "config",
+                    "narrator",
+                    "--script-path",
+                    script_path,
+                ]
+            )
+
+        self.assertEqual(result, 0)
+        config = output.getvalue()
+        self.assertIn(f"--voices-dir {shlex.quote(str(voices_dir))}", config)
+        self.assertIn(shlex.quote(script_path), config)
+        self.assertIn("voice: narrator", config)
 
     def test_preview_generates_audio_with_fake_backend(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
