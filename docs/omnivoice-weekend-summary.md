@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 16:00 America/New_York on branch
+Status as of 2026-05-31 16:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 139 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 141 tests with 1 expected
   opt-in real-backend skip.
 - Validator interpreter alignment: PASS. The fake-backend smoke command now
   uses the configured `PYTHON_BIN` instead of hardcoded `python3`, so full
@@ -74,6 +74,9 @@ sample and contains explicit confirmed consent metadata.
 - Wrapper max text length validation: PASS. Generated and static
   command-provider examples pass `--max-chars` alongside Hermes
   `max_text_length`, and oversized input files fail before backend startup.
+- Generated config bounds validation: PASS. The voice helper refuses
+  non-positive `--timeout` and `--max-text-length` values before emitting
+  command-provider YAML.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
 - `scripts/test-omnivoice-tts.sh` with the generated adapter exports: PASS,
@@ -124,7 +127,8 @@ sample and contains explicit confirmed consent metadata.
 - Command-provider config surface: PASS. Generated and static examples are
   pinned for `output_format: wav`, `timeout: 180`, `voice_compatible: true`,
   `max_text_length: 2000`, and wrapper `--max-chars 2000`; generated config
-  honors explicit timeout and max-text-length overrides.
+  honors explicit valid timeout and max-text-length overrides and refuses
+  non-positive generated-config bounds.
 - Selection-state validation: PASS. `scripts/hermes-omnivoice-voices.py
   current` revalidates the selected profile and fails closed if the selected
   voice no longer has valid consent/profile inputs or malformed registry

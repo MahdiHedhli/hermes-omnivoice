@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 16:00 America/New_York on branch
+As of 2026-05-31 16:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 139 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 141 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -73,6 +73,9 @@ As of 2026-05-31 16:00 America/New_York on branch
 - Generated and static command-provider examples now pass `--max-chars`
   alongside Hermes `max_text_length`, and the wrapper rejects oversized input
   before backend or Studio startup.
+- `scripts/hermes-omnivoice-voices.py config` now refuses non-positive
+  `--timeout` and `--max-text-length` values before emitting generated Hermes
+  config.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
   shell environment because no backend command is exported there.
@@ -152,7 +155,8 @@ As of 2026-05-31 16:00 America/New_York on branch
 - Generated and static command-provider examples are regression-pinned for
   `output_format: wav`, `timeout: 180`, `voice_compatible: true`,
   `max_text_length: 2000`, and wrapper `--max-chars 2000`; generated config
-  honors explicit timeout and max text length overrides.
+  honors explicit valid timeout and max text length overrides and refuses
+  non-positive generated-config bounds.
 - `scripts/hermes-omnivoice-voices.py current` revalidates the selected profile
   before reporting it, so stale local selection state cannot silently stand in
   for current consent/profile readiness. It also rejects malformed local

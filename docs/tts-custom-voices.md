@@ -124,6 +124,8 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   than zero; malformed runtime values fail before backend startup.
 - Keep wrapper `--max-chars` aligned with Hermes `max_text_length`; oversized
   input files fail before backend startup.
+- Generated command-provider config refuses non-positive `timeout` and
+  `max_text_length` overrides before printing YAML.
 - Treat cloned voice consent as a hard gate, not a documentation-only field.
 - Use the profile helpers for local registry writes. They create voice profile
   directories with `0700` permissions and write `voice.yaml` plus copied or

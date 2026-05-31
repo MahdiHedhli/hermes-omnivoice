@@ -3341,6 +3341,48 @@ class VoiceCliTests(unittest.TestCase):
             self.assertIn("max_text_length: 512", output.getvalue())
             self.assertIn("--max-chars 512", output.getvalue())
 
+    def test_config_command_refuses_invalid_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_design_voice(root, "narrator")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(root),
+                        "config",
+                        "narrator",
+                        "--timeout",
+                        "0",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("timeout must be greater than 0", stderr.getvalue())
+
+    def test_config_command_refuses_invalid_max_text_length(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_design_voice(root, "narrator")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(root),
+                        "config",
+                        "narrator",
+                        "--max-text-length",
+                        "0",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("max text length must be greater than 0", stderr.getvalue())
+
     def test_config_command_includes_custom_voices_dir_and_quotes_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             voices_dir = Path(tmp) / "hermes voice roots" / "omnivoice"

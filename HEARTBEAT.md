@@ -148,6 +148,9 @@ non-positive timeouts before backend or Studio startup.
 Generated and static command-provider examples now pass wrapper `--max-chars`
 alongside Hermes `max_text_length`, and the wrapper rejects oversized text
 input before backend or Studio startup.
+Generated Hermes command-provider config now refuses non-positive `timeout` and
+`max_text_length` overrides before emitting YAML, keeping generated handoff
+config aligned with wrapper runtime bounds.
 
 ## Previous heartbeat
 
@@ -4007,6 +4010,61 @@ input before backend or Studio startup.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 16:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `3117df0`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Hardened `scripts/hermes-omnivoice-voices.py config` so non-positive
+    `--timeout` and `--max-text-length` values fail before generated Hermes
+    command-provider YAML is printed.
+  - Added focused tests for invalid generated-config timeout and max text
+    length.
+  - Updated custom-voice, MVP handoff, weekend summary, and heartbeat docs for
+    the new 141-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -5`
+  - `sed -n '1,260p' scripts/hermes-omnivoice-voices.py`
+  - `rg -n "config_command|command_config|VoiceCliTests|max_text_length|timeout" tests/test_omnivoice_tts.py docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md docs/tts-custom-voices.md HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.VoiceCliTests.test_config_command_refuses_invalid_timeout tests.test_omnivoice_tts.VoiceCliTests.test_config_command_refuses_invalid_max_text_length tests.test_omnivoice_tts.VoiceCliTests.test_config_command_honors_timeout_and_max_text_length -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+- Tests:
+  - Generated-config bounds focused suite: PASS, 3 tests.
+  - Full bridge validator: PASS, 141 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Repo artifact scan and whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Generated config should refuse runtime-invalid numeric bounds instead of
+    printing YAML that the wrapper will reject later.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the generated config bounds validation if the reviewed diff is
+    clean.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 16:00 America/New_York
 - Completed:

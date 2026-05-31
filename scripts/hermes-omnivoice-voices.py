@@ -241,7 +241,15 @@ def command_current(args: argparse.Namespace) -> int:
     return 0
 
 
+def _positive_int(value: int, name: str) -> int:
+    if value <= 0:
+        raise RuntimeError(f"{name} must be greater than 0")
+    return value
+
+
 def command_config(args: argparse.Namespace) -> int:
+    timeout = _positive_int(args.timeout, "timeout")
+    max_text_length = _positive_int(args.max_text_length, "max text length")
     summary = _profile_summary(args.voices_dir, args.voice)
     if summary["status"] != "ready":
         print(f"Voice {args.voice} is invalid: {summary['error']}", file=sys.stderr)
@@ -251,7 +259,7 @@ def command_config(args: argparse.Namespace) -> int:
     command = (
         f"{shlex.quote(sys.executable)} {shlex.quote(str(script_path))} "
         f"--voices-dir {shlex.quote(str(voices_dir))} --voice {{voice}} --speed {{speed}} "
-        f"--max-chars {args.max_text_length} --text-file {{input_path}} --out {{output_path}}"
+        f"--max-chars {max_text_length} --text-file {{input_path}} --out {{output_path}}"
     )
     print(
         "\n".join(
@@ -265,9 +273,9 @@ def command_config(args: argparse.Namespace) -> int:
                 f"      voice: {args.voice}",
                 f"      speed: {summary['speed']}",
                 "      output_format: wav",
-                f"      timeout: {args.timeout}",
+                f"      timeout: {timeout}",
                 "      voice_compatible: true",
-                f"      max_text_length: {args.max_text_length}",
+                f"      max_text_length: {max_text_length}",
             ]
         )
     )
