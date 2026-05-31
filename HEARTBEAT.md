@@ -137,8 +137,9 @@ errors instead of tracebacks for operator-facing selection/config commands.
 Studio profile import now validates empty consent `allowed_uses` before
 network access and quotes imported allowed-use values in `voice.yaml` so CLI
 input cannot reshape stored consent metadata.
-The TTS wrapper now redacts common credential-shaped values from backend stderr
-before printing command failures while preserving useful failure context.
+The TTS wrapper now redacts common credential-shaped values from command
+backend stderr, Studio API failure detail, and final wrapper errors before
+printing failures while preserving useful failure context.
 
 ## Previous heartbeat
 
@@ -3998,6 +3999,61 @@ before printing command failures while preserving useful failure context.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 14:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `b2a2318`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Extended wrapper redaction to handle case-insensitive assignment keys with
+    `:` or `=` separators.
+  - Applied the same redaction to OmniVoice-Studio HTTP error detail and the
+    final `hermes-omnivoice-tts:` error line.
+  - Added regression coverage for lowercase/colon assignment redaction and
+    Studio API HTTP error-detail redaction.
+  - Updated setup, MVP handoff, weekend summary, and heartbeat docs for the new
+    132-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "def redact_sensitive_text|SENSITIVE_|HTTPError|hermes-omnivoice-tts:|backend stderr|redact" scripts/hermes-omnivoice-tts.py tests/test_omnivoice_tts.py docs/omnivoice-setup.md docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_command_failure_redacts_backend_stderr tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_studio_api_http_error_redacts_detail -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Redaction focused suite: PASS, 2 tests.
+  - Full bridge validator: PASS, 132 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Repo artifact scan and whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Backend and Studio failure text can help operator debugging but should not
+    echo credential-shaped material into Hermes logs.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Continue handoff hardening from the bridge repo, or install into the real
+    Hermes Agent checkout once the source path is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 14:00 America/New_York
 - Completed:

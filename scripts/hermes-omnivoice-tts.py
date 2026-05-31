@@ -82,9 +82,10 @@ def redact_sensitive_text(text: str) -> str:
     redacted = text
     for key in SENSITIVE_ASSIGNMENT_KEYS:
         redacted = re.sub(
-            rf"({re.escape(key)}\s*=\s*)\S+",
+            rf"({re.escape(key)}\s*[:=]\s*)\S+",
             r"\1[redacted]",
             redacted,
+            flags=re.IGNORECASE,
         )
     for prefix in SENSITIVE_PREFIXES:
         redacted = re.sub(
@@ -551,7 +552,7 @@ def synthesize_with_studio_api(
         with urllib.request.urlopen(request, timeout=timeout) as response:
             payload = response.read()
     except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        detail = redact_sensitive_text(exc.read().decode("utf-8", errors="replace")[:500])
         raise OmniVoiceConfigError(
             f"OmniVoice-Studio API failed with HTTP {exc.code}: {detail}"
         ) from exc
@@ -640,7 +641,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
                 if tmp_output_path is not None:
                     tmp_output_path.unlink(missing_ok=True)
     except (OSError, subprocess.SubprocessError, OmniVoiceConfigError) as exc:
-        print(f"hermes-omnivoice-tts: {exc}", file=sys.stderr)
+        print(redact_sensitive_text(f"hermes-omnivoice-tts: {exc}"), file=sys.stderr)
         return 1
 
     return 0

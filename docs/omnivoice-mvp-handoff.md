@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 14:00 America/New_York on branch
+As of 2026-05-31 14:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 131 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 132 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -63,8 +63,8 @@ As of 2026-05-31 14:00 America/New_York on branch
   `allowed_uses` values in YAML, matching the local voice creator's safer
   metadata-writing path.
 - `scripts/hermes-omnivoice-tts.py` now redacts common credential-shaped values
-  from backend stderr before printing command failures while preserving useful
-  failure context.
+  from command backend stderr, Studio API failure detail, and final wrapper
+  errors before printing failures while preserving useful failure context.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
   shell environment because no backend command is exported there.

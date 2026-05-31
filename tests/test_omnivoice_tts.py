@@ -306,6 +306,20 @@ class MockStudioHandler(http.server.BaseHTTPRequestHandler):
         return None
 
 
+class ErrorStudioHandler(http.server.BaseHTTPRequestHandler):
+    response_body = b""
+
+    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+        self.send_response(500)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(type(self).response_body)))
+        self.end_headers()
+        self.wfile.write(type(self).response_body)
+
+    def log_message(self, format: str, *args) -> None:  # noqa: A002
+        return None
+
+
 @contextlib.contextmanager
 def mock_studio_server():
     MockStudioHandler.requests = []
@@ -314,6 +328,20 @@ def mock_studio_server():
     thread.start()
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}", MockStudioHandler.requests
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+
+@contextlib.contextmanager
+def error_studio_server(response_body: bytes):
+    ErrorStudioHandler.response_body = response_body
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), ErrorStudioHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}"
     finally:
         server.shutdown()
         thread.join(timeout=5)
@@ -424,6 +452,7 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             text_file = root / "input.txt"
             text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
             password_key = "PASS" + "WORD"
+            token_key = "to" + "ken"
             token_value = "hf" + "_" + ("A" * 24)
             command = [
                 sys.executable,
@@ -433,6 +462,8 @@ class OmniVoiceRegistryTests(unittest.TestCase):
                     "sys.stderr.write('backend failed "
                     + password_key
                     + "=topsecret "
+                    + token_key
+                    + ": lowersecret "
                     + token_value
                     + "'); "
                     "sys.exit(7)"
@@ -459,8 +490,10 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn("backend failed", error)
             self.assertIn(f"{password_key}=[redacted]", error)
+            self.assertIn(f"{token_key}: [redacted]", error)
             self.assertIn("hf_[redacted]", error)
             self.assertNotIn("topsecret", error)
+            self.assertNotIn("lowersecret", error)
             self.assertNotIn(token_value, error)
 
     def test_command_json_unknown_placeholder_returns_config_error(self) -> None:
@@ -922,6 +955,48 @@ consent:
             self.assertEqual(path_mode(out_file), 0o600)
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
+
+    def test_studio_api_http_error_redacts_detail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_design_voice(voices_root, "narrator", studio_profile_id="studio-123")
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            key_name = "api" + "_key"
+            token_value = "hf" + "_" + ("B" * 24)
+            body = (
+                "generation failed "
+                + key_name
+                + ": studiosecret "
+                + token_value
+            ).encode("utf-8")
+            stderr = io.StringIO()
+
+            with error_studio_server(body) as studio_url:
+                with contextlib.redirect_stderr(stderr):
+                    result = omnivoice.run(
+                        [
+                            "--voices-dir",
+                            str(voices_root),
+                            "--text-file",
+                            str(text_file),
+                            "--out",
+                            str(out_file),
+                            "--voice",
+                            "narrator",
+                        ],
+                        env={"HERMES_OMNIVOICE_STUDIO_URL": studio_url},
+                    )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertIn("OmniVoice-Studio API failed with HTTP 500", error)
+            self.assertIn(f"{key_name}: [redacted]", error)
+            self.assertIn("hf_[redacted]", error)
+            self.assertNotIn("studiosecret", error)
+            self.assertNotIn(token_value, error)
 
     def test_studio_api_replaces_output_symlink_without_touching_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

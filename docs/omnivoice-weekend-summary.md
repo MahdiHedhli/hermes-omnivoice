@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 14:00 America/New_York on branch
+Status as of 2026-05-31 14:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 131 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 132 tests with 1 expected
   opt-in real-backend skip.
 - Validator interpreter alignment: PASS. The fake-backend smoke command now
   uses the configured `PYTHON_BIN` instead of hardcoded `python3`, so full
@@ -62,8 +62,9 @@ sample and contains explicit confirmed consent metadata.
 - Studio import allowed-use metadata handling: PASS. Empty `--allowed-use`
   values are rejected before network access, and imported allowed-use values are
   quoted in `voice.yaml` so CLI input cannot reshape consent metadata.
-- Backend stderr redaction: PASS. Command backend failures keep useful stderr
-  context but redact common credential-shaped values before printing.
+- Wrapper failure redaction: PASS. Command backend stderr, Studio API failure
+  detail, and final wrapper errors keep useful context but redact common
+  credential-shaped values before printing.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
 - `scripts/test-omnivoice-tts.sh` with the generated adapter exports: PASS,
