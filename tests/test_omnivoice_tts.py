@@ -1735,6 +1735,22 @@ class ArtifactCheckTests(unittest.TestCase):
                 ],
             )
 
+    def test_forbidden_root_dirs_have_ignore_coverage(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        repo_gitignore = set((repo_root / ".gitignore").read_text(encoding="utf-8").splitlines())
+        installer_patterns = set(installer.GITIGNORE_PATTERNS)
+
+        for dirname in artifact_check.FORBIDDEN_ROOT_DIRS:
+            accepted_patterns = {f"{dirname}/", f"/{dirname}/"}
+            self.assertTrue(
+                accepted_patterns & installer_patterns,
+                f"installer .gitignore coverage missing for {dirname}",
+            )
+            self.assertTrue(
+                accepted_patterns & repo_gitignore,
+                f"repo .gitignore coverage missing for {dirname}",
+            )
+
 
 class AcceptanceTests(unittest.TestCase):
     def test_acceptance_required_files_are_present(self) -> None:

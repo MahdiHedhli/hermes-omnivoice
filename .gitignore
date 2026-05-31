@@ -17,6 +17,8 @@ venv/
 /voice-samples/
 /reference-audio/
 .hermes/
+omnivoice-output/
+omnivoice-cache/
 
 # Model weights and inference caches.
 models/
