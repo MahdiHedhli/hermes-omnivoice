@@ -145,6 +145,9 @@ profile importer, and runtime diagnostics so credential-bearing Studio URLs do
 not become local config, diagnostics, or log material.
 The TTS wrapper now also rejects non-finite or non-positive speed values and
 non-positive timeouts before backend or Studio startup.
+Generated and static command-provider examples now pass wrapper `--max-chars`
+alongside Hermes `max_text_length`, and the wrapper rejects oversized text
+input before backend or Studio startup.
 
 ## Previous heartbeat
 
@@ -4004,6 +4007,64 @@ non-positive timeouts before backend or Studio startup.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 16:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `94ed792`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited text-file read paths and generated Hermes config for max text length
+    enforcement.
+  - Added wrapper `--max-chars` with a 2000-character default and oversized
+    input rejection before backend or Studio startup.
+  - Updated generated and static command-provider examples to pass
+    `--max-chars` in sync with Hermes `max_text_length`.
+  - Added focused tests for oversized text rejection and generated/static config
+    `--max-chars` coverage.
+  - Updated setup, custom-voice, MVP handoff, weekend summary, and heartbeat
+    docs for the new 139-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "max_text|max chars|max-chars|text length|text_file\\.read_text|read_text\\(encoding=\\\"utf-8\\\"\\)|max_text_length|Hermes custom voice synthesis test" scripts tests docs README.md examples HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_text_file_must_not_exceed_max_chars tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_command_success_writes_valid_wav tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_auto_cli_builds_official_clone_command tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_auto_cli_builds_official_design_command tests.test_omnivoice_tts.VoiceCliTests.test_config_command_prints_command_provider_yaml tests.test_omnivoice_tts.VoiceCliTests.test_config_command_honors_timeout_and_max_text_length tests.test_omnivoice_tts.ExampleFileTests.test_tts_config_example_uses_ready_design_voice -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Max-text focused/config suite: PASS, 7 tests.
+  - Full bridge validator: PASS, 139 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Repo artifact scan and whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - The wrapper should enforce the same max text length advertised in generated
+    Hermes command-provider config because direct wrapper invocations and schema
+    drift could otherwise bypass Hermes-side limits.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the wrapper max text length enforcement if the reviewed diff is
+    clean.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 15:30 America/New_York
 - Completed:

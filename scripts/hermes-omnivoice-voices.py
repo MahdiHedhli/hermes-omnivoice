@@ -251,7 +251,7 @@ def command_config(args: argparse.Namespace) -> int:
     command = (
         f"{shlex.quote(sys.executable)} {shlex.quote(str(script_path))} "
         f"--voices-dir {shlex.quote(str(voices_dir))} --voice {{voice}} --speed {{speed}} "
-        "--text-file {input_path} --out {output_path}"
+        f"--max-chars {args.max_text_length} --text-file {{input_path}} --out {{output_path}}"
     )
     print(
         "\n".join(

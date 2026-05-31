@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 15:30 America/New_York on branch
+Status as of 2026-05-31 16:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 138 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 139 tests with 1 expected
   opt-in real-backend skip.
 - Validator interpreter alignment: PASS. The fake-backend smoke command now
   uses the configured `PYTHON_BIN` instead of hardcoded `python3`, so full
@@ -71,6 +71,9 @@ sample and contains explicit confirmed consent metadata.
 - Wrapper speed/timeout validation: PASS. The TTS wrapper rejects non-finite or
   non-positive speed and non-positive timeout values before backend or Studio
   startup.
+- Wrapper max text length validation: PASS. Generated and static
+  command-provider examples pass `--max-chars` alongside Hermes
+  `max_text_length`, and oversized input files fail before backend startup.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
 - `scripts/test-omnivoice-tts.sh` with the generated adapter exports: PASS,
@@ -120,8 +123,8 @@ sample and contains explicit confirmed consent metadata.
   include explicit `speed: 1.0` for the selected voice.
 - Command-provider config surface: PASS. Generated and static examples are
   pinned for `output_format: wav`, `timeout: 180`, `voice_compatible: true`,
-  and `max_text_length: 2000`, and generated config honors explicit timeout
-  and max-text-length overrides.
+  `max_text_length: 2000`, and wrapper `--max-chars 2000`; generated config
+  honors explicit timeout and max-text-length overrides.
 - Selection-state validation: PASS. `scripts/hermes-omnivoice-voices.py
   current` revalidates the selected profile and fails closed if the selected
   voice no longer has valid consent/profile inputs or malformed registry
@@ -170,6 +173,7 @@ sample and contains explicit confirmed consent metadata.
 - Studio URLs containing userinfo are refused.
 - Non-finite or non-positive speed values and non-positive wrapper timeouts are
   refused before backend startup.
+- Oversized text input is refused by the wrapper before backend startup.
 - The fake backend is a contract fixture only and is not real synthesis
   evidence.
 

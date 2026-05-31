@@ -26,6 +26,7 @@ VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 PRIVATE_FILE_MODE = 0o600
 COMMAND_FORMATTER = string.Formatter()
+DEFAULT_MAX_TEXT_CHARS = 2000
 SENSITIVE_ASSIGNMENT_KEYS = (
     "API" + "_KEY",
     "TO" + "KEN",
@@ -114,6 +115,22 @@ def validate_timeout(value: int) -> int:
     if value <= 0:
         raise OmniVoiceConfigError("timeout must be greater than 0")
     return value
+
+
+def validate_max_text_chars(value: int) -> int:
+    if value <= 0:
+        raise OmniVoiceConfigError("max text length must be greater than 0")
+    return value
+
+
+def read_text_file(path: Path, max_chars: int) -> str:
+    with path.open("r", encoding="utf-8") as handle:
+        text = handle.read(max_chars + 1)
+    if len(text) > max_chars:
+        raise OmniVoiceConfigError(
+            f"text file exceeds max text length of {max_chars} characters"
+        )
+    return text
 
 
 def _strip_inline_comment(value: str) -> str:
@@ -332,10 +349,10 @@ def build_backend_command(
     voice_id: str,
     voice_dir: Path,
     text_file: Path,
+    text: str,
     output_path: Path,
     speed: str,
 ) -> list[str]:
-    text = text_file.read_text(encoding="utf-8")
     mapping = {
         "text_file": str(text_file),
         "input_path": str(text_file),
@@ -532,6 +549,7 @@ def synthesize_with_studio_api(
     profile: dict,
     voice_dir: Path,
     text_file: Path,
+    text: str,
     output_path: Path,
     speed: str,
     env: dict[str, str],
@@ -539,7 +557,6 @@ def synthesize_with_studio_api(
 ) -> None:
     base_url = validate_studio_url(studio_url, env)
     endpoint = f"{base_url}/generate"
-    text = text_file.read_text(encoding="utf-8")
     fields = {
         "text": text,
         "speed": speed,
@@ -590,6 +607,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--voice", required=True)
     parser.add_argument("--speed", default=None)
+    parser.add_argument("--max-chars", default=DEFAULT_MAX_TEXT_CHARS, type=int)
     parser.add_argument(
         "--voices-dir",
         default="~/.hermes/voices/omnivoice",
@@ -613,6 +631,8 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
             args.speed if args.speed is not None else profile.get("speed", "1.0")
         )
         timeout = validate_timeout(args.timeout)
+        max_text_chars = validate_max_text_chars(args.max_chars)
+        text = read_text_file(text_file, max_text_chars)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         prepare_output_path(output_path)
 
@@ -629,6 +649,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
                 profile=profile,
                 voice_dir=voice_dir,
                 text_file=text_file,
+                text=text,
                 output_path=output_path,
                 speed=speed,
                 env=runtime_env,
@@ -644,6 +665,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
                     voice_id=args.voice,
                     voice_dir=voice_dir,
                     text_file=text_file,
+                    text=text,
                     output_path=tmp_output_path,
                     speed=speed,
                 )

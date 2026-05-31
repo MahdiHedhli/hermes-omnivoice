@@ -510,6 +510,37 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             self.assertIn("timeout must be greater than 0", stderr.getvalue())
             self.assertFalse(out_file.exists())
 
+    def test_text_file_must_not_exceed_max_chars(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("x" * 11, encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "marvin",
+                        "--max-chars",
+                        "10",
+                    ],
+                    env={"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(["backend"])},
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("text file exceeds max text length", stderr.getvalue())
+            self.assertFalse(out_file.exists())
+
     def test_command_failure_returns_nonzero(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -920,6 +951,7 @@ class OmniVoiceRegistryTests(unittest.TestCase):
                     voice_id="marvin",
                     voice_dir=voice_dir,
                     text_file=text_file,
+                    text=text_file.read_text(encoding="utf-8"),
                     output_path=root / "out.wav",
                     speed="1.25",
                 )
@@ -959,6 +991,7 @@ class OmniVoiceRegistryTests(unittest.TestCase):
                     voice_id="narrator",
                     voice_dir=voice_dir,
                     text_file=text_file,
+                    text=text_file.read_text(encoding="utf-8"),
                     output_path=root / "out.wav",
                     speed="1.0",
                 )
@@ -3281,6 +3314,7 @@ class VoiceCliTests(unittest.TestCase):
             self.assertIn("voice_compatible: true", output.getvalue())
             self.assertIn("max_text_length: 2000", output.getvalue())
             self.assertIn("--voices-dir", output.getvalue())
+            self.assertIn("--max-chars 2000", output.getvalue())
 
     def test_config_command_honors_timeout_and_max_text_length(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -3305,6 +3339,7 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertIn("timeout: 45", output.getvalue())
             self.assertIn("max_text_length: 512", output.getvalue())
+            self.assertIn("--max-chars 512", output.getvalue())
 
     def test_config_command_includes_custom_voices_dir_and_quotes_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

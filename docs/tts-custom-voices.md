@@ -11,7 +11,7 @@ tts:
   providers:
     omnivoice:
       type: command
-      command: "python scripts/hermes-omnivoice-tts.py --voices-dir ~/.hermes/voices/omnivoice --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
+      command: "python scripts/hermes-omnivoice-tts.py --voices-dir ~/.hermes/voices/omnivoice --voice {voice} --speed {speed} --max-chars 2000 --text-file {input_path} --out {output_path}"
       voice: narrator
       speed: 1.0
       output_format: wav
@@ -27,6 +27,7 @@ schema while preserving:
 - output audio path
 - voice ID
 - speed
+- max text length
 - timeout
 - output format
 
@@ -47,7 +48,7 @@ tts:
   providers:
     omnivoice:
       type: command
-      command: "python scripts/hermes-omnivoice-tts.py --voices-dir ~/.hermes/voices/omnivoice --voice {voice} --speed {speed} --text-file {input_path} --out {output_path}"
+      command: "python scripts/hermes-omnivoice-tts.py --voices-dir ~/.hermes/voices/omnivoice --voice {voice} --speed {speed} --max-chars 2000 --text-file {input_path} --out {output_path}"
       voice: narrator
       speed: 1.0
       output_format: wav
@@ -121,6 +122,8 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   diagnostics reject URL userinfo.
 - Keep `speed` finite and greater than zero, and keep wrapper `timeout` greater
   than zero; malformed runtime values fail before backend startup.
+- Keep wrapper `--max-chars` aligned with Hermes `max_text_length`; oversized
+  input files fail before backend startup.
 - Treat cloned voice consent as a hard gate, not a documentation-only field.
 - Use the profile helpers for local registry writes. They create voice profile
   directories with `0700` permissions and write `voice.yaml` plus copied or

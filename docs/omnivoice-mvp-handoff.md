@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 15:30 America/New_York on branch
+As of 2026-05-31 16:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 138 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 139 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -70,6 +70,9 @@ As of 2026-05-31 15:30 America/New_York on branch
   diagnostics, or log material.
 - The TTS wrapper now rejects non-finite or non-positive speed values and
   non-positive timeouts before backend or Studio startup.
+- Generated and static command-provider examples now pass `--max-chars`
+  alongside Hermes `max_text_length`, and the wrapper rejects oversized input
+  before backend or Studio startup.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
   shell environment because no backend command is exported there.
@@ -147,9 +150,9 @@ As of 2026-05-31 15:30 America/New_York on branch
   `speed: 1.0` alongside the selected voice, matching the wrapper's speed
   argument and the documented Hermes config surface.
 - Generated and static command-provider examples are regression-pinned for
-  `output_format: wav`, `timeout: 180`, `voice_compatible: true`, and
-  `max_text_length: 2000`, and generated config honors explicit timeout and
-  max text length overrides.
+  `output_format: wav`, `timeout: 180`, `voice_compatible: true`,
+  `max_text_length: 2000`, and wrapper `--max-chars 2000`; generated config
+  honors explicit timeout and max text length overrides.
 - `scripts/hermes-omnivoice-voices.py current` revalidates the selected profile
   before reporting it, so stale local selection state cannot silently stand in
   for current consent/profile readiness. It also rejects malformed local
@@ -356,3 +359,4 @@ python scripts/hermes-omnivoice-voices.py preview narrator --out /tmp/narrator.w
 - Do not put credentials in Studio URLs; bridge tools reject URL userinfo.
 - Keep wrapper `speed` finite and greater than zero, and `timeout` greater than
   zero.
+- Keep wrapper `--max-chars` aligned with Hermes `max_text_length`.
