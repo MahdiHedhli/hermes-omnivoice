@@ -2096,6 +2096,27 @@ class ValidationScriptTests(unittest.TestCase):
         )
 
 
+class TerminologyTests(unittest.TestCase):
+    def test_shipped_handoff_uses_omnivoice_studio_name(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        forbidden = "omni" + "vore"
+        completed = subprocess.run(
+            ["git", "ls-files", "README.md", "docs", "examples", "scripts"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        matches = []
+        for relative_path in completed.stdout.splitlines():
+            path = repo_root / relative_path
+            text = path.read_text(encoding="utf-8", errors="ignore").lower()
+            if forbidden in text:
+                matches.append(relative_path)
+
+        self.assertEqual(matches, [])
+
+
 class AcceptanceTests(unittest.TestCase):
     def test_acceptance_required_files_are_present(self) -> None:
         root = Path(__file__).resolve().parents[1]

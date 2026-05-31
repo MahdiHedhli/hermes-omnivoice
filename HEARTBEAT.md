@@ -116,6 +116,8 @@ that private temporary output-path contract before the final output is replaced.
 The package validator now keeps its fake-backend smoke command on the
 configured `PYTHON_BIN` interpreter instead of falling back to a literal
 `python3`.
+The shipped README, docs, examples, and scripts now have a terminology
+regression guard so handoff copy keeps the OmniVoice-Studio product name.
 
 ## Previous heartbeat
 
@@ -3975,6 +3977,76 @@ configured `PYTHON_BIN` interpreter instead of falling back to a literal
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 10:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `ecc8ed3`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Added a terminology regression that scans shipped README, docs, examples,
+    and scripts for the correct OmniVoice-Studio product name.
+  - Confirmed there were no existing wrong-product-name matches in the shipped
+    package before adding the guard.
+  - Updated MVP handoff, weekend summary, and heartbeat state for the new
+    118-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "<wrong product-name variants>|TODO|FIXME|Open follow-ups|Next action|Remaining Blockers|Next Steps|source discovery|Hermes Agent source|install into|validate-omnivoice|acceptance|PYTHON_BIN" README.md docs scripts tests examples HEARTBEAT.md`
+  - `sed -n ... docs/omnivoice-weekend-summary.md docs/omnivoice-mvp-handoff.md scripts/find-hermes-source.py tests/test_omnivoice_tts.py`
+  - `rg -n "class .*Tests" tests/test_omnivoice_tts.py`
+  - `git ls-files README.md docs scripts examples`
+  - `python3 -m unittest tests.test_omnivoice_tts.TerminologyTests -v`
+  - `python3 -m py_compile tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `rg -n "<wrong product-name variants>" README.md docs scripts examples HEARTBEAT.md tests/test_omnivoice_tts.py`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__ && python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+  - `git status --short`
+  - `rg -n "10:30 America/New_York|118 tests|117 tests|10:00 America/New_York|OmniVoice-Studio product name|terminology" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md docs/omnivoice-acceptance.md HEARTBEAT.md`
+- Tests:
+  - Product-name terminology regression: PASS, 1 test.
+  - Python py_compile for tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 118 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Wrong product-name variant scan: PASS; no matches in shipped docs/scripts,
+    examples, heartbeat log, or tests.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Real-backend smoke script after evaluating generated shell exports: PASS;
+    generated a valid temporary WAV from the required smoke text.
+  - Stale handoff snapshot scan: PASS; current handoff docs report the
+    10:30/118-test state.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Handoff terminology should be test-pinned because this package may be copied
+    into the real Hermes checkout without the full project history.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the terminology guard and keep the branch clean for handoff, or
+    install the bridge into the real Hermes Agent checkout once the source path
+    is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 10:00 America/New_York
 - Completed:
