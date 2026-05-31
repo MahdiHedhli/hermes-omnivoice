@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 04:30 America/New_York on branch
+Status as of 2026-05-31 05:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 98 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 99 tests with 1 expected
   opt-in real-backend skip.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
@@ -81,6 +81,10 @@ sample and contains explicit confirmed consent metadata.
   ready `narrator` design profile.
 - Config speed field: PASS. Generated and static command-provider examples now
   include explicit `speed: 1.0` for the selected voice.
+- Command-provider config surface: PASS. Generated and static examples are
+  pinned for `output_format: wav`, `timeout: 180`, `voice_compatible: true`,
+  and `max_text_length: 2000`, and generated config honors explicit timeout
+  and max-text-length overrides.
 
 ## Remaining Blockers
 

@@ -2401,7 +2401,35 @@ class VoiceCliTests(unittest.TestCase):
             self.assertIn("provider: omnivoice", output.getvalue())
             self.assertIn("voice: narrator", output.getvalue())
             self.assertIn("speed: 1.0", output.getvalue())
+            self.assertIn("output_format: wav", output.getvalue())
+            self.assertIn("timeout: 180", output.getvalue())
+            self.assertIn("voice_compatible: true", output.getvalue())
+            self.assertIn("max_text_length: 2000", output.getvalue())
             self.assertIn("--voices-dir", output.getvalue())
+
+    def test_config_command_honors_timeout_and_max_text_length(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_design_voice(root, "narrator")
+            output = io.StringIO()
+
+            with contextlib.redirect_stdout(output):
+                result = voices_cli.run(
+                    [
+                        "--voices-dir",
+                        str(root),
+                        "config",
+                        "narrator",
+                        "--timeout",
+                        "45",
+                        "--max-text-length",
+                        "512",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            self.assertIn("timeout: 45", output.getvalue())
+            self.assertIn("max_text_length: 512", output.getvalue())
 
     def test_config_command_includes_custom_voices_dir_and_quotes_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2559,6 +2587,10 @@ class ExampleFileTests(unittest.TestCase):
         self.assertIn("--voices-dir ~/.hermes/voices/omnivoice", config)
         self.assertIn("voice: narrator", config)
         self.assertIn("speed: 1.0", config)
+        self.assertIn("output_format: wav", config)
+        self.assertIn("timeout: 180", config)
+        self.assertIn("voice_compatible: true", config)
+        self.assertIn("max_text_length: 2000", config)
         self.assertNotIn("voice: marvin", config)
 
     def test_design_voice_example_validates(self) -> None:

@@ -91,6 +91,9 @@ artifact-directory drift.
 Installed-checkout human acceptance output now labels missing package-only
 extras as `INCOMPLETE`, while strict package validation remains available with
 `--require-package-files`.
+Generated and static command-provider config fields are now regression-pinned
+for `output_format`, `timeout`, `voice_compatible`, `max_text_length`, and
+explicit timeout/max-text-length overrides.
 
 ## Previous heartbeat
 
@@ -3566,7 +3569,7 @@ extras as `INCOMPLETE`, while strict package validation remains available with
     clean for handoff, or install the bridge into the real Hermes Agent checkout
     once the source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-31 04:30 America/New_York
 - Completed:
@@ -3627,6 +3630,73 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   - Native-provider work still waits on the actual Hermes Agent source.
 - Next action:
   - Commit the config speed-field guard and keep the branch clean for handoff,
+    or install the bridge into the real Hermes Agent checkout once the source
+    path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 05:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `7d12eae`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the generated and static config speed-field work was already
+    committed and selected the remaining Phase 3 surface as the next narrow
+    guardrail.
+  - Added regression coverage that generated Hermes command-provider config
+    includes `output_format: wav`, `timeout: 180`, `voice_compatible: true`,
+    and `max_text_length: 2000`.
+  - Added regression coverage that `scripts/hermes-omnivoice-voices.py config`
+    honors explicit `--timeout` and `--max-text-length` overrides.
+  - Extended static Hermes TTS example assertions to keep the same command
+    provider fields documented in the shipped config.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 05:00/99-test validation state.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "Latest heartbeat|Open follow-ups|Next action|speed:|timeout|max_text_length|voice_compatible|output_format|config" HEARTBEAT.md README.md docs scripts tests examples`
+  - `python3 -m unittest tests.test_omnivoice_tts.VoiceCliTests tests.test_omnivoice_tts.ExampleFileTests -v`
+  - `python3 -m py_compile tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `rg -n "04:30 America/New_York|04:00 America/New_York|03:30 America/New_York|96 tests|03:00 America/New_York|95 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `rg -n "config marvin|voice: marvin" README.md docs examples`
+  - `git diff --check`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Targeted voice helper and example tests: PASS, 11 tests.
+  - Python py_compile for the test module: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 99 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Stale handoff snapshot scan: PASS; no 04:30 or older summary state remains
+    in the current handoff docs.
+  - Clone-template scan: PASS; no docs or examples route generated config to
+    the incomplete `marvin` clone template.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Command-provider handoff fields should be pinned even before the real
+    Hermes schema is inspected because missing config surface is easy to regress
+    in a standalone bridge.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Commit the config surface coverage and keep the branch clean for handoff,
     or install the bridge into the real Hermes Agent checkout once the source
     path is available.
 
@@ -3759,6 +3829,9 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   should be consent-checked before runtime, not only at synthesis time.
 - Keep speed explicit in command-provider examples so voice selection and voice
   pacing are handed off together.
+- Pin command-provider config fields in tests because the real Hermes TTS schema
+  is still unverified and handoff examples are currently the integration
+  contract.
 
 ## Open follow-ups
 

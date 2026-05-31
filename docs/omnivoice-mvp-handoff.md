@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 04:30 America/New_York on branch
+As of 2026-05-31 05:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 98 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 99 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
@@ -106,6 +106,10 @@ As of 2026-05-31 04:30 America/New_York on branch
 - Generated and static command-provider examples now include explicit
   `speed: 1.0` alongside the selected voice, matching the wrapper's speed
   argument and the documented Hermes config surface.
+- Generated and static command-provider examples are regression-pinned for
+  `output_format: wav`, `timeout: 180`, `voice_compatible: true`, and
+  `max_text_length: 2000`, and generated config honors explicit timeout and
+  max text length overrides.
 
 ## Validate
 
