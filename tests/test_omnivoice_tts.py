@@ -53,6 +53,9 @@ ACCEPTANCE_SCRIPT_PATH = (
 ARTIFACTS_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "check-omnivoice-artifacts.py"
 )
+VALIDATE_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "validate-omnivoice-bridge.sh"
+)
 FAKE_BACKEND_PATH = Path(__file__).resolve().parent / "fixtures" / "fake_omnivoice_backend.py"
 EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
 SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_tts", SCRIPT_PATH)
@@ -2078,6 +2081,19 @@ class ArtifactCheckTests(unittest.TestCase):
                 accepted_patterns & repo_gitignore,
                 f"repo .gitignore coverage missing for {dirname}",
             )
+
+
+class ValidationScriptTests(unittest.TestCase):
+    def test_validator_smoke_backend_uses_configured_python_bin(self) -> None:
+        script = VALIDATE_SCRIPT_PATH.read_text(encoding="utf-8")
+
+        self.assertIn('SMOKE_COMMAND_JSON="$(', script)
+        self.assertIn('"$PYTHON_BIN" - "$PYTHON_BIN"', script)
+        self.assertIn('HERMES_OMNIVOICE_COMMAND_JSON="$SMOKE_COMMAND_JSON"', script)
+        self.assertNotIn(
+            '\'["python3","tests/fixtures/fake_omnivoice_backend.py"',
+            script,
+        )
 
 
 class AcceptanceTests(unittest.TestCase):

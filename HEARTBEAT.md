@@ -113,6 +113,9 @@ passes command backends a private temporary output path, and validates command
 or Studio API output before atomic replacement.
 Installed smoke-script coverage now proves that copied Hermes checkouts retain
 that private temporary output-path contract before the final output is replaced.
+The package validator now keeps its fake-backend smoke command on the
+configured `PYTHON_BIN` interpreter instead of falling back to a literal
+`python3`.
 
 ## Previous heartbeat
 
@@ -3972,6 +3975,78 @@ that private temporary output-path contract before the final output is replaced.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 10:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `ca19808`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Tightened `scripts/validate-omnivoice-bridge.sh` so the fake-backend smoke
+    command JSON uses the configured `PYTHON_BIN` instead of hardcoded
+    `python3`.
+  - Added regression coverage that pins the validator's smoke backend to the
+    configured interpreter path.
+  - Updated acceptance, MVP handoff, weekend summary, and heartbeat docs for the
+    new 117-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|Open follow-ups|Next action|Remaining Blockers|Next Steps|install|acceptance|smoke|output isolation|private temp|package-only|native provider|actual Hermes" README.md docs scripts tests HEARTBEAT.md`
+  - `sed -n ... docs/omnivoice-acceptance.md docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md scripts/validate-omnivoice-bridge.sh tests/test_omnivoice_tts.py HEARTBEAT.md`
+  - `rg -n "validate-omnivoice-bridge|VALIDATE|class .*Tests|def test_.*validate|PYTHON_BIN|fake_omnivoice_backend" tests/test_omnivoice_tts.py scripts/validate-omnivoice-bridge.sh`
+  - `python3 -m unittest tests.test_omnivoice_tts.ValidationScriptTests -v`
+  - `bash -n scripts/validate-omnivoice-bridge.sh`
+  - `python3 -m py_compile tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rg -n "PYTHON_BIN|validate-omnivoice-bridge|117 tests|116 tests|09:30 America/New_York|10:00 America/New_York|Latest heartbeat" README.md docs HEARTBEAT.md`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `find . -type d -name __pycache__ -print`
+  - `git diff --check`
+  - `git status --short`
+  - `git diff --stat`
+- Tests:
+  - Validator interpreter regression: PASS, 1 test.
+  - Shell syntax check for the validator: PASS.
+  - Python py_compile for tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 117 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Real-backend smoke script after evaluating generated shell exports: PASS;
+    generated a valid temporary WAV from the required smoke text.
+  - Stale handoff snapshot scan: PASS; current handoff docs report the
+    10:00/117-test state.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, local selection state, or pycache directories found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Users may run the validator with `PYTHON_BIN` pointing at a supported
+    interpreter such as Python 3.11, so all validator smoke paths should honor
+    the same interpreter selection.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the validator interpreter alignment and keep the branch clean for
+    handoff, or install the bridge into the real Hermes Agent checkout once the
+    source path is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 09:30 America/New_York
 - Completed:

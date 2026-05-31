@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 09:30 America/New_York on branch
+Status as of 2026-05-31 10:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,11 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 116 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 117 tests with 1 expected
   opt-in real-backend skip.
+- Validator interpreter alignment: PASS. The fake-backend smoke command now
+  uses the configured `PYTHON_BIN` instead of hardcoded `python3`, so full
+  validation runs stay on the selected interpreter.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
 - `scripts/test-omnivoice-tts.sh` with the generated adapter exports: PASS,

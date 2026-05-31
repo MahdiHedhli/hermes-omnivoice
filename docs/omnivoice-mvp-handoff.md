@@ -31,11 +31,14 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 09:30 America/New_York on branch
+As of 2026-05-31 10:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 116 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 117 tests and 1 expected
   opt-in real-backend skip.
+- `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
+  command from the configured `PYTHON_BIN`, so alternate interpreter runs do
+  not silently fall back to `python3` for the wrapper smoke path.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
   shell environment because no backend command is exported there.

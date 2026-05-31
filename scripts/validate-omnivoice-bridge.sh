@@ -25,7 +25,26 @@ cd "$ROOT_DIR"
 
 "$PYTHON_BIN" scripts/omnivoice-acceptance.py --require-package-files --json >/dev/null
 
-HERMES_OMNIVOICE_COMMAND_JSON='["python3","tests/fixtures/fake_omnivoice_backend.py","--text-file","{text_file}","--out","{out}","--voice-dir","{voice_dir}","--speed","{speed}"]' \
+SMOKE_COMMAND_JSON="$(
+  "$PYTHON_BIN" - "$PYTHON_BIN" <<'PY'
+import json
+import sys
+
+print(json.dumps([
+    sys.argv[1],
+    "tests/fixtures/fake_omnivoice_backend.py",
+    "--text-file",
+    "{text_file}",
+    "--out",
+    "{out}",
+    "--voice-dir",
+    "{voice_dir}",
+    "--speed",
+    "{speed}",
+]))
+PY
+)"
+HERMES_OMNIVOICE_COMMAND_JSON="$SMOKE_COMMAND_JSON" \
   scripts/test-omnivoice-tts.sh
 
 set +e

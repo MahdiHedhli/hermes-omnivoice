@@ -29,6 +29,8 @@ The validation script runs the deterministic test suite, smoke checks,
 secret-pattern scanning, generated-artifact scanning for audio/model/cache,
 top-level local voice or sample directories, env/local selection files, and
 whitespace checks.
+Set `PYTHON_BIN=/path/to/python` when validation must run under a specific
+interpreter; the fake-backend smoke command uses that same interpreter.
 
 For handoff into a real Hermes checkout, dry-run the installer first:
 
