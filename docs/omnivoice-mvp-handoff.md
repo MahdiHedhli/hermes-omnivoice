@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 17:00 America/New_York on branch
+As of 2026-05-31 17:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 142 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 144 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -60,6 +60,9 @@ As of 2026-05-31 17:00 America/New_York on branch
 - `scripts/hermes-omnivoice-voices.py` now catches local filesystem and
   subprocess failures at the CLI boundary and exits with a concise
   `hermes-omnivoice-voices:` error instead of a traceback.
+- `scripts/hermes-omnivoice-voices.py preview` now rejects non-positive
+  `--timeout` and non-positive or non-finite `--speed` overrides before
+  spawning the wrapper subprocess.
 - `scripts/import-omnivoice-studio-voice.py` now validates empty
   `--allowed-use` values before network access and quotes imported
   `allowed_uses` values in YAML, matching the local voice creator's safer

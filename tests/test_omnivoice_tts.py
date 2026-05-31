@@ -3486,6 +3486,58 @@ class VoiceCliTests(unittest.TestCase):
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
 
+    def test_preview_refuses_invalid_timeout_without_spawning_wrapper(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root, "marvin")
+            stderr = io.StringIO()
+
+            with unittest.mock.patch.object(voices_cli.subprocess, "run") as run_mock:
+                with contextlib.redirect_stderr(stderr):
+                    result = voices_cli.run(
+                        [
+                            "--voices-dir",
+                            str(voices_root),
+                            "preview",
+                            "marvin",
+                            "--out",
+                            str(root / "preview.wav"),
+                            "--timeout",
+                            "0",
+                        ]
+                    )
+
+            self.assertEqual(result, 1)
+            self.assertIn("timeout must be greater than 0", stderr.getvalue())
+            run_mock.assert_not_called()
+
+    def test_preview_refuses_invalid_speed_without_spawning_wrapper(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root, "marvin")
+            stderr = io.StringIO()
+
+            with unittest.mock.patch.object(voices_cli.subprocess, "run") as run_mock:
+                with contextlib.redirect_stderr(stderr):
+                    result = voices_cli.run(
+                        [
+                            "--voices-dir",
+                            str(voices_root),
+                            "preview",
+                            "marvin",
+                            "--out",
+                            str(root / "preview.wav"),
+                            "--speed",
+                            "0",
+                        ]
+                    )
+
+            self.assertEqual(result, 1)
+            self.assertIn("speed must be greater than 0", stderr.getvalue())
+            run_mock.assert_not_called()
+
     def test_set_and_current_commands_manage_selection_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

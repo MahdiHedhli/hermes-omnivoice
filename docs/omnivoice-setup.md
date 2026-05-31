@@ -401,6 +401,9 @@ Generate a short preview:
 python scripts/hermes-omnivoice-voices.py preview marvin --out /tmp/marvin-preview.wav
 ```
 
+Preview `--speed` and `--timeout` overrides are validated before the helper
+launches the wrapper subprocess.
+
 Print a Hermes command-provider config example:
 
 ```bash

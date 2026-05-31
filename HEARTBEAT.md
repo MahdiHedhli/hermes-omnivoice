@@ -153,6 +153,8 @@ input before backend or Studio startup.
 Generated Hermes command-provider config now refuses non-positive `timeout` and
 `max_text_length` overrides before emitting YAML, keeping generated handoff
 config aligned with wrapper runtime bounds.
+Voice helper preview now validates non-positive `timeout` and invalid `speed`
+overrides before spawning the wrapper subprocess.
 
 ## Previous heartbeat
 
@@ -4012,6 +4014,61 @@ config aligned with wrapper runtime bounds.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 17:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `a383ab5`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited voice helper preview bounds handling.
+  - Added `scripts/hermes-omnivoice-voices.py preview` validation so
+    non-positive `--timeout` and invalid `--speed` overrides fail before
+    spawning the wrapper subprocess.
+  - Added focused preview tests proving invalid timeout and speed do not launch
+    the wrapper.
+  - Updated setup, custom-voice, MVP handoff, weekend summary, and heartbeat
+    docs for the new 144-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "Latest heartbeat|Next action|Open follow-ups|preview|timeout|speed|current|config" HEARTBEAT.md docs scripts tests README.md examples`
+  - `python3 -m unittest tests.test_omnivoice_tts.VoiceCliTests.test_preview_refuses_invalid_timeout_without_spawning_wrapper tests.test_omnivoice_tts.VoiceCliTests.test_preview_refuses_invalid_speed_without_spawning_wrapper tests.test_omnivoice_tts.VoiceCliTests.test_preview_generates_audio_with_fake_backend -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Preview bounds focused suite: PASS, 3 tests.
+  - Full bridge validator: PASS, 144 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Repo artifact scan and whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Voice helper preview overrides should fail at the helper boundary so invalid
+    input does not start a wrapper subprocess.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the voice helper preview bounds validation if the reviewed diff is
+    clean.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 17:00 America/New_York
 - Completed:

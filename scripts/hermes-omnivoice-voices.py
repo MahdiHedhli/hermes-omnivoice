@@ -102,10 +102,12 @@ def command_info(args: argparse.Namespace) -> int:
 
 
 def command_preview(args: argparse.Namespace) -> int:
+    timeout = _positive_int(args.timeout, "timeout")
     summary = _profile_summary(args.voices_dir, args.voice)
     if summary["status"] != "ready":
         print(f"Voice {args.voice} is invalid: {summary['error']}", file=sys.stderr)
         return 1
+    speed = omnivoice.normalize_speed(args.speed if args.speed is not None else summary["speed"])
     out_path = args.out.expanduser().resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as handle:
@@ -125,9 +127,9 @@ def command_preview(args: argparse.Namespace) -> int:
                 "--voice",
                 args.voice,
                 "--speed",
-                str(args.speed if args.speed is not None else summary["speed"]),
+                speed,
                 "--timeout",
-                str(args.timeout),
+                str(timeout),
             ],
             check=False,
             text=True,
