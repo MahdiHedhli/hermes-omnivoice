@@ -11,7 +11,11 @@ Create one directory per local voice:
 ```
 
 The safest way to create local profiles is the helper script. It refuses to
-write a usable profile until consent is explicitly confirmed.
+write a usable profile until consent is explicitly confirmed. Created or
+imported local profile directories are made private with `0700` permissions;
+`voice.yaml` and any copied or imported `ref.wav` are written with `0600`
+permissions through same-directory temporary files and atomic replacement.
+Forced rewrites replace existing material symlinks instead of following them.
 
 Create a designed voice:
 
@@ -39,8 +43,8 @@ python scripts/create-omnivoice-voice.py clone marvin \
 
 The clone command copies the reference sample into the local registry as
 `ref.wav`, validates that the sample is a readable WAV file, and refuses to
-write over an existing voice directory unless `--force` is set. Keep that
-registry outside the repo.
+write over an existing voice directory unless `--force` is set. The copied
+sample is private local voice material; keep that registry outside the repo.
 
 Example clone profile:
 

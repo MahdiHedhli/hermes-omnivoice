@@ -5,15 +5,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import shutil
 import sys
+import tempfile
 import wave
 
 
 VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 DEFAULT_ALLOWED_USES = ["personal_assistant", "local_generation"]
+PRIVATE_DIR_MODE = 0o700
+PRIVATE_FILE_MODE = 0o600
 
 
 class CreateVoiceError(RuntimeError):
@@ -22,6 +26,49 @@ class CreateVoiceError(RuntimeError):
 
 def yaml_scalar(value: object) -> str:
     return json.dumps("" if value is None else str(value))
+
+
+def replace_private_file(path: Path, mode: str, data: str | bytes) -> None:
+    fd = -1
+    tmp_path: Path | None = None
+    try:
+        fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        tmp_path = Path(tmp_name)
+        os.chmod(tmp_path, PRIVATE_FILE_MODE)
+        if "b" in mode:
+            with os.fdopen(fd, mode) as handle:
+                fd = -1
+                handle.write(data)
+        else:
+            with os.fdopen(fd, mode, encoding="utf-8") as handle:
+                fd = -1
+                handle.write(data)
+        os.replace(tmp_path, path)
+    except Exception:
+        if fd != -1:
+            os.close(fd)
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
+        raise
+
+
+def copy_private_file(source: Path, path: Path) -> None:
+    fd = -1
+    tmp_path: Path | None = None
+    try:
+        fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        tmp_path = Path(tmp_name)
+        os.chmod(tmp_path, PRIVATE_FILE_MODE)
+        with source.open("rb") as source_handle, os.fdopen(fd, "wb") as dest_handle:
+            fd = -1
+            shutil.copyfileobj(source_handle, dest_handle)
+        os.replace(tmp_path, path)
+    except Exception:
+        if fd != -1:
+            os.close(fd)
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
+        raise
 
 
 def validate_voice_id(voice_id: str) -> None:
@@ -60,6 +107,7 @@ def prepare_voice_dir(voices_dir: Path, voice_id: str, force: bool) -> Path:
     if voice_dir.exists() and any(voice_dir.iterdir()) and not force:
         raise CreateVoiceError(f"voice directory already contains files: {voice_dir}")
     voice_dir.mkdir(parents=True, exist_ok=True)
+    voice_dir.chmod(PRIVATE_DIR_MODE)
     return voice_dir
 
 
@@ -113,7 +161,7 @@ def write_voice_yaml(
     )
     for allowed_use in allowed_uses:
         lines.append(f"    - {yaml_scalar(allowed_use)}")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    replace_private_file(path, "w", "\n".join(lines) + "\n")
 
 
 def require_consent(args: argparse.Namespace) -> None:
@@ -158,7 +206,7 @@ def command_clone(args: argparse.Namespace) -> int:
     ref_dest = voice_dir / "ref.wav"
     if ref_dest.exists() and not args.force:
         raise CreateVoiceError(f"reference audio already exists: {ref_dest}")
-    shutil.copyfile(ref_audio, ref_dest)
+    copy_private_file(ref_audio, ref_dest)
     write_voice_yaml(
         path=voice_dir / "voice.yaml",
         voice_id=args.voice_id,

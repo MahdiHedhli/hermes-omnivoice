@@ -9,6 +9,8 @@ This repo is intentionally conservative:
   out of git.
 - Cloned voices require `consent.status: confirmed`.
 - Cloned voice reference files are validated as readable WAV audio before use.
+- Local voice profile directories are written private by default; registry YAML
+  and copied/imported `ref.wav` files are `0600`.
 - OmniVoice-Studio is treated as loopback-only by default because it has no
   built-in authentication.
 - The first integration path is a command provider, not a native Hermes patch,

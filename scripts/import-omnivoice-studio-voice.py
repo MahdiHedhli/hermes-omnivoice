@@ -6,9 +6,11 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
 from pathlib import Path
 import re
 import sys
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -17,6 +19,8 @@ import wave
 
 VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
+PRIVATE_DIR_MODE = 0o700
+PRIVATE_FILE_MODE = 0o600
 
 
 class ImportErrorWithContext(RuntimeError):
@@ -44,7 +48,32 @@ def prepare_voice_dir(voices_dir: Path, voice_id: str, force: bool) -> Path:
     if voice_dir.exists() and any(voice_dir.iterdir()) and not force:
         raise ImportErrorWithContext(f"voice directory already contains files: {voice_dir}")
     voice_dir.mkdir(parents=True, exist_ok=True)
+    voice_dir.chmod(PRIVATE_DIR_MODE)
     return voice_dir
+
+
+def replace_private_file(path: Path, mode: str, data: str | bytes) -> None:
+    fd = -1
+    tmp_path: Path | None = None
+    try:
+        fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        tmp_path = Path(tmp_name)
+        os.chmod(tmp_path, PRIVATE_FILE_MODE)
+        if "b" in mode:
+            with os.fdopen(fd, mode) as handle:
+                fd = -1
+                handle.write(data)
+        else:
+            with os.fdopen(fd, mode, encoding="utf-8") as handle:
+                fd = -1
+                handle.write(data)
+        os.replace(tmp_path, path)
+    except Exception:
+        if fd != -1:
+            os.close(fd)
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
+        raise
 
 
 def validate_studio_url(url: str, allow_remote: bool = False) -> str:
@@ -120,7 +149,7 @@ def write_voice_yaml(path: Path, profile: dict, voice_id: str, mode: str, allowe
     )
     for use in allowed_uses:
         lines.append(f"    - {use}")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    replace_private_file(path, "w", "\n".join(lines) + "\n")
 
 
 def run(argv: list[str] | None = None) -> int:
@@ -177,7 +206,7 @@ def run(argv: list[str] | None = None) -> int:
         mode = "clone" if audio_bytes else "design"
         if mode == "clone":
             validate_wav_bytes(audio_bytes)
-            (voice_dir / "ref.wav").write_bytes(audio_bytes)
+            replace_private_file(voice_dir / "ref.wav", "wb", audio_bytes)
         elif not has_instruct:
             raise ImportErrorWithContext(
                 "Studio profile has no downloadable audio and no design instruction"

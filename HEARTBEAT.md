@@ -103,6 +103,10 @@ speed and voice registry path instead of trusting stale selection-file values.
 Selection writes now use a private `0600` same-directory temporary file and
 atomic replace, replacing destination symlinks rather than following them and
 cleaning up failed temp writes before returning errors.
+Local voice profile writes now use private `0700` profile directories and
+`0600` `voice.yaml`/`ref.wav` files. Create/import forced rewrites use
+same-directory temporary files and replace existing material symlinks rather
+than following them.
 
 ## Previous heartbeat
 
@@ -3963,6 +3967,73 @@ cleaning up failed temp writes before returning errors.
 
 ## Latest heartbeat
 
+- Time: 2026-05-31 08:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `d00538d`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Reviewed create/import voice profile write paths after selection-file
+    hardening.
+  - Made local voice profile directories private with mode `0700`.
+  - Made `voice.yaml` and copied/imported `ref.wav` writes use private `0600`
+    same-directory temporary files and atomic replacement.
+  - Added regression coverage that create/import helpers write private profile
+    material and replace existing material symlinks instead of following them
+    during forced rewrites.
+  - Updated README, setup docs, custom voice docs, MVP handoff, and weekend
+    summary to document private local voice registry writes.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `sed -n '1,240p' scripts/create-omnivoice-voice.py`
+  - `sed -n '1,260p' scripts/import-omnivoice-studio-voice.py`
+  - `rg -n "copy|copy2|write_text|mkdir|ref\\.wav|voice\\.yaml|chmod|permission|atomic|replace" scripts/create-omnivoice-voice.py scripts/import-omnivoice-studio-voice.py tests/test_omnivoice_tts.py docs README.md HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.CreateVoiceTests tests.test_omnivoice_tts.StudioImportTests -v`
+  - `python3 -m py_compile scripts/create-omnivoice-voice.py scripts/import-omnivoice-studio-voice.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rg -n "07:30 America/New_York|07:00 America/New_York|06:30 America/New_York|107 tests|106 tests|104 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Targeted create/import tests: PASS, 18 tests.
+  - Python py_compile for create/import helpers and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 111 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Real-backend smoke script after evaluating generated shell exports: PASS;
+    generated a valid temporary WAV from the required smoke text.
+  - Stale handoff snapshot scan: PASS; no 07:30/107-test or older summary state
+    remains in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, local selection state, or pycache directories found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Cloned/imported `ref.wav` files are sensitive local voice material and
+    should be private even outside the git repo.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the private voice profile write hardening and keep the branch clean
+    for handoff, or install the bridge into the real Hermes Agent checkout once
+    the source path is available.
+
+## Previous heartbeat
+
 - Time: 2026-05-31 07:30 America/New_York
 - Completed:
   - Rechecked repo state; branch was clean at commit `036b137`.
@@ -4170,6 +4241,10 @@ cleaning up failed temp writes before returning errors.
   and avoid following destination symlinks.
 - Clean up temporary selection files on failed writes so interrupted or invalid
   selection updates do not leave local state artifacts behind.
+- Write local voice profile directories as `0700` and profile/audio files as
+  `0600` because cloned reference audio is sensitive local voice material.
+- Replace existing profile-material symlinks on forced create/import rewrites
+  instead of following them into arbitrary local targets.
 
 ## Open follow-ups
 

@@ -152,6 +152,10 @@ def write_wav(path: Path) -> None:
         wav.writeframes(b"\x00\x00" * 160)
 
 
+def path_mode(path: Path) -> int:
+    return stat.S_IMODE(path.stat().st_mode)
+
+
 def wav_bytes() -> bytes:
     buffer = io.BytesIO()
     with wave.open(buffer, "wb") as wav:
@@ -1018,6 +1022,89 @@ class StudioImportTests(unittest.TestCase):
 
             self.assertEqual(validated["studio_profile_id"], "studio-123")
             self.assertEqual(validated["consent"]["status"], "confirmed")
+            self.assertEqual(path_mode(voice_dir / "voice.yaml"), 0o600)
+
+    def test_importer_writes_private_profile_material(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            profile = {
+                "id": "studio-123",
+                "name": "Marvin",
+                "ref_text": "Reference transcript.",
+                "language": "en",
+            }
+
+            with unittest.mock.patch.object(studio_import, "request_json", return_value=profile):
+                with unittest.mock.patch.object(studio_import, "request_bytes", return_value=wav_bytes()):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        result = studio_import.run(
+                            [
+                                "--studio-url",
+                                "http://127.0.0.1:3900",
+                                "--profile-id",
+                                "studio-123",
+                                "--voice-id",
+                                "marvin",
+                                "--voices-dir",
+                                str(voices_root),
+                                "--confirm-consent",
+                            ]
+                        )
+
+            voice_dir = voices_root / "marvin"
+            self.assertEqual(result, 0)
+            self.assertEqual(path_mode(voice_dir), 0o700)
+            self.assertEqual(path_mode(voice_dir / "voice.yaml"), 0o600)
+            self.assertEqual(path_mode(voice_dir / "ref.wav"), 0o600)
+
+    def test_importer_force_replaces_existing_material_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            voice_dir = voices_root / "marvin"
+            voice_dir.mkdir(parents=True)
+            yaml_target = root / "outside.yaml"
+            audio_target = root / "outside.wav"
+            yaml_target.write_text("sentinel-yaml", encoding="utf-8")
+            audio_target.write_text("sentinel-audio", encoding="utf-8")
+            try:
+                (voice_dir / "voice.yaml").symlink_to(yaml_target)
+                (voice_dir / "ref.wav").symlink_to(audio_target)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            profile = {
+                "id": "studio-123",
+                "name": "Marvin",
+                "ref_text": "Reference transcript.",
+                "language": "en",
+            }
+
+            with unittest.mock.patch.object(studio_import, "request_json", return_value=profile):
+                with unittest.mock.patch.object(studio_import, "request_bytes", return_value=wav_bytes()):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        result = studio_import.run(
+                            [
+                                "--studio-url",
+                                "http://127.0.0.1:3900",
+                                "--profile-id",
+                                "studio-123",
+                                "--voice-id",
+                                "marvin",
+                                "--voices-dir",
+                                str(voices_root),
+                                "--confirm-consent",
+                                "--force",
+                            ]
+                        )
+
+            self.assertEqual(result, 0)
+            self.assertFalse((voice_dir / "voice.yaml").is_symlink())
+            self.assertFalse((voice_dir / "ref.wav").is_symlink())
+            self.assertEqual(yaml_target.read_text(encoding="utf-8"), "sentinel-yaml")
+            self.assertEqual(audio_target.read_text(encoding="utf-8"), "sentinel-audio")
+            self.assertEqual(path_mode(voice_dir / "voice.yaml"), 0o600)
+            self.assertEqual(path_mode(voice_dir / "ref.wav"), 0o600)
 
 
 class CreateVoiceTests(unittest.TestCase):
@@ -1045,6 +1132,8 @@ class CreateVoiceTests(unittest.TestCase):
             validated = omnivoice.validate_voice_profile(loaded, voice_dir)
             self.assertEqual(validated["mode"], "design")
             self.assertEqual(validated["consent"]["source"], "user_created")
+            self.assertEqual(path_mode(voice_dir), 0o700)
+            self.assertEqual(path_mode(voice_dir / "voice.yaml"), 0o600)
 
     def test_create_clone_voice_requires_confirmed_consent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1126,6 +1215,76 @@ class CreateVoiceTests(unittest.TestCase):
                 validated["ref_audio_path"],
                 str((voices_root / "marvin" / "ref.wav").resolve()),
             )
+
+    def test_create_clone_voice_writes_private_profile_material(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            source_ref = root / "source.wav"
+            write_wav(source_ref)
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "clone",
+                        "marvin",
+                        "--ref-audio",
+                        str(source_ref),
+                        "--ref-text",
+                        "Reference transcript.",
+                        "--confirm-consent",
+                    ]
+                )
+
+            voice_dir = voices_root / "marvin"
+            self.assertEqual(result, 0)
+            self.assertEqual(path_mode(voice_dir), 0o700)
+            self.assertEqual(path_mode(voice_dir / "voice.yaml"), 0o600)
+            self.assertEqual(path_mode(voice_dir / "ref.wav"), 0o600)
+
+    def test_create_clone_force_replaces_existing_material_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            voice_dir = voices_root / "marvin"
+            voice_dir.mkdir(parents=True)
+            source_ref = root / "source.wav"
+            yaml_target = root / "outside.yaml"
+            audio_target = root / "outside.wav"
+            write_wav(source_ref)
+            yaml_target.write_text("sentinel-yaml", encoding="utf-8")
+            audio_target.write_text("sentinel-audio", encoding="utf-8")
+            try:
+                (voice_dir / "voice.yaml").symlink_to(yaml_target)
+                (voice_dir / "ref.wav").symlink_to(audio_target)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "clone",
+                        "marvin",
+                        "--ref-audio",
+                        str(source_ref),
+                        "--ref-text",
+                        "Reference transcript.",
+                        "--confirm-consent",
+                        "--force",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            self.assertFalse((voice_dir / "voice.yaml").is_symlink())
+            self.assertFalse((voice_dir / "ref.wav").is_symlink())
+            self.assertEqual(yaml_target.read_text(encoding="utf-8"), "sentinel-yaml")
+            self.assertEqual(audio_target.read_text(encoding="utf-8"), "sentinel-audio")
+            self.assertEqual(path_mode(voice_dir / "voice.yaml"), 0o600)
+            self.assertEqual(path_mode(voice_dir / "ref.wav"), 0o600)
 
     def test_create_voice_refuses_dot_segment_voice_id(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

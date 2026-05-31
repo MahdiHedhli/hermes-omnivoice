@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 07:30 America/New_York on branch
+Status as of 2026-05-31 08:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 107 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 111 tests with 1 expected
   opt-in real-backend skip.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
@@ -96,6 +96,10 @@ sample and contains explicit confirmed consent metadata.
   same-directory temporary file and atomic replace, and replaces destination
   symlinks instead of following them. Failed temp writes are cleaned up before
   the error is returned.
+- Voice profile writes: PASS. Create/import helpers write local profile
+  directories with `0700` permissions and `voice.yaml` plus copied or imported
+  `ref.wav` material with `0600` permissions. Forced rewrites replace existing
+  material symlinks instead of following them.
 
 ## Remaining Blockers
 
@@ -114,6 +118,8 @@ sample and contains explicit confirmed consent metadata.
   or local voice selection state are committed.
 - Cloned voices require `consent.status: confirmed`, `ref_audio`, `ref_text`,
   and a readable WAV reference file.
+- Created/imported local voice profile files are private by default and should
+  stay under `~/.hermes/voices/omnivoice`, outside the repo.
 - Non-loopback Studio URLs are refused by default.
 - The fake backend is a contract fixture only and is not real synthesis
   evidence.
