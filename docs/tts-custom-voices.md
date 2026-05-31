@@ -120,6 +120,8 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   service.
 - Do not put credentials in Studio URLs; wrapper, importer, and runtime
   diagnostics reject URL userinfo.
+- Keep importer `--timeout` greater than zero; invalid values fail before local
+  registry writes or Studio network access.
 - Keep `speed` finite and greater than zero, and keep wrapper `timeout` greater
   than zero; malformed runtime values fail before backend startup.
 - Keep wrapper `--max-chars` aligned with Hermes `max_text_length`; oversized

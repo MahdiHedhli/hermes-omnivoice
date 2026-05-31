@@ -139,6 +139,8 @@ errors instead of tracebacks for operator-facing selection/config commands.
 Studio profile import now validates empty consent `allowed_uses` before
 network access and quotes imported allowed-use values in `voice.yaml` so CLI
 input cannot reshape stored consent metadata.
+Studio profile import now also rejects non-positive timeouts before creating a
+local voice directory or touching the Studio API.
 The TTS wrapper now redacts common credential-shaped values from command
 backend stderr, Studio API failure detail, and final wrapper errors before
 printing failures while preserving useful failure context.
@@ -4014,6 +4016,63 @@ overrides before spawning the wrapper subprocess.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 18:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `81cfbc8`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited Studio importer timeout handling.
+  - Added `scripts/import-omnivoice-studio-voice.py` validation so non-positive
+    `--timeout` values fail before local voice directory creation or Studio
+    network access.
+  - Added focused importer coverage proving invalid timeout does not call
+    Studio and does not create a partial local voice directory.
+  - Updated setup, Studio bridge, custom-voice, MVP handoff, weekend summary,
+    and heartbeat docs for the new 145-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "Latest heartbeat|Next action|Open follow-ups|source-scan-timeout|scan-timeout|timeout|acceptance|RuntimeCheck|validate_timeout" HEARTBEAT.md docs scripts tests README.md examples`
+  - `sed -n '1,260p' scripts/import-omnivoice-studio-voice.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_invalid_timeout_before_network_and_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_empty_allowed_use_before_network tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_existing_voice_without_force_before_network -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Studio importer pre-network focused suite: PASS, 3 tests.
+  - Full bridge validator: PASS, 145 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Repo artifact scan and whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Importer input validation should happen before both network access and
+    local registry writes, because partial voice directories are user-visible
+    local state.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the Studio importer timeout validation if the reviewed diff is
+    clean.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 17:30 America/New_York
 - Completed:

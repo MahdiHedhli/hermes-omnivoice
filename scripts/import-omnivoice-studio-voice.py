@@ -44,6 +44,12 @@ def validate_allowed_uses(values: list[str] | None) -> list[str]:
     return clean
 
 
+def validate_timeout(value: int) -> int:
+    if value <= 0:
+        raise ImportErrorWithContext("timeout must be greater than 0")
+    return value
+
+
 def resolve_voice_dir(voices_dir: Path, voice_id: str) -> Path:
     validate_voice_id(voice_id)
     resolved_root = voices_dir.expanduser().resolve()
@@ -202,16 +208,17 @@ def run(argv: list[str] | None = None) -> int:
         voice_id = args.voice_id or args.profile_id
         validate_voice_id(voice_id)
         allowed_uses = validate_allowed_uses(args.allowed_use)
+        timeout = validate_timeout(args.timeout)
         voice_dir = prepare_voice_dir(args.voices_dir, voice_id, args.force)
 
         base_url = validate_studio_url(args.studio_url, args.allow_remote_studio)
-        profile = request_json(f"{base_url}/profiles/{urllib.parse.quote(args.profile_id)}", args.timeout)
+        profile = request_json(f"{base_url}/profiles/{urllib.parse.quote(args.profile_id)}", timeout)
 
         audio_bytes = b""
         try:
             audio_bytes = request_bytes(
                 f"{base_url}/profiles/{urllib.parse.quote(args.profile_id)}/audio",
-                args.timeout,
+                timeout,
             )
         except urllib.error.HTTPError as exc:
             if exc.code != 404:

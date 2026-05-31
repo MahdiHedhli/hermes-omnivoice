@@ -1575,6 +1575,33 @@ class StudioImportTests(unittest.TestCase):
         self.assertIn("allowed uses cannot be empty", errors.getvalue())
         request_json.assert_not_called()
 
+    def test_importer_rejects_invalid_timeout_before_network_and_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_dir = Path(tmp) / "voices"
+            with unittest.mock.patch.object(studio_import, "request_json") as request_json:
+                errors = io.StringIO()
+                with contextlib.redirect_stderr(errors):
+                    result = studio_import.run(
+                        [
+                            "--studio-url",
+                            "http://127.0.0.1:3900",
+                            "--profile-id",
+                            "studio-123",
+                            "--voice-id",
+                            "marvin",
+                            "--voices-dir",
+                            str(voices_dir),
+                            "--timeout",
+                            "0",
+                            "--confirm-consent",
+                        ]
+                    )
+
+            self.assertEqual(result, 1)
+            self.assertIn("timeout must be greater than 0", errors.getvalue())
+            request_json.assert_not_called()
+            self.assertFalse((voices_dir / "marvin").exists())
+
     def test_importer_rejects_invalid_downloaded_wav(self) -> None:
         with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "valid WAV"):
             studio_import.validate_wav_bytes(b"not a wav")
