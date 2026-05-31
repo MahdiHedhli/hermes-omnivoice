@@ -415,6 +415,101 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "valid WAV"):
                 omnivoice.validate_voice_profile(profile, resolved_dir)
 
+    def test_profile_speed_must_be_positive(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            voice_dir = write_voice(voices_root)
+            profile_path = voice_dir / "voice.yaml"
+            profile_yaml = profile_path.read_text(encoding="utf-8")
+            profile_path.write_text(
+                profile_yaml.replace("speed: 1.0", "speed: 0"),
+                encoding="utf-8",
+            )
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--voice",
+                        "marvin",
+                    ],
+                    env={"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(["backend"])},
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("speed must be greater than 0", stderr.getvalue())
+
+    def test_cli_speed_must_be_finite_positive(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "marvin",
+                        "--speed",
+                        "nan",
+                    ],
+                    env={"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(["backend"])},
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("speed must be greater than 0", stderr.getvalue())
+            self.assertFalse(out_file.exists())
+
+    def test_timeout_must_be_positive(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "marvin",
+                        "--timeout",
+                        "0",
+                    ],
+                    env={"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(["backend"])},
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("timeout must be greater than 0", stderr.getvalue())
+            self.assertFalse(out_file.exists())
+
     def test_command_failure_returns_nonzero(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

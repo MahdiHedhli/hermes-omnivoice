@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 15:00 America/New_York on branch
+Status as of 2026-05-31 15:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 135 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 138 tests with 1 expected
   opt-in real-backend skip.
 - Validator interpreter alignment: PASS. The fake-backend smoke command now
   uses the configured `PYTHON_BIN` instead of hardcoded `python3`, so full
@@ -68,6 +68,9 @@ sample and contains explicit confirmed consent metadata.
 - Studio URL userinfo rejection: PASS. The wrapper, importer, and runtime
   diagnostics reject userinfo in Studio URLs so credential-bearing URLs do not
   enter local config, diagnostics, or logs.
+- Wrapper speed/timeout validation: PASS. The TTS wrapper rejects non-finite or
+  non-positive speed and non-positive timeout values before backend or Studio
+  startup.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
 - `scripts/test-omnivoice-tts.sh` with the generated adapter exports: PASS,
@@ -165,6 +168,8 @@ sample and contains explicit confirmed consent metadata.
   output locations, not in the repo.
 - Non-loopback Studio URLs are refused by default.
 - Studio URLs containing userinfo are refused.
+- Non-finite or non-positive speed values and non-positive wrapper timeouts are
+  refused before backend startup.
 - The fake backend is a contract fixture only and is not real synthesis
   evidence.
 

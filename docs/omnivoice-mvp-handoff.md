@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 15:00 America/New_York on branch
+As of 2026-05-31 15:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 135 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 138 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -68,6 +68,8 @@ As of 2026-05-31 15:00 America/New_York on branch
 - Wrapper, importer, and runtime diagnostics now reject Studio URLs containing
   userinfo, preventing credential-bearing URLs from becoming local config,
   diagnostics, or log material.
+- The TTS wrapper now rejects non-finite or non-positive speed values and
+  non-positive timeouts before backend or Studio startup.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
   shell environment because no backend command is exported there.
@@ -352,3 +354,5 @@ python scripts/hermes-omnivoice-voices.py preview narrator --out /tmp/narrator.w
 - Keep Studio on loopback by default and prefer HTTP APIs or import/export over
   direct SQLite coupling.
 - Do not put credentials in Studio URLs; bridge tools reject URL userinfo.
+- Keep wrapper `speed` finite and greater than zero, and `timeout` greater than
+  zero.

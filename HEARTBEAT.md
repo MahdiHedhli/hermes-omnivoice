@@ -143,6 +143,8 @@ printing failures while preserving useful failure context.
 Studio URL validation now rejects URL userinfo in the TTS wrapper, Studio
 profile importer, and runtime diagnostics so credential-bearing Studio URLs do
 not become local config, diagnostics, or log material.
+The TTS wrapper now also rejects non-finite or non-positive speed values and
+non-positive timeouts before backend or Studio startup.
 
 ## Previous heartbeat
 
@@ -4002,6 +4004,59 @@ not become local config, diagnostics, or log material.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 15:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `eff148b`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited wrapper speed and timeout handling.
+  - Added TTS wrapper validation for finite positive speed and positive
+    timeout before backend or Studio startup.
+  - Added tests for invalid profile speed, invalid CLI speed override, and
+    invalid timeout.
+  - Updated setup, custom-voice, MVP handoff, weekend summary, and heartbeat
+    docs for the new 138-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "speed|timeout|max_text|text_file|read_text|add_argument\\(\\\"--timeout|add_argument\\(\\\"--speed|def run\\(" scripts/hermes-omnivoice-tts.py scripts/hermes-omnivoice-voices.py docs tests/test_omnivoice_tts.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_profile_speed_must_be_positive tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_cli_speed_must_be_finite_positive tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_timeout_must_be_positive -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Wrapper speed/timeout focused suite: PASS, 3 tests.
+  - Full bridge validator: PASS, 138 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Repo artifact scan and whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Invalid speed and timeout values should fail before any model process or
+    Studio request begins.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the wrapper speed/timeout validation if the reviewed diff is clean.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 15:00 America/New_York
 - Completed:

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -94,6 +95,25 @@ def redact_sensitive_text(text: str) -> str:
             redacted,
         )
     return redacted
+
+
+def normalize_speed(value: object) -> str:
+    text = str(value).strip()
+    if not text:
+        raise OmniVoiceConfigError("speed must be greater than 0")
+    try:
+        numeric = float(text)
+    except ValueError as exc:
+        raise OmniVoiceConfigError("speed must be numeric") from exc
+    if not math.isfinite(numeric) or numeric <= 0:
+        raise OmniVoiceConfigError("speed must be greater than 0")
+    return text
+
+
+def validate_timeout(value: int) -> int:
+    if value <= 0:
+        raise OmniVoiceConfigError("timeout must be greater than 0")
+    return value
 
 
 def _strip_inline_comment(value: str) -> str:
@@ -589,7 +609,10 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
 
         profile, voice_dir = load_voice_profile(args.voices_dir, args.voice)
         profile = validate_voice_profile(profile, voice_dir)
-        speed = str(args.speed if args.speed is not None else profile.get("speed", "1.0"))
+        speed = normalize_speed(
+            args.speed if args.speed is not None else profile.get("speed", "1.0")
+        )
+        timeout = validate_timeout(args.timeout)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         prepare_output_path(output_path)
 
@@ -609,7 +632,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
                 output_path=output_path,
                 speed=speed,
                 env=runtime_env,
-                timeout=args.timeout,
+                timeout=timeout,
             )
         else:
             tmp_output_path: Path | None = None
@@ -629,7 +652,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
                     check=False,
                     text=True,
                     capture_output=True,
-                    timeout=args.timeout,
+                    timeout=timeout,
                 )
                 if completed.returncode != 0:
                     if completed.stderr:

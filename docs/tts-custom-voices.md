@@ -119,6 +119,8 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   service.
 - Do not put credentials in Studio URLs; wrapper, importer, and runtime
   diagnostics reject URL userinfo.
+- Keep `speed` finite and greater than zero, and keep wrapper `timeout` greater
+  than zero; malformed runtime values fail before backend startup.
 - Treat cloned voice consent as a hard gate, not a documentation-only field.
 - Use the profile helpers for local registry writes. They create voice profile
   directories with `0700` permissions and write `voice.yaml` plus copied or
