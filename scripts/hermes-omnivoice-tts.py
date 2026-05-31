@@ -12,6 +12,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -21,6 +22,7 @@ import wave
 
 VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
+PRIVATE_FILE_MODE = 0o600
 OMNIVOICE_ENGLISH_INSTRUCT_ITEMS = {
     "american accent",
     "australian accent",
@@ -319,6 +321,8 @@ def build_backend_command(
 
 
 def validate_audio_file(path: Path) -> None:
+    if path.is_symlink():
+        raise OmniVoiceConfigError(f"audio output cannot be a symlink: {path}")
     if not path.is_file() or path.stat().st_size == 0:
         raise OmniVoiceConfigError(f"backend did not create audio output: {path}")
     if path.suffix.lower() == ".wav":
@@ -327,6 +331,46 @@ def validate_audio_file(path: Path) -> None:
                 wav.getparams()
         except wave.Error as exc:
             raise OmniVoiceConfigError(f"output is not a valid WAV file: {path}") from exc
+
+
+def resolve_output_path(path: Path) -> Path:
+    expanded = path.expanduser()
+    return expanded.parent.resolve() / expanded.name
+
+
+def prepare_output_path(path: Path) -> None:
+    if path.is_symlink():
+        path.unlink()
+
+
+def chmod_private_file(path: Path) -> None:
+    if path.is_symlink():
+        raise OmniVoiceConfigError(f"audio output cannot be a symlink: {path}")
+    path.chmod(PRIVATE_FILE_MODE)
+
+
+def write_private_audio_file(path: Path, payload: bytes) -> None:
+    fd = -1
+    tmp_path: Path | None = None
+    try:
+        fd, tmp_name = tempfile.mkstemp(
+            prefix=f".{path.name}.",
+            suffix=path.suffix or ".audio",
+            dir=path.parent,
+        )
+        tmp_path = Path(tmp_name)
+        os.chmod(tmp_path, PRIVATE_FILE_MODE)
+        with os.fdopen(fd, "wb") as handle:
+            fd = -1
+            handle.write(payload)
+        validate_audio_file(tmp_path)
+        os.replace(tmp_path, path)
+    except Exception:
+        if fd != -1:
+            os.close(fd)
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
+        raise
 
 
 def validate_studio_url(url: str, env: dict[str, str]) -> str:
@@ -427,8 +471,7 @@ def synthesize_with_studio_api(
     except urllib.error.URLError as exc:
         raise OmniVoiceConfigError(f"OmniVoice-Studio API is unreachable: {exc}") from exc
 
-    output_path.write_bytes(payload)
-    validate_audio_file(output_path)
+    write_private_audio_file(output_path, payload)
 
 
 def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int:
@@ -450,7 +493,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
 
     try:
         text_file = args.text_file.expanduser().resolve()
-        output_path = args.out.expanduser().resolve()
+        output_path = resolve_output_path(args.out)
         if not text_file.is_file():
             raise OmniVoiceConfigError(f"text file not found: {text_file}")
 
@@ -458,6 +501,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
         profile = validate_voice_profile(profile, voice_dir)
         speed = str(args.speed if args.speed is not None else profile.get("speed", "1.0"))
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        prepare_output_path(output_path)
 
         studio_url = str(
             profile.get("studio_url") or runtime_env.get("HERMES_OMNIVOICE_STUDIO_URL") or ""
@@ -501,6 +545,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
                     f"OmniVoice backend failed with exit code {completed.returncode}"
                 )
             validate_audio_file(output_path)
+            chmod_private_file(output_path)
     except (OSError, subprocess.SubprocessError, OmniVoiceConfigError) as exc:
         print(f"hermes-omnivoice-tts: {exc}", file=sys.stderr)
         return 1

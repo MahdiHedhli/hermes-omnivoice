@@ -449,8 +449,57 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             )
 
             self.assertEqual(result, 0)
+            self.assertEqual(path_mode(out_file), 0o600)
             with wave.open(str(out_file), "rb") as wav:
                 self.assertEqual(wav.getnchannels(), 1)
+                self.assertGreater(wav.getnframes(), 0)
+
+    def test_command_backend_replaces_output_symlink_without_touching_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            target = root / "target.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            target.write_text("sentinel", encoding="utf-8")
+            try:
+                out_file.symlink_to(target)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            command = [
+                sys.executable,
+                str(FAKE_BACKEND_PATH),
+                "--text-file",
+                "{text_file}",
+                "--out",
+                "{out}",
+                "--voice-dir",
+                "{voice_dir}",
+                "--speed",
+                "{speed}",
+            ]
+
+            result = omnivoice.run(
+                [
+                    "--voices-dir",
+                    str(voices_root),
+                    "--text-file",
+                    str(text_file),
+                    "--out",
+                    str(out_file),
+                    "--voice",
+                    "marvin",
+                ],
+                env={"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(command)},
+            )
+
+            self.assertEqual(result, 0)
+            self.assertFalse(out_file.is_symlink())
+            self.assertEqual(target.read_text(encoding="utf-8"), "sentinel")
+            self.assertEqual(path_mode(out_file), 0o600)
+            with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
 
     def test_auto_cli_builds_official_clone_command(self) -> None:
@@ -605,6 +654,44 @@ consent:
             self.assertIn(b'name="profile_id"', requests[0]["body"])
             self.assertIn(b"studio-123", requests[0]["body"])
             self.assertIn(b"Hermes custom voice synthesis test.", requests[0]["body"])
+            self.assertEqual(path_mode(out_file), 0o600)
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertGreater(wav.getnframes(), 0)
+
+    def test_studio_api_replaces_output_symlink_without_touching_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_design_voice(voices_root, "narrator", studio_profile_id="studio-123")
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            target = root / "target.wav"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            target.write_text("sentinel", encoding="utf-8")
+            try:
+                out_file.symlink_to(target)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            with mock_studio_server() as (studio_url, _requests):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "narrator",
+                    ],
+                    env={"HERMES_OMNIVOICE_STUDIO_URL": studio_url},
+                )
+
+            self.assertEqual(result, 0)
+            self.assertFalse(out_file.is_symlink())
+            self.assertEqual(target.read_text(encoding="utf-8"), "sentinel")
+            self.assertEqual(path_mode(out_file), 0o600)
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
 

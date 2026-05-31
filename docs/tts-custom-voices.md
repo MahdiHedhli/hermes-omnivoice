@@ -122,6 +122,10 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   directories with `0700` permissions and write `voice.yaml` plus copied or
   imported `ref.wav` files with `0600` permissions. Forced rewrites replace
   existing material symlinks instead of following them.
+- Generated audio may contain sensitive assistant output. The wrapper removes
+  an existing output symlink before synthesis and leaves successful output
+  files with `0600` permissions; the Studio API path validates a private temp
+  file before atomic replacement.
 
 ## Voice Helper CLI
 

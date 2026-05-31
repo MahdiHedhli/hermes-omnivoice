@@ -107,6 +107,10 @@ Local voice profile writes now use private `0700` profile directories and
 `0600` `voice.yaml`/`ref.wav` files. Create/import forced rewrites use
 same-directory temporary files and replace existing material symlinks rather
 than following them.
+Generated TTS output is now hardened too: the wrapper removes existing output
+symlinks before backend synthesis, leaves successful output audio as `0600`,
+and validates Studio API response audio in a private temp file before atomic
+replacement.
 
 ## Previous heartbeat
 
@@ -3967,6 +3971,73 @@ than following them.
 
 ## Latest heartbeat
 
+- Time: 2026-05-31 08:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `a056cec`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Reviewed wrapper output handling after local voice profile write hardening.
+  - Stopped resolving the final output leaf before synthesis so an existing
+    output symlink can be removed rather than followed.
+  - Added `0600` output permissions for successful command-backend and Studio
+    API outputs.
+  - Made the built-in Studio API path write and validate response audio in a
+    private same-directory temporary file before atomic replacement.
+  - Added regression coverage for command-backend and Studio API output-symlink
+    replacement without modifying the symlink targets.
+  - Updated README, setup docs, custom voice docs, MVP handoff, and weekend
+    summary to document private generated output writes.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "TODO|FIXME|follow-up|follow up|blocker|unsafe|symlink|permission|chmod|write_text\\(|write_bytes\\(|copyfile|copyfileobj|mkstemp|os\\.replace|urlopen|allow_remote|consent|ref\\.wav|voice\\.yaml" scripts tests docs README.md HEARTBEAT.md`
+  - `sed -n '1,470p' scripts/hermes-omnivoice-tts.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-tts.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rg -n "08:00 America/New_York|07:30 America/New_York|111 tests|107 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Targeted wrapper registry tests: PASS, 18 tests.
+  - Python py_compile for the wrapper and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 113 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Real-backend smoke script after evaluating generated shell exports: PASS;
+    generated a valid temporary WAV from the required smoke text.
+  - Stale handoff snapshot scan: PASS; no 08:00/111-test or older summary state
+    remains in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, local selection state, or pycache directories found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Generated audio can contain sensitive assistant output, so local output
+    files should be private by default even when they are temporary.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the generated-output write hardening and keep the branch clean for
+    handoff, or install the bridge into the real Hermes Agent checkout once the
+    source path is available.
+
+## Previous heartbeat
+
 - Time: 2026-05-31 08:00 America/New_York
 - Completed:
   - Rechecked repo state; branch was clean at commit `d00538d`.
@@ -4245,6 +4316,11 @@ than following them.
   `0600` because cloned reference audio is sensitive local voice material.
 - Replace existing profile-material symlinks on forced create/import rewrites
   instead of following them into arbitrary local targets.
+- Treat generated output audio as sensitive local material: remove existing
+  output symlinks before synthesis and leave successful outputs as `0600`.
+- Validate Studio API response audio in a private temp file before replacing
+  the requested output path, so invalid response payloads do not become the
+  final output.
 
 ## Open follow-ups
 
