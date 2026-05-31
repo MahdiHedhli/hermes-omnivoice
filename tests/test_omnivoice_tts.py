@@ -2464,6 +2464,33 @@ class AcceptanceTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn("Real backend ready: BLOCKED", output.getvalue())
 
+    def test_acceptance_invalid_runtime_command_fails_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                result = acceptance.run(
+                    [
+                        "--voices-dir",
+                        str(Path(tmp) / "missing"),
+                        "--source-root",
+                        str(Path(tmp) / "source"),
+                        "--json",
+                    ],
+                    env={
+                        "HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(
+                            ["/bin/echo", "{missing_placeholder}"]
+                        )
+                    },
+                )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertIn("omnivoice-acceptance:", error)
+            self.assertIn("{missing_placeholder}", error)
+            self.assertNotIn("Traceback", error)
+
     def test_acceptance_reports_missing_hermes_source_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = io.StringIO()

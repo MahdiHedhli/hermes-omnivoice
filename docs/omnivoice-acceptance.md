@@ -85,7 +85,8 @@ one consented voice profile under `~/.hermes/voices/omnivoice`.
 Command backends must also pass placeholder validation in
 `scripts/check-omnivoice-runtime.py`; unknown placeholders, unsupported
 placeholder access, or malformed brace syntax do not count as configured
-runtime readiness.
+runtime readiness. If that diagnostic validation fails, acceptance exits with
+a concise `omnivoice-acceptance:` error instead of a Python traceback.
 
 Use `python scripts/setup-omnivoice-python-env.py --dry-run` before creating
 the local Python backend environment. Use `--check-only --require-ready` after

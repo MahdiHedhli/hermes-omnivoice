@@ -183,7 +183,12 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
-    report = build_report(args, dict(os.environ if env is None else env))
+    try:
+        report = build_report(args, dict(os.environ if env is None else env))
+    except (OSError, RuntimeError) as exc:
+        print(f"omnivoice-acceptance: {exc}", file=sys.stderr)
+        return 1
+
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:

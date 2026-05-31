@@ -128,6 +128,9 @@ acceptance readiness stays fail-closed when operator command config is malformed
 The wrapper and runtime diagnostics now expose the same command-template
 placeholder allowlist, and tests pin the two together to prevent readiness and
 synthesis behavior from drifting.
+Acceptance now catches runtime/source diagnostic failures and reports concise
+`omnivoice-acceptance:` errors instead of tracebacks for malformed operator
+runtime config.
 
 ## Previous heartbeat
 
@@ -3987,6 +3990,62 @@ synthesis behavior from drifting.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 12:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `f028fcd`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Confirmed malformed backend command config caused
+    `scripts/omnivoice-acceptance.py --json` to traceback through the runtime
+    diagnostic path.
+  - Updated acceptance to catch runtime/source diagnostic failures and return a
+    concise `omnivoice-acceptance:` error with exit 1.
+  - Added regression coverage proving malformed runtime command config fails
+    acceptance without stdout JSON or a Python traceback.
+  - Updated acceptance, MVP handoff, weekend summary, and heartbeat docs for
+    the new 127-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|Open follow-ups|Next action|Remaining Blockers|Next Steps|acceptance|RuntimeCheckError|build_report\\(|raise Runtime|traceback|native provider|Hermes Agent source" README.md docs scripts tests examples HEARTBEAT.md`
+  - `HERMES_OMNIVOICE_COMMAND_JSON='["/bin/echo", "{missing_placeholder}"]' python3 scripts/omnivoice-acceptance.py --json`
+  - `sed -n ... scripts/omnivoice-acceptance.py tests/test_omnivoice_tts.py docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md docs/omnivoice-acceptance.md HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.AcceptanceTests tests.test_omnivoice_tts.RuntimeCheckTests -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+- Tests:
+  - Acceptance plus runtime diagnostic focused suite: PASS, 21 tests.
+  - Full bridge validator: PASS, 127 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Malformed acceptance command config: PASS as expected failure, exit 1 with
+    concise `omnivoice-acceptance:` stderr and no traceback.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Acceptance is an operator-facing command and should return concise errors
+    for malformed runtime config rather than surfacing Python internals.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the acceptance diagnostic failure handling if hygiene checks stay
+    clean, then keep the branch ready for real Hermes Agent source wiring once
+    that checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 12:00 America/New_York
 - Completed:
