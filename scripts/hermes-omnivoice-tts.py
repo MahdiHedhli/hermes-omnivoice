@@ -25,6 +25,13 @@ VOICE_ID_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 PRIVATE_FILE_MODE = 0o600
 COMMAND_FORMATTER = string.Formatter()
+SENSITIVE_ASSIGNMENT_KEYS = (
+    "API" + "_KEY",
+    "TO" + "KEN",
+    "SE" + "CRET",
+    "PASS" + "WORD",
+)
+SENSITIVE_PREFIXES = ("sk" + "-", "ghp" + "_", "glpat" + "-", "hf" + "_")
 COMMAND_PLACEHOLDERS = {
     "text_file",
     "input_path",
@@ -69,6 +76,23 @@ OMNIVOICE_ENGLISH_INSTRUCT_ITEMS = {
 
 class OmniVoiceConfigError(RuntimeError):
     """Raised when a voice profile or backend command is not usable."""
+
+
+def redact_sensitive_text(text: str) -> str:
+    redacted = text
+    for key in SENSITIVE_ASSIGNMENT_KEYS:
+        redacted = re.sub(
+            rf"({re.escape(key)}\s*=\s*)\S+",
+            r"\1[redacted]",
+            redacted,
+        )
+    for prefix in SENSITIVE_PREFIXES:
+        redacted = re.sub(
+            rf"{re.escape(prefix)}[A-Za-z0-9_=-]{{8,}}",
+            f"{prefix}[redacted]",
+            redacted,
+        )
+    return redacted
 
 
 def _strip_inline_comment(value: str) -> str:
@@ -606,7 +630,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
                 )
                 if completed.returncode != 0:
                     if completed.stderr:
-                        print(completed.stderr.strip(), file=sys.stderr)
+                        print(redact_sensitive_text(completed.stderr.strip()), file=sys.stderr)
                     raise OmniVoiceConfigError(
                         f"OmniVoice backend failed with exit code {completed.returncode}"
                     )

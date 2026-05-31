@@ -203,8 +203,10 @@ reference audio is missing, the backend command fails, or the output WAV is not
 valid. It removes an existing output-file symlink before synthesis so local
 backends do not follow it, passes command backends a private same-directory
 temporary output path, and leaves successful generated audio with `0600`
-permissions. Command backend output and built-in Studio API responses are
-validated before the wrapper atomically replaces the requested output file.
+permissions. Command backend stderr is redacted for common credential-shaped
+values before it is printed on failure. Command backend output and built-in
+Studio API responses are validated before the wrapper atomically replaces the
+requested output file.
 
 ## Smoke Test
 

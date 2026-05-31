@@ -416,6 +416,53 @@ class OmniVoiceRegistryTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
 
+    def test_command_failure_redacts_backend_stderr(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            password_key = "PASS" + "WORD"
+            token_value = "hf" + "_" + ("A" * 24)
+            command = [
+                sys.executable,
+                "-c",
+                (
+                    "import sys; "
+                    "sys.stderr.write('backend failed "
+                    + password_key
+                    + "=topsecret "
+                    + token_value
+                    + "'); "
+                    "sys.exit(7)"
+                ),
+            ]
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--voice",
+                        "marvin",
+                    ],
+                    env={"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(command)},
+                )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertIn("backend failed", error)
+            self.assertIn(f"{password_key}=[redacted]", error)
+            self.assertIn("hf_[redacted]", error)
+            self.assertNotIn("topsecret", error)
+            self.assertNotIn(token_value, error)
+
     def test_command_json_unknown_placeholder_returns_config_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

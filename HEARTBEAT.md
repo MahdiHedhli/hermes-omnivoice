@@ -137,6 +137,8 @@ errors instead of tracebacks for operator-facing selection/config commands.
 Studio profile import now validates empty consent `allowed_uses` before
 network access and quotes imported allowed-use values in `voice.yaml` so CLI
 input cannot reshape stored consent metadata.
+The TTS wrapper now redacts common credential-shaped values from backend stderr
+before printing command failures while preserving useful failure context.
 
 ## Previous heartbeat
 
@@ -3996,6 +3998,55 @@ input cannot reshape stored consent metadata.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 14:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `7517b3e`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited command backend failure handling for accidental credential echoing
+    through backend stderr.
+  - Added `scripts/hermes-omnivoice-tts.py` backend-stderr redaction for common
+    credential-shaped assignment values and token-like prefixes.
+  - Added regression coverage proving backend failure context is preserved
+    while credential-shaped values are removed from wrapper stderr.
+  - Updated setup, MVP handoff, weekend summary, and heartbeat docs for the new
+    131-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|TBD|unsafe|security|consent|allowed_use|allowed_uses|source-root|root=|HERMES|remote|allow_remote|urlopen|subprocess\\.run|shell=True|eval|token|secret|Traceback|traceback|redact|command" scripts tests docs README.md examples HEARTBEAT.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_command_failure_returns_nonzero tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_command_failure_redacts_backend_stderr -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+- Tests:
+  - Backend failure focused suite: PASS, 2 tests.
+  - Full bridge validator: PASS, 131 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Backend stderr can be useful for operator debugging but should not echo
+    credential-shaped material into Hermes logs.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Complete hygiene checks, then commit the backend stderr redaction if clean.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 13:30 America/New_York
 - Completed:
