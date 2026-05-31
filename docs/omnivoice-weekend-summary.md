@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 16:30 America/New_York on branch
+Status as of 2026-05-31 17:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 141 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 142 tests with 1 expected
   opt-in real-backend skip.
 - Validator interpreter alignment: PASS. The fake-backend smoke command now
   uses the configured `PYTHON_BIN` instead of hardcoded `python3`, so full
@@ -50,6 +50,8 @@ sample and contains explicit confirmed consent metadata.
 - Runtime command diagnostics: PASS. `scripts/check-omnivoice-runtime.py`
   validates the same command-template placeholder contract before reporting a
   backend command as configured, keeping acceptance readiness fail-closed.
+- Runtime timeout validation: PASS. `scripts/check-omnivoice-runtime.py`
+  rejects non-positive `--timeout` values before any Studio URL probe.
 - Placeholder contract drift guard: PASS. Runtime diagnostics and the synthesis
   wrapper now expose the same placeholder allowlist and the test suite pins
   them together.

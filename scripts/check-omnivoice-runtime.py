@@ -39,6 +39,12 @@ class RuntimeCheckError(RuntimeError):
     pass
 
 
+def validate_timeout(value: int) -> int:
+    if value <= 0:
+        raise RuntimeCheckError("timeout must be greater than 0")
+    return value
+
+
 def validate_studio_url(url: str, allow_remote: bool = False) -> str:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
@@ -160,8 +166,9 @@ def check_voices_dir(voices_dir: Path) -> dict:
 
 def build_report(args: argparse.Namespace, env: dict[str, str]) -> dict:
     studio_url = args.studio_url or env.get("HERMES_OMNIVOICE_STUDIO_URL", "")
+    timeout = validate_timeout(args.timeout)
     return {
-        "studio": check_studio(studio_url, args.timeout, args.allow_remote_studio),
+        "studio": check_studio(studio_url, timeout, args.allow_remote_studio),
         "backend_command": check_backend_command(env),
         "omnivoice_cli": check_omnivoice_cli(env),
         "voices_dir": check_voices_dir(args.voices_dir),

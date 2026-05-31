@@ -1985,6 +1985,25 @@ class RuntimeCheckTests(unittest.TestCase):
             self.assertEqual(report["backend_command"]["status"], "missing")
             self.assertEqual(report["voices_dir"]["status"], "missing")
 
+    def test_runtime_check_refuses_invalid_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = runtime_check.run(
+                    [
+                        "--voices-dir",
+                        str(Path(tmp) / "missing"),
+                        "--timeout",
+                        "0",
+                        "--json",
+                    ],
+                    env={},
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("timeout must be greater than 0", stderr.getvalue())
+
     def test_runtime_check_redacts_backend_command_arguments(self) -> None:
         report = runtime_check.check_backend_command(
             {"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(["/bin/echo", "secret-arg"])}

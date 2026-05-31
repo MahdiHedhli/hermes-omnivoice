@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 16:30 America/New_York on branch
+As of 2026-05-31 17:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 141 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 142 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -49,6 +49,8 @@ As of 2026-05-31 16:30 America/New_York on branch
 - Runtime diagnostics now validate the same backend command-template
   placeholder contract, so malformed command configuration does not count as
   `real_backend_ready`.
+- Runtime diagnostics now reject non-positive `--timeout` values before any
+  Studio probe can reach lower-level URL handling.
 - The wrapper and runtime diagnostics now expose and test the same placeholder
   allowlist, so future command-template changes cannot silently drift between
   synthesis and readiness checks.

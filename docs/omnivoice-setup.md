@@ -237,7 +237,7 @@ print command arguments. It validates backend command template placeholders,
 reports whether a backend command is configured, whether a loopback Studio
 `/profiles` endpoint is reachable, whether an `omnivoice-infer` CLI is on
 `PATH`, whether auto CLI mode is enabled, and how many local registry profiles
-exist.
+exist. Its Studio probe `--timeout` must be greater than zero.
 
 ## Local Studio With Docker
 

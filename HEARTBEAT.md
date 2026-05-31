@@ -125,6 +125,8 @@ wrapper config errors instead of raw Python exceptions.
 Runtime diagnostics now validate that same command-template placeholder
 contract before reporting an exported backend command as configured, so
 acceptance readiness stays fail-closed when operator command config is malformed.
+Runtime diagnostics now also reject non-positive Studio probe timeouts before
+touching URL handling.
 The wrapper and runtime diagnostics now expose the same command-template
 placeholder allowlist, and tests pin the two together to prevent readiness and
 synthesis behavior from drifting.
@@ -4010,6 +4012,60 @@ config aligned with wrapper runtime bounds.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 17:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `ed6956f`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited runtime diagnostics timeout handling.
+  - Added `scripts/check-omnivoice-runtime.py` validation so non-positive
+    `--timeout` values fail with a concise `check-omnivoice-runtime:` error
+    before Studio URL probing.
+  - Added focused runtime-check coverage for invalid timeout values.
+  - Updated setup, MVP handoff, weekend summary, and heartbeat docs for the new
+    142-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|Next action|Open follow-ups|timeout|max_text_length|max-chars|config|selection|voice" HEARTBEAT.md docs scripts tests README.md examples`
+  - `sed -n '1,260p' scripts/check-omnivoice-runtime.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_refuses_invalid_timeout tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_reports_missing_backend_without_failing tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_accepts_loopback_studio_profiles -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Runtime timeout focused suite: PASS, 3 tests.
+  - Full bridge validator: PASS, 142 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Repo artifact scan and whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Runtime diagnostics should validate probe bounds before lower-level URL
+    handling so operator misconfiguration does not produce inconsistent errors.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Commit the runtime-check timeout validation if the reviewed diff is clean.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 16:30 America/New_York
 - Completed:
