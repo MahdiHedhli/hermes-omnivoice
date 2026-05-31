@@ -61,6 +61,8 @@ artifact directories while preserving safe nested example voice templates.
 Acceptance output keeps package-only handoff files visible without treating
 their expected default-install absence as a blocker, and strict package-file
 validation still fails when explicitly required.
+Acceptance tests now also pin the bridge required-file membership to the
+installer runtime payload so handoff manifests cannot drift silently.
 Top-level local sample directories such as `samples/`, `voice-samples/`, and
 `reference-audio/` are now covered by both the repo artifact checker and the
 installer-managed `.gitignore` safety block.
@@ -3004,7 +3006,7 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   - Keep the branch clean for handoff, or install the bridge into the real
     Hermes Agent checkout once the source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-31 00:00 America/New_York
 - Completed:
@@ -3060,6 +3062,68 @@ extras as `INCOMPLETE`, while strict package validation remains available with
 - Next action:
   - Keep the branch clean for handoff, or install the bridge into the real
     Hermes Agent checkout once the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 00:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `cefc49f`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Inspected the installer and acceptance manifests for handoff drift.
+  - Added regression coverage proving the acceptance bridge required-file list
+    and default installer runtime payload contain the same file set.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 00:30/90-test validation state.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "TODO|FIXME|Open follow-ups|Next action|blocked|source discovery|install|acceptance|package|handoff|manifest|native provider" README.md docs scripts tests HEARTBEAT.md`
+  - `sed -n '1,260p' scripts/install-hermes-omnivoice-bridge.py`
+  - `sed -n '1,240p' scripts/omnivoice-acceptance.py`
+  - `sed -n '1748,2210p' tests/test_omnivoice_tts.py`
+  - `python3 -m unittest tests.test_omnivoice_tts.AcceptanceTests -v`
+  - `python3 -m py_compile scripts/omnivoice-acceptance.py scripts/install-hermes-omnivoice-bridge.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `rg -n "00:00 America/New_York|89 tests|23:30 America/New_York|88 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+- Tests:
+  - Targeted acceptance tests: PASS, 11 tests after making the manifest guard
+    order-insensitive.
+  - Python py_compile for acceptance, installer, and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 90 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Stale handoff snapshot scan: PASS; no 00:00/89-test or older summary state
+    remains in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+  - The first order-sensitive draft of the manifest guard failed because the
+    lists contain the same files in a different order; the committed test now
+    verifies exact membership instead.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Acceptance and installer manifests should match by file membership; ordering
+    is not currently significant to runtime behavior.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Commit the manifest drift guard and keep the branch clean for handoff, or
+    install the bridge into the real Hermes Agent checkout once the source path
+    is available.
 
 ## Decision log
 
@@ -3168,6 +3232,9 @@ extras as `INCOMPLETE`, while strict package validation remains available with
 - Keep strict package-file validation failing after default runtime installs so
   local package completeness cannot be silently downgraded by the human
   non-blocking output label.
+- Pin acceptance required-file membership to the default installer payload so
+  runtime handoff coverage cannot drift while preserving order-independent
+  installer behavior.
 
 ## Open follow-ups
 

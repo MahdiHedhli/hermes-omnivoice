@@ -1764,6 +1764,12 @@ class AcceptanceTests(unittest.TestCase):
         self.assertEqual(package_report["status"], "pass")
         self.assertEqual(package_report["missing"], [])
 
+    def test_acceptance_bridge_manifest_matches_installer_payload(self) -> None:
+        self.assertEqual(
+            set(acceptance.BRIDGE_REQUIRED_FILES),
+            set(installer.BASE_MANIFEST),
+        )
+
     def test_package_only_files_are_not_default_installer_payload(self) -> None:
         package_only = set(acceptance.PACKAGE_REQUIRED_FILES)
 

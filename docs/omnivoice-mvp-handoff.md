@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 00:00 America/New_York on branch
+As of 2026-05-31 00:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 89 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 90 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/omnivoice-acceptance.py` reports `mvp_static_ready: true`,
   `real_backend_ready: false`, and `hermes_source_ready: false` in the default
@@ -77,6 +77,9 @@ As of 2026-05-31 00:00 America/New_York on branch
 - Strict package-file acceptance is covered after a default runtime install: the
   copied acceptance script still exits failed with `--require-package-files`
   when package-only helpers are absent.
+- Acceptance required-file coverage is pinned to the default installer runtime
+  payload by file membership, preventing silent manifest drift between local
+  validation and real-checkout installs.
 
 ## Validate
 
