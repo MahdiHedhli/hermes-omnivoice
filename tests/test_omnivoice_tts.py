@@ -2046,6 +2046,20 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(second, 1)
             self.assertTrue((target / "scripts" / "hermes-omnivoice-tts.py").is_file())
 
+    def test_installer_preserves_runtime_script_executable_modes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = installer.run(["--target-root", str(target)])
+
+            self.assertEqual(result, 0)
+            for relative_path in installer.BASE_MANIFEST:
+                path = Path(relative_path)
+                if path.parts[0] != "scripts" or path.suffix not in {".py", ".sh"}:
+                    continue
+                with self.subTest(relative_path=relative_path):
+                    self.assertTrue(os.access(target / relative_path, os.X_OK))
+
     def test_installer_can_include_examples(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "hermes"
