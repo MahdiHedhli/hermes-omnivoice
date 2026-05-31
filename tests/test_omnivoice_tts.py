@@ -2090,6 +2090,44 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 77)
             self.assertIn("SKIP: set HERMES_OMNIVOICE", completed.stderr)
 
+    def test_installed_smoke_script_runs_with_configured_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = installer.run(["--target-root", str(target)])
+            self.assertEqual(result, 0)
+
+            command = [
+                sys.executable,
+                str(FAKE_BACKEND_PATH),
+                "--text-file",
+                "{text_file}",
+                "--out",
+                "{out}",
+                "--voice-dir",
+                "{voice_dir}",
+                "--speed",
+                "{speed}",
+            ]
+            env = os.environ.copy()
+            env["HERMES_OMNIVOICE_COMMAND_JSON"] = json.dumps(command)
+            env.pop("HERMES_OMNIVOICE_COMMAND", None)
+            env.pop("HERMES_OMNIVOICE_STUDIO_URL", None)
+            env.pop("HERMES_OMNIVOICE_AUTO_CLI", None)
+            env["PYTHON_BIN"] = sys.executable
+
+            completed = subprocess.run(
+                [str(target / "scripts" / "test-omnivoice-tts.sh")],
+                cwd=target,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0)
+            self.assertIn("PASS: generated", completed.stdout)
+
     def test_installer_can_include_examples(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "hermes"
