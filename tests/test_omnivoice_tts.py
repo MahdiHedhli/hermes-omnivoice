@@ -2380,6 +2380,24 @@ class StudioLocalTests(unittest.TestCase):
                 timeout=1,
             )
 
+    def test_command_timeout_zero_remains_unbounded(self) -> None:
+        completed = subprocess.CompletedProcess(["true"], 0, "", "")
+        with unittest.mock.patch.object(
+            studio_local.subprocess,
+            "run",
+            return_value=completed,
+        ) as run:
+            studio_local.run_command(["true"], timeout=0)
+
+        self.assertIsNone(run.call_args.kwargs["timeout"])
+
+    def test_health_timeout_must_be_positive(self) -> None:
+        with self.assertRaisesRegex(
+            studio_local.StudioLocalError,
+            "health timeout must be greater than 0",
+        ):
+            studio_local.studio_health("http://127.0.0.1:3900", 0)
+
     def test_down_args_can_remove_volumes(self) -> None:
         args = unittest.mock.Mock()
         args.studio_dir = Path("/tmp/omnivoice-studio-src")

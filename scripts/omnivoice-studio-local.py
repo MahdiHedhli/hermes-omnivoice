@@ -146,6 +146,12 @@ def pull_image(image: str, command_timeout: int | None = None) -> None:
     run_command(["docker", "pull", image], capture=True, timeout=command_timeout)
 
 
+def validate_health_timeout(timeout: int) -> int:
+    if timeout <= 0:
+        raise StudioLocalError("health timeout must be greater than 0")
+    return timeout
+
+
 def preflight_start(args: argparse.Namespace, config: dict) -> None:
     image = service_image(config, args.profile)
     if args.no_build and args.pull == "never" and image and not local_image_exists(
@@ -190,6 +196,7 @@ def compose_down_args(args: argparse.Namespace, remove_volumes: bool = False) ->
 
 
 def studio_health(url: str, timeout: int) -> dict:
+    timeout = validate_health_timeout(timeout)
     try:
         with urllib.request.urlopen(f"{url.rstrip('/')}/health", timeout=timeout) as response:
             body = response.read().decode("utf-8", errors="replace")[:200]

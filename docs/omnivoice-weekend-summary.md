@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 18:00 America/New_York on branch
+Status as of 2026-05-31 18:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 145 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 147 tests with 1 expected
   opt-in real-backend skip.
 - Validator interpreter alignment: PASS. The fake-backend smoke command now
   uses the configured `PYTHON_BIN` instead of hardcoded `python3`, so full
@@ -64,6 +64,10 @@ sample and contains explicit confirmed consent metadata.
 - Preview input validation: PASS. `scripts/hermes-omnivoice-voices.py preview`
   rejects non-positive `--timeout` and non-positive or non-finite `--speed`
   overrides before spawning the wrapper subprocess.
+- Studio helper health timeout validation: PASS.
+  `scripts/omnivoice-studio-local.py check` rejects non-positive health
+  `--timeout` values while preserving `--command-timeout 0` as an explicit
+  unbounded manual escape hatch for Docker/Git commands.
 - Studio import allowed-use metadata handling: PASS. Empty `--allowed-use`
   values are rejected before network access, and imported allowed-use values are
   quoted in `voice.yaml` so CLI input cannot reshape consent metadata.

@@ -265,6 +265,7 @@ First startup can pull the Studio image and download model files. Keep those
 artifacts in Docker volumes or local caches; do not add them to this repo.
 Docker/Git subprocesses are bounded by `--command-timeout 900` by default; set
 `--command-timeout 0` only for an intentionally unbounded manual run.
+The health probe `--timeout` must be greater than zero.
 For a local-only startup probe that does not pull or build images, use:
 
 ```bash
