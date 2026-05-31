@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 02:00 America/New_York on branch
+Status as of 2026-05-31 02:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 93 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 94 tests with 1 expected
   opt-in real-backend skip.
 - `python scripts/omnivoice-acceptance.py --require-real-backend` after
   evaluating `setup-omnivoice-python-env.py --check-only --shell`: PASS.
@@ -68,6 +68,9 @@ sample and contains explicit confirmed consent metadata.
   configured backend instead of attempting synthesis.
 - Installed smoke configured-backend behavior: PASS. A copied smoke script can
   generate a temporary WAV through an explicit local command backend.
+- Installed example voice handling: PASS. A copied voice helper validates the
+  installed `narrator` design template as ready and keeps the `marvin` clone
+  template invalid until a user supplies the consented `ref.wav` sample.
 
 ## Remaining Blockers
 

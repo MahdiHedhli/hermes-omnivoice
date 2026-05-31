@@ -69,6 +69,9 @@ Installed smoke-script tests now also prove a default target checkout exits with
 the documented 77 skip when no backend is configured.
 Installed smoke-script tests now cover the paired success path with an explicit
 local command backend, without depending on cloud services or a real model.
+Installed example voice handling now validates through the copied voice helper:
+the designed `narrator` template is ready, while the cloned `marvin` template
+stays invalid until a user supplies the consented `ref.wav`.
 Top-level local sample directories such as `samples/`, `voice-samples/`, and
 `reference-audio/` are now covered by both the repo artifact checker and the
 installer-managed `.gitignore` safety block.
@@ -3248,7 +3251,7 @@ extras as `INCOMPLETE`, while strict package validation remains available with
     or install the bridge into the real Hermes Agent checkout once the source
     path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-31 02:00 America/New_York
 - Completed:
@@ -3304,6 +3307,68 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   - Commit the installed-smoke configured-backend guard and keep the branch clean
     for handoff, or install the bridge into the real Hermes Agent checkout once
     the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 02:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `3662f6b`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Inspected installed example voice templates and the copied voice helper
+    path.
+  - Added installer regression coverage proving the copied
+    `scripts/hermes-omnivoice-voices.py` reports the installed `narrator`
+    design example as ready.
+  - Added fail-closed coverage proving the installed clone example `marvin`
+    remains invalid until the user supplies the consented `ref.wav` sample.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 02:30/94-test validation state.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "with-examples|examples/voices|hermes-omnivoice-voices|config command|voice helper|installed.*example|example.*install" README.md docs scripts tests HEARTBEAT.md`
+  - `sed -n '1,240p' scripts/hermes-omnivoice-voices.py`
+  - `cat examples/voices/narrator/voice.yaml`
+  - `cat examples/voices/marvin/voice.yaml`
+  - `python3 -m unittest tests.test_omnivoice_tts.InstallerTests -v`
+  - `python3 -m py_compile scripts/install-hermes-omnivoice-bridge.py scripts/hermes-omnivoice-voices.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `rg -n "02:00 America/New_York|93 tests|01:30 America/New_York|92 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+- Tests:
+  - Targeted installer tests: PASS, 12 tests.
+  - Python py_compile for installer, voice helper, and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 94 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Stale handoff snapshot scan: PASS; no 02:00/93-test or older summary state
+    remains in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Installed examples are templates only; clone examples must remain invalid
+    until explicit user-provided reference audio exists.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Commit the installed example voice guard and keep the branch clean for
+    handoff, or install the bridge into the real Hermes Agent checkout once the
+    source path is available.
 
 ## Decision log
 
@@ -3424,6 +3489,8 @@ extras as `INCOMPLETE`, while strict package validation remains available with
 - Preserve the installed smoke-test configured-backend path so real target
   checkouts can prove the wrapper contract with a local command backend before
   using a heavyweight model.
+- Keep installed clone example templates invalid until a user supplies a real
+  consented reference WAV; do not commit placeholder voice samples.
 
 ## Open follow-ups
 

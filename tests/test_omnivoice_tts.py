@@ -2139,6 +2139,62 @@ class InstallerTests(unittest.TestCase):
             self.assertTrue((target / "examples" / "hermes-tts-omnivoice.yaml").is_file())
             self.assertTrue((target / "examples" / "voices" / "narrator" / "voice.yaml").is_file())
 
+    def test_installed_voice_helper_validates_example_profiles(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = installer.run(["--target-root", str(target), "--with-examples"])
+            self.assertEqual(result, 0)
+
+            voices_dir = target / "examples" / "voices"
+            helper = target / "scripts" / "hermes-omnivoice-voices.py"
+            narrator = subprocess.run(
+                [
+                    sys.executable,
+                    str(helper),
+                    "--voices-dir",
+                    str(voices_dir),
+                    "info",
+                    "narrator",
+                    "--json",
+                ],
+                cwd=target,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(narrator.returncode, 0, narrator.stderr)
+            narrator_info = json.loads(narrator.stdout)
+            self.assertEqual(narrator_info["id"], "narrator")
+            self.assertEqual(narrator_info["mode"], "design")
+            self.assertEqual(narrator_info["status"], "ready")
+            self.assertEqual(narrator_info["consent_status"], "confirmed")
+
+            marvin = subprocess.run(
+                [
+                    sys.executable,
+                    str(helper),
+                    "--voices-dir",
+                    str(voices_dir),
+                    "info",
+                    "marvin",
+                    "--json",
+                ],
+                cwd=target,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(marvin.returncode, 1)
+            marvin_info = json.loads(marvin.stdout)
+            self.assertEqual(marvin_info["id"], "marvin")
+            self.assertEqual(marvin_info["status"], "invalid")
+            self.assertIn("ref_audio is missing", marvin_info["error"])
+            self.assertIn("ref.wav", marvin_info["error"])
+
     def test_installer_can_append_gitignore_safety_block(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "hermes"
