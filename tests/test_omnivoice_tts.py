@@ -2527,6 +2527,33 @@ class HermesSourceFinderTests(unittest.TestCase):
             self.assertEqual(report["candidate_count"], 1)
             self.assertEqual(report["likely_count"], 1)
 
+    def test_discovery_refuses_non_positive_scan_timeout(self) -> None:
+        with self.assertRaisesRegex(
+            source_finder.SourceDiscoveryError,
+            "scan timeout must be greater than 0",
+        ):
+            source_finder.discover(
+                argparse_namespace(
+                    root=[Path("/tmp/missing-hermes-source")],
+                    max_depth=3,
+                    max_candidates=50,
+                    max_files=100,
+                    max_file_bytes=2048,
+                    scan_timeout=0,
+                )
+            )
+
+    def test_discovery_cli_invalid_scan_timeout_fails_without_traceback(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            result = source_finder.run(["--scan-timeout", "0", "--json"])
+
+        self.assertEqual(result, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("find-hermes-source: scan timeout must be greater than 0", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
 
 def argparse_namespace(**kwargs):
     return types.SimpleNamespace(**kwargs)
@@ -2865,6 +2892,31 @@ class AcceptanceTests(unittest.TestCase):
             self.assertEqual(stdout.getvalue(), "")
             self.assertIn("omnivoice-acceptance:", error)
             self.assertIn("{missing_placeholder}", error)
+            self.assertNotIn("Traceback", error)
+
+    def test_acceptance_invalid_source_scan_timeout_fails_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                result = acceptance.run(
+                    [
+                        "--voices-dir",
+                        str(Path(tmp) / "missing"),
+                        "--source-root",
+                        str(Path(tmp) / "source"),
+                        "--source-scan-timeout",
+                        "0",
+                        "--json",
+                    ],
+                    env={},
+                )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertIn("omnivoice-acceptance:", error)
+            self.assertIn("scan timeout must be greater than 0", error)
             self.assertNotIn("Traceback", error)
 
     def test_acceptance_reports_missing_hermes_source_by_default(self) -> None:

@@ -63,6 +63,16 @@ CONTENT_TERMS = ("tts", "text-to-speech", "speech", "voice", "provider")
 EXPIRED_CANDIDATE_INSPECTION_GRACE_SECONDS = 1.0
 
 
+class SourceDiscoveryError(RuntimeError):
+    pass
+
+
+def validate_scan_timeout(value: int) -> int:
+    if value <= 0:
+        raise SourceDiscoveryError("scan timeout must be greater than 0")
+    return value
+
+
 def safe_resolve(path: Path) -> Path:
     return path.expanduser().resolve()
 
@@ -235,7 +245,8 @@ def inspect_candidate(
 
 def discover(args: argparse.Namespace) -> dict:
     roots = args.root or DEFAULT_ROOTS
-    deadline = time.monotonic() + args.scan_timeout if args.scan_timeout > 0 else None
+    scan_timeout = validate_scan_timeout(args.scan_timeout)
+    deadline = time.monotonic() + scan_timeout
     candidate_roots, truncated = find_candidate_roots(
         roots,
         args.max_depth,
@@ -294,7 +305,11 @@ def run(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
-    report = discover(args)
+    try:
+        report = discover(args)
+    except SourceDiscoveryError as exc:
+        print(f"find-hermes-source: {exc}", file=sys.stderr)
+        return 1
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
