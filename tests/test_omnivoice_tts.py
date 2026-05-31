@@ -2195,6 +2195,36 @@ class InstallerTests(unittest.TestCase):
             self.assertIn("ref_audio is missing", marvin_info["error"])
             self.assertIn("ref.wav", marvin_info["error"])
 
+    def test_installed_voice_helper_config_uses_installed_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                result = installer.run(["--target-root", str(target), "--with-examples"])
+            self.assertEqual(result, 0)
+
+            voices_dir = target / "examples" / "voices"
+            helper = target / "scripts" / "hermes-omnivoice-voices.py"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(helper),
+                    "--voices-dir",
+                    str(voices_dir),
+                    "config",
+                    "narrator",
+                ],
+                cwd=target,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertIn(str(target / "scripts" / "hermes-omnivoice-tts.py"), completed.stdout)
+            self.assertIn(f"--voices-dir {voices_dir}", completed.stdout)
+            self.assertIn("voice: narrator", completed.stdout)
+
     def test_installer_can_append_gitignore_safety_block(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "hermes"

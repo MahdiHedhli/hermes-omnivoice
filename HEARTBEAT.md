@@ -75,6 +75,8 @@ stays invalid until a user supplies the consented `ref.wav`.
 Generated Hermes command-provider config now includes the selected
 `--voices-dir` path and shell-quotes static paths, so custom voice registries do
 not silently fall back to the default user registry.
+Installed command-provider config generation now proves copied checkouts emit
+copied wrapper paths and target voice-registry paths after `--with-examples`.
 Top-level local sample directories such as `samples/`, `voice-samples/`, and
 `reference-audio/` are now covered by both the repo artifact checker and the
 installer-managed `.gitignore` safety block.
@@ -3373,7 +3375,7 @@ extras as `INCOMPLETE`, while strict package validation remains available with
     handoff, or install the bridge into the real Hermes Agent checkout once the
     source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-31 03:00 America/New_York
 - Completed:
@@ -3436,6 +3438,63 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   - Commit the config-generation registry-path guard and keep the branch clean
     for handoff, or install the bridge into the real Hermes Agent checkout once
     the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 03:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `7a3d9ac`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Inspected current config-generation docs and tests for installed-helper
+    path coverage.
+  - Added installer regression coverage proving a copied
+    `scripts/hermes-omnivoice-voices.py config` emits the copied wrapper path
+    and target `examples/voices` registry path after `--with-examples`.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 03:30/96-test validation state.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -6`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `rg -n "Latest heartbeat|Open follow-ups|Next action|config|--voices-dir|installed.*helper|install.*config|TODO|FIXME" HEARTBEAT.md README.md docs scripts tests examples`
+  - `python3 -m unittest tests.test_omnivoice_tts.InstallerTests tests.test_omnivoice_tts.VoiceCliTests -v`
+  - `python3 -m py_compile scripts/hermes-omnivoice-voices.py tests/test_omnivoice_tts.py`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `rg -n "03:00 America/New_York|95 tests|02:30 America/New_York|94 tests" docs/omnivoice-mvp-handoff.md docs/omnivoice-weekend-summary.md README.md docs/omnivoice-acceptance.md`
+  - `git diff --check`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+- Tests:
+  - Targeted installer and voice helper tests: PASS, 19 tests.
+  - Python py_compile for voice helper and tests: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 96 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+  - Stale handoff snapshot scan: PASS; no 03:00/95-test or older summary state
+    remains in the current handoff docs.
+  - Repo artifact scan: PASS; no generated audio, models, local voice samples,
+    env files, caches, or local selection state found.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Installed checkout config generation must be relocatable and should never
+    point Hermes back at this bridge repo by accident.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Commit the installed config-generation relocation guard and keep the branch
+    clean for handoff, or install the bridge into the real Hermes Agent checkout
+    once the source path is available.
 
 ## Decision log
 
@@ -3560,6 +3619,8 @@ extras as `INCOMPLETE`, while strict package validation remains available with
   consented reference WAV; do not commit placeholder voice samples.
 - Include the voice registry path in generated command-provider config because
   relying on wrapper defaults can route Hermes to the wrong local profile root.
+- Verify generated config from installed checkouts too, because source-repo
+  paths in copied Hermes configs would be a subtle handoff failure.
 
 ## Open follow-ups
 
