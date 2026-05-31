@@ -14,7 +14,9 @@ This repo separates three gates:
 It also reports local package-only handoff files, such as the installer,
 validation script, artifact checker, examples, and heartbeat record. Those
 package extras are required in this bridge repo but are not required after a
-default install into a real Hermes checkout.
+default install into a real Hermes checkout. Human output marks missing package
+extras as `INCOMPLETE`, not as a default-install blocker; use
+`--require-package-files` when validating the bridge package itself.
 
 Run:
 

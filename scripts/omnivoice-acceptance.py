@@ -136,9 +136,14 @@ def print_human(report: dict) -> None:
         for path in report["required_files"]["missing"]:
             print(f"  - {path}")
     package = report["package_files"]
-    print(f"- Local package handoff files: {'PASS' if package['status'] == 'pass' else 'BLOCKED'}")
+    package_label = (
+        "PASS"
+        if package["status"] == "pass"
+        else "INCOMPLETE (package-only; not required after default install)"
+    )
+    print(f"- Local package handoff files: {package_label}")
     if package["missing"]:
-        print("  Missing package-only files:")
+        print("  Missing package-only files (only required with --require-package-files):")
         for path in package["missing"]:
             print(f"  - {path}")
     print(f"- Real backend ready: {'PASS' if report['real_backend_ready'] else 'BLOCKED'}")

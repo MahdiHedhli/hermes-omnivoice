@@ -1831,6 +1831,48 @@ class AcceptanceTests(unittest.TestCase):
                 report["package_files"]["missing"],
             )
 
+    def test_acceptance_human_output_marks_package_files_as_non_blocking_after_install(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "hermes"
+            with contextlib.redirect_stdout(io.StringIO()):
+                install_result = installer.run(["--target-root", str(target)])
+            self.assertEqual(install_result, 0)
+
+            spec = importlib.util.spec_from_file_location(
+                "installed_omnivoice_acceptance_human",
+                target / "scripts" / "omnivoice-acceptance.py",
+            )
+            assert spec is not None and spec.loader is not None
+            installed_acceptance = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(installed_acceptance)
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                result = installed_acceptance.run(
+                    [
+                        "--voices-dir",
+                        str(target / "missing-voices"),
+                        "--source-root",
+                        str(target / "missing-source"),
+                    ],
+                    env={},
+                )
+
+            text = output.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn(
+                "- Local package handoff files: INCOMPLETE "
+                "(package-only; not required after default install)",
+                text,
+            )
+            self.assertIn(
+                "Missing package-only files (only required with --require-package-files):",
+                text,
+            )
+            self.assertNotIn("- Local package handoff files: BLOCKED", text)
+
     def test_acceptance_can_require_real_backend(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             output = io.StringIO()

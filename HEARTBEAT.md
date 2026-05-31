@@ -64,6 +64,9 @@ installer-managed `.gitignore` safety block.
 The artifact checker denylist, repo `.gitignore`, and installer-managed
 `.gitignore` safety block now have regression coverage to prevent top-level
 artifact-directory drift.
+Installed-checkout human acceptance output now labels missing package-only
+extras as `INCOMPLETE`, while strict package validation remains available with
+`--require-package-files`.
 
 ## Previous heartbeat
 
@@ -2886,7 +2889,7 @@ artifact-directory drift.
   - Keep the branch clean for handoff, or install the bridge into the real
     Hermes Agent checkout once the source path is available.
 
-## Latest heartbeat
+## Previous heartbeat
 
 - Time: 2026-05-30 23:00 America/New_York
 - Completed:
@@ -2937,6 +2940,62 @@ artifact-directory drift.
 - Assumptions:
   - The artifact checker denylist and ignore patterns should stay mechanically
     aligned because both are security-sensitive handoff surfaces.
+  - Native-provider work still waits on the actual Hermes Agent source.
+- Next action:
+  - Keep the branch clean for handoff, or install the bridge into the real
+    Hermes Agent checkout once the source path is available.
+
+## Latest heartbeat
+
+- Time: 2026-05-30 23:30 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `8563f2d`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Confirmed the isolated OmniVoice Python venv remains ready and can provide
+    shell exports for the real OmniVoice adapter command.
+  - Updated human acceptance output so missing package-only handoff extras are
+    labeled `INCOMPLETE`, not `BLOCKED`, after a default install into a real
+    Hermes checkout.
+  - Kept strict package validation behavior unchanged via
+    `--require-package-files`.
+  - Added installed-checkout human-output regression coverage.
+  - Refreshed the packaged MVP handoff and weekend summary snapshots to the
+    current 23:30/88-test validation state.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/setup-omnivoice-python-env.py --check-only --json`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `rg -n "TODO|FIXME|Open follow-ups|Next action|follow-up|blocked|artifact|\\.gitignore|acceptance|source discovery|sample|cache" README.md docs scripts tests HEARTBEAT.md .gitignore`
+  - `python3 -m unittest tests.test_omnivoice_tts.AcceptanceTests -v`
+  - `python3 -m py_compile scripts/omnivoice-acceptance.py tests/test_omnivoice_tts.py`
+  - `python3 scripts/omnivoice-acceptance.py --source-root /tmp/nonexistent-hermes-root`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+- Tests:
+  - Targeted acceptance tests: PASS, 9 tests.
+  - Python py_compile for acceptance and tests: PASS.
+  - Human default acceptance smoke: PASS; package files show `PASS` in this
+    complete bridge repo.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS; includes 88 tests with 1
+    expected opt-in real-backend skip, py_compile, strict package-file
+    acceptance, fake-backend smoke, unconfigured smoke skip, secret-pattern
+    scan, helper-backed generated-artifact scan, and `git diff --check`.
+  - Strict real-backend acceptance after evaluating generated shell exports:
+    PASS; `real_backend_ready: true`, `hermes_source_ready: false`,
+    `package_files.required_count: 7`.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Package-only files are useful in this bridge repo but expected to be absent
+    after a default runtime install into Hermes.
   - Native-provider work still waits on the actual Hermes Agent source.
 - Next action:
   - Keep the branch clean for handoff, or install the bridge into the real
@@ -3044,6 +3103,8 @@ artifact-directory drift.
   matching installer `.gitignore` coverage for real Hermes checkouts.
 - Keep artifact checker top-level directory rules aligned with both repo and
   installer `.gitignore` coverage through tests.
+- Keep package-only handoff files visible in human acceptance output without
+  labeling their expected default-install absence as a blocker.
 
 ## Open follow-ups
 
