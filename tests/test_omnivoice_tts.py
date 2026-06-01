@@ -397,6 +397,59 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "consent.status"):
                 omnivoice.validate_voice_profile(profile, voice_dir)
 
+    def test_empty_consent_source_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp)
+            voice_dir = write_voice(voices_root)
+            profile_path = voice_dir / "voice.yaml"
+            profile_path.write_text(
+                profile_path.read_text(encoding="utf-8").replace(
+                    "  source: user_uploaded",
+                    "  source:   ",
+                ),
+                encoding="utf-8",
+            )
+            profile, resolved_dir = omnivoice.load_voice_profile(voices_root, "marvin")
+
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "consent.source"):
+                omnivoice.validate_voice_profile(profile, resolved_dir)
+
+    def test_empty_consent_allowed_uses_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp)
+            voice_dir = write_voice(voices_root)
+            profile_path = voice_dir / "voice.yaml"
+            profile_path.write_text(
+                profile_path.read_text(encoding="utf-8").replace(
+                    "  allowed_uses:\n"
+                    "    - personal_assistant\n"
+                    "    - local_generation\n",
+                    "  allowed_uses:\n",
+                ),
+                encoding="utf-8",
+            )
+            profile, resolved_dir = omnivoice.load_voice_profile(voices_root, "marvin")
+
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "consent.allowed_uses"):
+                omnivoice.validate_voice_profile(profile, resolved_dir)
+
+    def test_blank_consent_allowed_use_entry_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp)
+            voice_dir = write_voice(voices_root)
+            profile_path = voice_dir / "voice.yaml"
+            profile_path.write_text(
+                profile_path.read_text(encoding="utf-8").replace(
+                    "    - local_generation",
+                    "    - \"\"",
+                ),
+                encoding="utf-8",
+            )
+            profile, resolved_dir = omnivoice.load_voice_profile(voices_root, "marvin")
+
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "non-empty strings"):
+                omnivoice.validate_voice_profile(profile, resolved_dir)
+
     def test_missing_ref_audio_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             voices_root = Path(tmp)
@@ -2090,6 +2143,30 @@ class CreateVoiceTests(unittest.TestCase):
             self.assertIn("allowed uses cannot be empty", stderr.getvalue())
             self.assertFalse((voices_root / "narrator").exists())
 
+    def test_create_design_voice_rejects_empty_consent_source_before_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp) / "voices"
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "design",
+                        "narrator",
+                        "--instruct",
+                        "calm voice",
+                        "--consent-source",
+                        "   ",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("consent source cannot be empty", stderr.getvalue())
+            self.assertFalse((voices_root / "narrator").exists())
+
     def test_create_clone_voice_requires_confirmed_consent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -2255,6 +2332,35 @@ class CreateVoiceTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
             self.assertIn("allowed uses cannot be empty", stderr.getvalue())
+            self.assertFalse((voices_root / "marvin" / "ref.wav").exists())
+
+    def test_create_clone_voice_rejects_empty_consent_source_before_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            source_ref = root / "source.wav"
+            write_wav(source_ref)
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "clone",
+                        "marvin",
+                        "--ref-audio",
+                        str(source_ref),
+                        "--ref-text",
+                        "Reference transcript.",
+                        "--consent-source",
+                        "   ",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("consent source cannot be empty", stderr.getvalue())
             self.assertFalse((voices_root / "marvin" / "ref.wav").exists())
 
     def test_create_clone_force_replaces_existing_material_symlinks(self) -> None:

@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 00:30 America/New_York on branch
+Status as of 2026-06-01 01:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,12 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 174 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 179 tests with 1 expected
   opt-in real-backend skip.
+- Consent metadata validation: PASS. Voice profile validation now requires
+  non-empty `consent.source` and at least one non-empty
+  `consent.allowed_uses` entry, and the voice creation helper rejects empty
+  `--consent-source` values before writing profile material.
 - Setup and auto-CLI model validation: PASS. Empty setup `--model` and
   `--package` values fail before export or pip command planning, and wrapper
   auto-CLI mode rejects an empty model before command construction.
@@ -208,7 +212,8 @@ sample and contains explicit confirmed consent metadata.
 
 - No voice samples, generated audio, model files, caches, secrets, local config,
   or local voice selection state are committed.
-- Cloned voices require `consent.status: confirmed`, `ref_audio`, `ref_text`,
+- Cloned voices require `consent.status: confirmed`, non-empty
+  `consent.source`, non-empty `consent.allowed_uses`, `ref_audio`, `ref_text`,
   and a readable WAV reference file.
 - Created/imported local voice profile files are private by default and should
   stay under `~/.hermes/voices/omnivoice`, outside the repo.

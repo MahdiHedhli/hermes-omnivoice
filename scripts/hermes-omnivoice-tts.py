@@ -284,6 +284,16 @@ def validate_voice_profile(profile: dict, voice_dir: Path) -> dict:
         raise OmniVoiceConfigError("voice profile mode must be 'clone' or 'design'")
     if not isinstance(consent, dict) or consent.get("status") != "confirmed":
         raise OmniVoiceConfigError("voice profile requires consent.status: confirmed")
+    consent_source = consent.get("source")
+    if not isinstance(consent_source, str) or not consent_source.strip():
+        raise OmniVoiceConfigError("voice profile requires consent.source")
+    allowed_uses = consent.get("allowed_uses")
+    if not isinstance(allowed_uses, list) or not allowed_uses:
+        raise OmniVoiceConfigError("voice profile requires consent.allowed_uses")
+    if any(not isinstance(item, str) or not item.strip() for item in allowed_uses):
+        raise OmniVoiceConfigError(
+            "voice profile consent.allowed_uses entries must be non-empty strings"
+        )
 
     resolved = dict(profile)
     if mode == "clone":

@@ -182,10 +182,63 @@ Local voice creation now rejects non-finite or non-positive speed values before
 creating profile directories or copying clone reference audio.
 Local voice creation now rejects empty consent allowed-use metadata before
 creating profile directories or copying clone reference audio.
+Voice profile validation now also requires non-empty consent source and
+allowed-use metadata, and local voice creation rejects empty consent sources
+before writing profile material.
 Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 01:00 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Hardened `scripts/hermes-omnivoice-tts.py` so arbitrary `voice.yaml`
+    profiles must include non-empty `consent.source` and at least one
+    non-empty `consent.allowed_uses` entry, in addition to
+    `consent.status: confirmed`.
+  - Hardened `scripts/create-omnivoice-voice.py` so empty
+    `--consent-source` values fail before profile directory creation or clone
+    reference-audio copy.
+  - Updated README, custom voice, MVP handoff, and weekend-summary docs for
+    the stricter consent metadata gate and 179-test snapshot.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_loads_valid_clone_voice tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_invalid_consent_fails tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_empty_consent_source_fails tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_empty_consent_allowed_uses_fail tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_blank_consent_allowed_use_entry_fails tests.test_omnivoice_tts.CreateVoiceTests.test_create_design_voice_validates_with_confirmed_consent tests.test_omnivoice_tts.CreateVoiceTests.test_create_design_voice_rejects_empty_consent_source_before_writes tests.test_omnivoice_tts.CreateVoiceTests.test_create_clone_voice_copies_wav_and_validates tests.test_omnivoice_tts.CreateVoiceTests.test_create_clone_voice_rejects_empty_consent_source_before_copy -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused consent metadata validation suite: PASS, 9 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 179 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Confirmed consent should require an auditable source and explicit allowed
+    use scope before Hermes can use any custom voice profile.
+- Next action:
+  - Continue bounded MVP hardening, or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 00:30 America/New_York
 - Completed:

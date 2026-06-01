@@ -97,6 +97,13 @@ def validate_allowed_uses(values: list[str] | None) -> list[str]:
     return clean
 
 
+def validate_consent_source(value: str) -> str:
+    source = value.strip()
+    if not source:
+        raise CreateVoiceError("consent source cannot be empty")
+    return source
+
+
 def prepare_voice_dir(voices_dir: Path, voice_id: str, force: bool) -> Path:
     validate_voice_id(voice_id)
     voices_root = voices_dir.expanduser().resolve()
@@ -177,6 +184,7 @@ def command_design(args: argparse.Namespace) -> int:
         raise CreateVoiceError("design voice requires --instruct")
     speed = validate_speed(args.speed)
     allowed_uses = validate_allowed_uses(args.allowed_use)
+    consent_source = validate_consent_source(args.consent_source)
     voice_dir = prepare_voice_dir(args.voices_dir, args.voice_id, args.force)
     write_voice_yaml(
         path=voice_dir / "voice.yaml",
@@ -185,7 +193,7 @@ def command_design(args: argparse.Namespace) -> int:
         mode="design",
         language=args.language,
         speed=speed,
-        consent_source=args.consent_source,
+        consent_source=consent_source,
         allowed_uses=allowed_uses,
         instruct=instruct,
     )
@@ -206,6 +214,7 @@ def command_clone(args: argparse.Namespace) -> int:
         raise CreateVoiceError("clone voice requires --ref-text")
     speed = validate_speed(args.speed)
     allowed_uses = validate_allowed_uses(args.allowed_use)
+    consent_source = validate_consent_source(args.consent_source)
 
     voice_dir = prepare_voice_dir(args.voices_dir, args.voice_id, args.force)
     ref_dest = voice_dir / "ref.wav"
@@ -219,7 +228,7 @@ def command_clone(args: argparse.Namespace) -> int:
         mode="clone",
         language=args.language,
         speed=speed,
-        consent_source=args.consent_source,
+        consent_source=consent_source,
         allowed_uses=allowed_uses,
         ref_text=ref_text,
         instruct=args.instruct.strip(),

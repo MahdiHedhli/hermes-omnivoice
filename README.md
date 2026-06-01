@@ -7,7 +7,8 @@ This repo is intentionally conservative:
 
 - Voice samples, generated audio, model weights, caches, and local config stay
   out of git.
-- Cloned voices require `consent.status: confirmed`.
+- Cloned voices require `consent.status: confirmed`, a non-empty
+  `consent.source`, and at least one non-empty `consent.allowed_uses` entry.
 - Cloned voice reference files are validated as readable WAV audio before use.
 - Local voice profile directories are written private by default; registry YAML
   and copied/imported `ref.wav` files are `0600`.

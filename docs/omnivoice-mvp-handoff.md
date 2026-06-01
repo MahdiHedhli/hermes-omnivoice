@@ -31,11 +31,15 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 00:30 America/New_York on branch
+As of 2026-06-01 01:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 174 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 179 tests and 1 expected
   opt-in real-backend skip.
+- Voice profile validation now requires non-empty `consent.source` and at
+  least one non-empty `consent.allowed_uses` entry, and the voice creation
+  helper rejects empty `--consent-source` values before writing profile
+  material.
 - `scripts/setup-omnivoice-python-env.py` now rejects empty `--model` and
   `--package` values before planning exports or pip commands, and wrapper
   auto-CLI mode rejects an empty model before composing the backend command.
@@ -188,6 +192,10 @@ As of 2026-06-01 00:30 America/New_York on branch
   before printing Hermes config, and the shipped Hermes TTS config example
   defaults to the ready `narrator` design profile instead of the clone template
   that intentionally lacks reference audio.
+- Voice profile validation now requires confirmed consent with non-empty
+  `consent.source` and at least one non-empty `consent.allowed_uses` entry.
+  The local voice creation helper rejects empty `--consent-source` values
+  before profile directory creation or clone reference-audio copy.
 - Generated and static command-provider examples now include explicit
   `speed: 1.0` alongside the selected voice, matching the wrapper's speed
   argument and the documented Hermes config surface.
