@@ -187,7 +187,8 @@ python scripts/hermes-omnivoice-voices.py config narrator
 The preview command uses `scripts/hermes-omnivoice-tts.py`, so it requires the
 same local Studio URL or backend command configuration as Hermes TTS. The
 preview helper validates `--speed` and `--timeout` overrides before launching
-the wrapper subprocess. The
+the wrapper subprocess, and preserves the final output path so the wrapper can
+replace an existing preview output symlink instead of following it. The
 `set` command validates consent and writes `~/.hermes/omnivoice-selection.json`
 for user-level selection state using a private `0600` atomic same-directory
 replace. Existing destination symlinks are replaced instead of followed. The

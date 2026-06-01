@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 07:30 America/New_York on branch
+As of 2026-06-01 08:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 202 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 203 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/check-omnivoice-runtime.py` now reuses the wrapper voice-profile
   validator when reporting local voice readiness, so acceptance cannot count
@@ -258,6 +258,9 @@ As of 2026-06-01 07:30 America/New_York on branch
   synthesis, passes command backends a private same-directory temp output path,
   makes successful generated output audio `0600`, and validates command or
   Studio response audio before atomically replacing the requested output.
+- `scripts/hermes-omnivoice-voices.py preview` now preserves the final output
+  path when invoking the wrapper, so preview output symlinks are replaced
+  instead of followed.
 - `scripts/hermes-omnivoice-tts.py` rejects symlinked text input files before
   reading text or starting a backend, so the Hermes text temp path cannot alias
   another local file.

@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 07:30 America/New_York on branch
+Status as of 2026-06-01 08:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 202 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 203 tests with 1 expected
   opt-in real-backend skip.
 - Runtime voice readiness guard: PASS. Runtime diagnostics reuse the wrapper
   voice-profile validator so acceptance does not count unsafe registry aliases,
@@ -222,6 +222,9 @@ sample and contains explicit confirmed consent metadata.
   before backend synthesis, passes command backends a private temporary output
   path, leaves successful output audio with `0600` permissions, and validates
   command or Studio response audio before atomic replacement.
+- Preview output symlink guard: PASS. The voice helper preview command
+  preserves the final output path when invoking the wrapper, so preview output
+  symlinks are replaced instead of followed.
 - Text input symlink guard: PASS. The wrapper rejects symlinked `--text-file`
   inputs before reading text or starting a backend, so the Hermes text temp
   path cannot alias another local file.

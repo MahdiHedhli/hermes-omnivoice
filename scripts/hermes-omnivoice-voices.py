@@ -108,7 +108,7 @@ def command_preview(args: argparse.Namespace) -> int:
         print(f"Voice {args.voice} is invalid: {summary['error']}", file=sys.stderr)
         return 1
     speed = omnivoice.normalize_speed(args.speed if args.speed is not None else summary["speed"])
-    out_path = args.out.expanduser().resolve()
+    out_path = omnivoice.resolve_output_path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as handle:
         handle.write(args.text)

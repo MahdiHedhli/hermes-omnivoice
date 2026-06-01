@@ -4840,6 +4840,54 @@ class VoiceCliTests(unittest.TestCase):
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
 
+    def test_preview_replaces_output_symlink_without_touching_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root, "marvin")
+            out_file = root / "preview.wav"
+            target = root / "target.wav"
+            target.write_text("sentinel", encoding="utf-8")
+            try:
+                out_file.symlink_to(target)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            command = [
+                sys.executable,
+                str(FAKE_BACKEND_PATH),
+                "--text-file",
+                "{text_file}",
+                "--out",
+                "{out}",
+                "--voice-dir",
+                "{voice_dir}",
+                "--speed",
+                "{speed}",
+            ]
+
+            with unittest.mock.patch.dict(
+                "os.environ",
+                {"HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(command)},
+                clear=False,
+            ):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    result = voices_cli.run(
+                        [
+                            "--voices-dir",
+                            str(voices_root),
+                            "preview",
+                            "marvin",
+                            "--out",
+                            str(out_file),
+                        ]
+                    )
+
+            self.assertEqual(result, 0)
+            self.assertEqual(target.read_text(encoding="utf-8"), "sentinel")
+            self.assertFalse(out_file.is_symlink())
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertGreater(wav.getnframes(), 0)
+
     def test_preview_refuses_invalid_timeout_without_spawning_wrapper(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

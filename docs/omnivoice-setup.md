@@ -428,7 +428,9 @@ python scripts/hermes-omnivoice-voices.py preview marvin --out /tmp/marvin-previ
 ```
 
 Preview `--speed` and `--timeout` overrides are validated before the helper
-launches the wrapper subprocess.
+launches the wrapper subprocess. Preview output paths preserve the final path
+component so the wrapper can replace an existing output symlink instead of
+following it.
 
 Print a Hermes command-provider config example:
 

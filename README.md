@@ -23,6 +23,8 @@ This repo is intentionally conservative:
 - Generated output audio is validated before final replacement, written as
   `0600`, and an existing output symlink is replaced instead of followed.
 - Symlinked TTS text inputs are rejected before backend startup.
+- The preview helper preserves the wrapper's final output path handling, so
+  preview output symlinks are replaced instead of followed.
 - OmniVoice-Studio is treated as loopback-only by default because it has no
   built-in authentication.
 - The first integration path is a command provider, not a native Hermes patch,
