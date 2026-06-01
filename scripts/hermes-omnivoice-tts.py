@@ -267,6 +267,8 @@ def _safe_child_path(parent: Path, child: str) -> Path:
 def load_voice_profile(voices_dir: Path, voice_id: str) -> tuple[dict, Path]:
     voice_dir = resolve_voice_dir(voices_dir, voice_id)
     profile_path = voice_dir / "voice.yaml"
+    if profile_path.is_symlink():
+        raise OmniVoiceConfigError(f"voice profile file cannot be a symlink: {profile_path}")
     if not profile_path.exists():
         raise OmniVoiceConfigError(f"voice profile not found: {profile_path}")
 
@@ -308,6 +310,11 @@ def validate_voice_profile(profile: dict, voice_dir: Path) -> dict:
             raise OmniVoiceConfigError("clone voice requires ref_audio")
         if not ref_text:
             raise OmniVoiceConfigError("clone voice requires ref_text")
+        raw_ref_audio_path = voice_dir / ref_audio
+        if raw_ref_audio_path.is_symlink():
+            raise OmniVoiceConfigError(
+                f"clone voice ref_audio cannot be a symlink: {raw_ref_audio_path}"
+            )
         ref_audio_path = _safe_child_path(voice_dir, ref_audio)
         if not ref_audio_path.is_file():
             raise OmniVoiceConfigError(f"clone voice ref_audio is missing: {ref_audio_path}")

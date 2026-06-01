@@ -209,6 +209,8 @@ reference audio is missing, `speed` is not finite and greater than zero,
 `timeout` is not greater than zero, the input exceeds `--max-chars`, the output
 path does not end in `.wav`, the backend command fails, or the output WAV is
 not valid. It rejects non-`.wav` output paths before backend or Studio startup.
+It also rejects symlinked `voice.yaml` files and cloned `ref_audio` files before
+using registry material.
 It removes an existing output-file symlink before synthesis so local backends do
 not follow it, passes command backends a private same-directory temporary output
 path, and leaves successful generated audio with `0600` permissions. Command

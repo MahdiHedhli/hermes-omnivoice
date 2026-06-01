@@ -12,6 +12,8 @@ This repo is intentionally conservative:
 - Cloned voice reference files are validated as readable WAV audio before use.
 - Local voice profile directories are written private by default; registry YAML
   and copied/imported `ref.wav` files are `0600`.
+- Runtime profile loading rejects symlinked `voice.yaml` files and cloned
+  `ref_audio` files.
 - Create/import helpers refuse final voice-directory symlinks so forced writes
   cannot alias another profile.
 - The Studio importer validates profile JSON shape before requesting audio or

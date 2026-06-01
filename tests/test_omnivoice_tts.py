@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import stat
 import subprocess
 import sys
@@ -392,6 +393,37 @@ class OmniVoiceRegistryTests(unittest.TestCase):
 
             with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "escapes"):
                 omnivoice.resolve_voice_dir(root / "voices", "escape")
+
+    def test_voice_yaml_symlink_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp) / "voices"
+            voice_dir = write_voice(voices_root)
+            target = Path(tmp) / "outside.yaml"
+            target.write_text((voice_dir / "voice.yaml").read_text(encoding="utf-8"), encoding="utf-8")
+            (voice_dir / "voice.yaml").unlink()
+            try:
+                (voice_dir / "voice.yaml").symlink_to(target)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "voice profile file"):
+                omnivoice.load_voice_profile(voices_root, "marvin")
+
+    def test_ref_audio_symlink_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp) / "voices"
+            voice_dir = write_voice(voices_root)
+            target = voice_dir / "target.wav"
+            shutil.copyfile(voice_dir / "ref.wav", target)
+            (voice_dir / "ref.wav").unlink()
+            try:
+                (voice_dir / "ref.wav").symlink_to(target)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            profile, resolved_dir = omnivoice.load_voice_profile(voices_root, "marvin")
+
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "ref_audio cannot be a symlink"):
+                omnivoice.validate_voice_profile(profile, resolved_dir)
 
     def test_invalid_consent_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
