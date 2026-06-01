@@ -100,6 +100,8 @@ python scripts/omnivoice-studio-local.py start
 
 The helper validates the Compose port mapping before startup and rejects a
 configuration that publishes Studio beyond loopback.
+The configured published `--port` must also be between 1 and 65535 and is
+rejected before Docker or Git commands can run.
 
 Use `python scripts/omnivoice-studio-local.py start --no-fetch --no-build --pull never`
 for a local-only startup probe that will not pull or build Docker images.

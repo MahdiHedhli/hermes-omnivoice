@@ -34,6 +34,12 @@ def normalize_command_timeout(timeout: int | None) -> int | None:
     return timeout
 
 
+def validate_port(port: int) -> int:
+    if port < 1 or port > 65535:
+        raise StudioLocalError("port must be between 1 and 65535")
+    return port
+
+
 def run_command(
     argv: list[str],
     *,
@@ -399,6 +405,8 @@ def run(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         args.command_timeout = normalize_command_timeout(args.command_timeout)
+        if hasattr(args, "port"):
+            args.port = validate_port(args.port)
         return args.func(args)
     except (OSError, json.JSONDecodeError, StudioLocalError) as exc:
         print(f"omnivoice-studio-local: {exc}", file=sys.stderr)

@@ -2259,6 +2259,26 @@ class StudioLocalTests(unittest.TestCase):
         with self.assertRaisesRegex(studio_local.StudioLocalError, "published port"):
             studio_local.validate_loopback_ports(config, "cpu", 3900)
 
+    def test_port_must_be_positive_before_subcommand(self) -> None:
+        stderr = io.StringIO()
+        with unittest.mock.patch.object(studio_local, "command_check") as command_check, \
+            contextlib.redirect_stderr(stderr):
+            result = studio_local.run(["check", "--port", "0", "--json"])
+
+        self.assertEqual(result, 1)
+        self.assertIn("port must be between 1 and 65535", stderr.getvalue())
+        command_check.assert_not_called()
+
+    def test_port_must_not_exceed_tcp_range_before_subcommand(self) -> None:
+        stderr = io.StringIO()
+        with unittest.mock.patch.object(studio_local, "command_start") as command_start, \
+            contextlib.redirect_stderr(stderr):
+            result = studio_local.run(["start", "--port", "65536", "--no-fetch"])
+
+        self.assertEqual(result, 1)
+        self.assertIn("port must be between 1 and 65535", stderr.getvalue())
+        command_start.assert_not_called()
+
     def test_start_args_can_be_local_only(self) -> None:
         args = unittest.mock.Mock()
         args.studio_dir = Path("/tmp/omnivoice-studio-src")

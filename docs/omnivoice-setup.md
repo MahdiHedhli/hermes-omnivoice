@@ -255,8 +255,8 @@ python scripts/omnivoice-studio-local.py logs
 python scripts/omnivoice-studio-local.py stop
 ```
 
-The helper validates that Studio's published API port is bound to loopback
-before `start` runs. By default it uses:
+The helper validates that Studio's published API port is in the valid TCP range
+and bound to loopback before `start` runs. By default it uses:
 
 ```text
 ~/.cache/hermes/OmniVoice-Studio
@@ -270,6 +270,8 @@ Docker/Git subprocesses are bounded by `--command-timeout 900` by default; set
 `--command-timeout 0` only for an intentionally unbounded manual run.
 Negative `--command-timeout` values are rejected before Docker or Git commands
 can run.
+The published `--port` value must be between 1 and 65535 and is rejected before
+Docker or Git commands can run.
 The health probe `--timeout` must be greater than zero.
 The `logs --tail` value must be zero or greater so log inspection stays
 bounded by an explicit line count.
