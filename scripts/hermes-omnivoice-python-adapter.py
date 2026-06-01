@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import os
 from pathlib import Path
 import sys
@@ -18,6 +19,18 @@ def _optional(value: str | None) -> str | None:
         return None
     value = value.strip()
     return value or None
+
+
+def _validate_speed(speed: float) -> float:
+    if not math.isfinite(speed) or speed <= 0:
+        raise PythonAdapterError("speed must be a finite number greater than 0")
+    return speed
+
+
+def _validate_sample_rate(sample_rate: int) -> int:
+    if sample_rate <= 0:
+        raise PythonAdapterError("sample rate must be greater than 0")
+    return sample_rate
 
 
 def _load_backend():
@@ -60,6 +73,8 @@ def _resolve_dtype(torch_module, dtype_name: str):
 def synthesize(args: argparse.Namespace) -> None:
     text_file = args.text_file.expanduser().resolve()
     output_path = args.out.expanduser().resolve()
+    speed = _validate_speed(args.speed)
+    sample_rate = _validate_sample_rate(args.sample_rate)
     ref_audio = _optional(args.ref_audio)
     ref_text = _optional(args.ref_text)
     instruct = _optional(args.instruct)
@@ -86,7 +101,7 @@ def synthesize(args: argparse.Namespace) -> None:
     model = OmniVoice.from_pretrained(args.model, device_map=device, dtype=dtype)
     generate_kwargs = {
         "text": text_file.read_text(encoding="utf-8"),
-        "speed": args.speed,
+        "speed": speed,
     }
     if language:
         generate_kwargs["language"] = language
@@ -101,7 +116,8 @@ def synthesize(args: argparse.Namespace) -> None:
         raise PythonAdapterError("OmniVoice did not return audio")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    sampling_rate = int(getattr(model, "sampling_rate", args.sample_rate))
+    sampling_rate = int(getattr(model, "sampling_rate", sample_rate))
+    _validate_sample_rate(sampling_rate)
     soundfile.write(str(output_path), audios[0], sampling_rate)
 
 

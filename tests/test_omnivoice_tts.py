@@ -1325,6 +1325,84 @@ class PythonAdapterTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
 
+    def test_python_adapter_rejects_invalid_speed_before_backend_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with unittest.mock.patch.object(python_adapter, "_load_backend") as load_backend, \
+                contextlib.redirect_stderr(stderr):
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--instruct",
+                        "male, american accent, moderate pitch",
+                        "--speed",
+                        "nan",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("speed must be a finite number greater than 0", stderr.getvalue())
+            load_backend.assert_not_called()
+
+    def test_python_adapter_rejects_non_positive_speed_before_backend_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with unittest.mock.patch.object(python_adapter, "_load_backend") as load_backend, \
+                contextlib.redirect_stderr(stderr):
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--instruct",
+                        "male, american accent, moderate pitch",
+                        "--speed",
+                        "0",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("speed must be a finite number greater than 0", stderr.getvalue())
+            load_backend.assert_not_called()
+
+    def test_python_adapter_rejects_sample_rate_before_backend_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with unittest.mock.patch.object(python_adapter, "_load_backend") as load_backend, \
+                contextlib.redirect_stderr(stderr):
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--instruct",
+                        "male, american accent, moderate pitch",
+                        "--sample-rate",
+                        "0",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("sample rate must be greater than 0", stderr.getvalue())
+            load_backend.assert_not_called()
+
 
 class PythonEnvSetupTests(unittest.TestCase):
     def test_setup_env_dry_run_plans_command_json_without_creating_venv(self) -> None:

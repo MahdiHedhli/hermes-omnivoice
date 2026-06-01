@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 22:30 America/New_York on branch
+Status as of 2026-05-31 23:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,11 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 163 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 166 tests with 1 expected
   opt-in real-backend skip.
+- Python adapter bounds validation: PASS. Non-finite or non-positive
+  `--speed` values and non-positive `--sample-rate` values are rejected before
+  loading the OmniVoice Python backend.
 - Studio helper port validation: PASS. Invalid published `--port` values are
   rejected before Docker can run.
 - Validator interpreter alignment: PASS. The fake-backend smoke command now
