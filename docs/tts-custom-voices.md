@@ -167,6 +167,8 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   private temporary output path, and leaves successful output files with `0600`
   permissions. Command and Studio API outputs are validated before atomic
   replacement.
+- Symlinked `--text-file` inputs are rejected before the wrapper reads text or
+  starts a backend, so a Hermes temp-file path cannot alias another local file.
 
 ## Voice Helper CLI
 

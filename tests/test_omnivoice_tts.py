@@ -698,6 +698,50 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             self.assertIn("text file exceeds max text length", stderr.getvalue())
             self.assertFalse(out_file.exists())
 
+    def test_text_file_symlink_fails_before_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            target_text = root / "target.txt"
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            marker = root / "backend-ran"
+            target_text.write_text("sensitive local text", encoding="utf-8")
+            try:
+                text_file.symlink_to(target_text)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "marvin",
+                    ],
+                    env={
+                        "HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(
+                            [
+                                sys.executable,
+                                "-c",
+                                f"from pathlib import Path; Path({str(marker)!r}).write_text('ran')",
+                            ]
+                        )
+                    },
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("text file cannot be a symlink", stderr.getvalue())
+            self.assertFalse(marker.exists())
+            self.assertFalse(out_file.exists())
+
     def test_command_failure_returns_nonzero(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

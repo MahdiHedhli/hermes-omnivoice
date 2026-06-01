@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 07:00 America/New_York on branch
+As of 2026-06-01 07:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 201 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 202 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/check-omnivoice-runtime.py` now reuses the wrapper voice-profile
   validator when reporting local voice readiness, so acceptance cannot count
@@ -43,6 +43,8 @@ As of 2026-06-01 07:00 America/New_York on branch
 - `scripts/hermes-omnivoice-tts.py` now rejects symlinked voice registry roots,
   voice directories, `voice.yaml` files, and cloned `ref_audio` files before
   using local registry material.
+- `scripts/hermes-omnivoice-tts.py` now rejects symlinked `--text-file` inputs
+  before reading text or starting a backend.
 - `scripts/hermes-omnivoice-tts.py` now rejects non-`.wav` output paths before
   backend command execution or Studio API network access.
 - `scripts/check-omnivoice-runtime.py` now reports malformed Studio `/profiles`
@@ -256,6 +258,9 @@ As of 2026-06-01 07:00 America/New_York on branch
   synthesis, passes command backends a private same-directory temp output path,
   makes successful generated output audio `0600`, and validates command or
   Studio response audio before atomically replacing the requested output.
+- `scripts/hermes-omnivoice-tts.py` rejects symlinked text input files before
+  reading text or starting a backend, so the Hermes text temp path cannot alias
+  another local file.
 - Command templates fail closed on unknown placeholders, unsupported
   placeholder access, or malformed brace syntax before backend startup; literal
   braces should be written as `{{` and `}}`.

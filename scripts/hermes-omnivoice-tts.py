@@ -656,7 +656,10 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
     runtime_env = dict(os.environ if env is None else env)
 
     try:
-        text_file = args.text_file.expanduser().resolve()
+        raw_text_file = args.text_file.expanduser()
+        if raw_text_file.is_symlink():
+            raise OmniVoiceConfigError(f"text file cannot be a symlink: {raw_text_file}")
+        text_file = raw_text_file.resolve()
         output_path = resolve_output_path(args.out)
         validate_output_path(output_path)
         if not text_file.is_file():

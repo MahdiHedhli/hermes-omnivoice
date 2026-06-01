@@ -120,6 +120,9 @@ Generated TTS output is now hardened too: the wrapper removes existing output
 symlinks before backend synthesis, leaves successful output audio as `0600`,
 passes command backends a private temporary output path, and validates command
 or Studio API output before atomic replacement.
+Symlinked TTS text input files are now rejected before the wrapper reads text
+or starts a backend, so the Hermes text temp path cannot alias another local
+file.
 Installed smoke-script coverage now proves that copied Hermes checkouts retain
 that private temporary output-path contract before the final output is replaced.
 The package validator now keeps its fake-backend smoke command on the
@@ -215,6 +218,53 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 07:30 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked remaining blockers; actual Hermes Agent source is still absent,
+    so native-provider work remains deferred.
+  - Hardened the wrapper so symlinked `--text-file` inputs are rejected before
+    text is read or any backend command, Studio API request, or auto CLI path
+    can run.
+  - Added regression coverage proving a symlinked text input fails before the
+    backend marker runs or an output file is created.
+  - Updated setup, custom voice, README, MVP handoff, weekend-summary, and
+    heartbeat docs for the text input symlink guard.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_text_file_symlink_fails_before_backend tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_text_file_must_not_exceed_max_chars tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_output_path_must_be_wav_before_backend tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_command_success_writes_valid_wav -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused text input symlink guard suite: PASS, 4 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 202 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Hermes should provide a regular temporary text file to the command provider;
+    a symlinked text input is a local file alias and should fail closed.
+- Next action:
+  - Continue bounded MVP hardening or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 07:00 America/New_York
 - Completed:

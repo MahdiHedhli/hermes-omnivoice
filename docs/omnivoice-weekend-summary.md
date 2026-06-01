@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 07:00 America/New_York on branch
+Status as of 2026-06-01 07:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 201 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 202 tests with 1 expected
   opt-in real-backend skip.
 - Runtime voice readiness guard: PASS. Runtime diagnostics reuse the wrapper
   voice-profile validator so acceptance does not count unsafe registry aliases,
@@ -222,6 +222,9 @@ sample and contains explicit confirmed consent metadata.
   before backend synthesis, passes command backends a private temporary output
   path, leaves successful output audio with `0600` permissions, and validates
   command or Studio response audio before atomic replacement.
+- Text input symlink guard: PASS. The wrapper rejects symlinked `--text-file`
+  inputs before reading text or starting a backend, so the Hermes text temp
+  path cannot alias another local file.
 - Command templates fail closed on unknown placeholders, unsupported
   placeholder access, or malformed brace syntax before backend startup; literal
   braces should be escaped as `{{` and `}}`.
@@ -254,6 +257,8 @@ sample and contains explicit confirmed consent metadata.
 - Non-finite or non-positive speed values and non-positive wrapper timeouts are
   refused before backend startup.
 - Oversized text input is refused by the wrapper before backend startup.
+- Symlinked text input files are refused before the wrapper reads text or
+  starts a backend.
 - The fake backend is a contract fixture only and is not real synthesis
   evidence.
 
