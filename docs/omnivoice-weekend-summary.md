@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 06:30 America/New_York on branch
+Status as of 2026-06-01 07:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,15 +35,15 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 198 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 201 tests with 1 expected
   opt-in real-backend skip.
 - Runtime voice readiness guard: PASS. Runtime diagnostics reuse the wrapper
   voice-profile validator so acceptance does not count unsafe registry aliases,
   cloned `ref_audio` symlinks, missing clone audio, or invalid consent metadata
   as voice-ready.
-- Runtime registry symlink guard: PASS. Symlinked voice directories,
-  `voice.yaml` files, and cloned `ref_audio` files are rejected before
-  synthesis uses local registry material.
+- Runtime registry symlink guard: PASS. Symlinked voice registry roots, voice
+  directories, `voice.yaml` files, and cloned `ref_audio` files are rejected
+  before synthesis uses local registry material.
 - Wrapper WAV output guard: PASS. Non-`.wav` output paths are rejected before
   command backend execution or Studio API network access.
 - Studio runtime profile-list shape: PASS. Runtime diagnostics report malformed
@@ -52,10 +52,10 @@ sample and contains explicit confirmed consent metadata.
 - Studio profile payload shape: PASS. Non-object Studio profile JSON is
   rejected before profile audio is requested or local voice material is
   written.
-- Voice directory symlink guard: PASS. Create/import helpers refuse final
-  voice-directory symlinks before local profile material writes, while forced
-  rewrites still replace `voice.yaml` and `ref.wav` symlinks instead of
-  following them.
+- Voice directory symlink guard: PASS. Create/import helpers refuse symlinked
+  registry roots and final voice-directory symlinks before local profile
+  material writes, while forced rewrites still replace `voice.yaml` and
+  `ref.wav` symlinks instead of following them.
 - Studio import write staging: PASS. Existing occupied target directories are
   still rejected before network access, while failed Studio fetches and invalid
   design payloads no longer create empty target voice directories.
@@ -216,8 +216,8 @@ sample and contains explicit confirmed consent metadata.
 - Voice profile writes: PASS. Create/import helpers write local profile
   directories with `0700` permissions and `voice.yaml` plus copied or imported
   `ref.wav` material with `0600` permissions. Forced rewrites replace existing
-  material symlinks instead of following them, and final voice-directory
-  symlinks are refused before writes.
+  material symlinks instead of following them, and symlinked registry roots
+  plus final voice-directory symlinks are refused before writes.
 - Generated audio writes: PASS. The wrapper removes an existing output symlink
   before backend synthesis, passes command backends a private temporary output
   path, leaves successful output audio with `0600` permissions, and validates

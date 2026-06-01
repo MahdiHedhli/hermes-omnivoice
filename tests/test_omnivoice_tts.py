@@ -372,6 +372,20 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "voice profile not found"):
                 omnivoice.load_voice_profile(Path(tmp), "missing")
 
+    def test_symlink_voices_root_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "real-voices"
+            write_voice(target)
+            symlink = root / "voices"
+            try:
+                symlink.symlink_to(target, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "voices root"):
+                omnivoice.load_voice_profile(symlink, "marvin")
+
     def test_dot_segment_voice_ids_fail(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             for voice_id in (".", ".."):
@@ -2079,6 +2093,39 @@ class StudioImportTests(unittest.TestCase):
             request_json.assert_not_called()
             self.assertFalse((target / "voice.yaml").exists())
 
+    def test_importer_rejects_voices_root_symlink_before_network(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "real-voices"
+            target.mkdir()
+            symlink = root / "voices"
+            try:
+                symlink.symlink_to(target, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            with unittest.mock.patch.object(studio_import, "request_json") as request_json:
+                errors = io.StringIO()
+                with contextlib.redirect_stderr(errors):
+                    result = studio_import.run(
+                        [
+                            "--studio-url",
+                            "http://127.0.0.1:3900",
+                            "--profile-id",
+                            "studio-123",
+                            "--voice-id",
+                            "marvin",
+                            "--voices-dir",
+                            str(symlink),
+                            "--confirm-consent",
+                        ]
+                    )
+
+            self.assertEqual(result, 1)
+            self.assertIn("voices root cannot be a symlink", errors.getvalue())
+            request_json.assert_not_called()
+            self.assertFalse((target / "marvin").exists())
+
     def test_importer_rejects_existing_voice_without_force_before_network(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -2875,6 +2922,35 @@ class CreateVoiceTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn("voice directory cannot be a symlink", errors.getvalue())
             self.assertFalse((target / "voice.yaml").exists())
+
+    def test_create_voice_rejects_voices_root_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "real-voices"
+            target.mkdir()
+            symlink = root / "voices"
+            try:
+                symlink.symlink_to(target, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            errors = io.StringIO()
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(errors):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(symlink),
+                        "design",
+                        "narrator",
+                        "--instruct",
+                        "calm voice",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("voices root cannot be a symlink", errors.getvalue())
+            self.assertFalse((target / "narrator").exists())
 
 
 class RuntimeCheckTests(unittest.TestCase):

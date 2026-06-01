@@ -31,18 +31,18 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 06:30 America/New_York on branch
+As of 2026-06-01 07:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 198 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 201 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/check-omnivoice-runtime.py` now reuses the wrapper voice-profile
   validator when reporting local voice readiness, so acceptance cannot count
   unsafe registry aliases, cloned `ref_audio` symlinks, missing clone audio, or
   invalid consent metadata as voice-ready.
-- `scripts/hermes-omnivoice-tts.py` now rejects symlinked voice directories,
-  `voice.yaml` files, and cloned `ref_audio` files before using local registry
-  material.
+- `scripts/hermes-omnivoice-tts.py` now rejects symlinked voice registry roots,
+  voice directories, `voice.yaml` files, and cloned `ref_audio` files before
+  using local registry material.
 - `scripts/hermes-omnivoice-tts.py` now rejects non-`.wav` output paths before
   backend command execution or Studio API network access.
 - `scripts/check-omnivoice-runtime.py` now reports malformed Studio `/profiles`
@@ -51,10 +51,10 @@ As of 2026-06-01 06:30 America/New_York on branch
 - `scripts/import-omnivoice-studio-voice.py` now rejects non-object Studio
   profile JSON before requesting profile audio or writing local voice material.
 - `scripts/create-omnivoice-voice.py` and
-  `scripts/import-omnivoice-studio-voice.py` now refuse final voice-directory
-  symlinks before profile material writes. Forced rewrites can still replace
-  `voice.yaml` or `ref.wav` symlinks, but cannot alias another profile through
-  the target directory.
+  `scripts/import-omnivoice-studio-voice.py` now refuse symlinked registry
+  roots and final voice-directory symlinks before profile material writes.
+  Forced rewrites can still replace `voice.yaml` or `ref.wav` symlinks, but
+  cannot alias another profile through the target directory.
 - `scripts/import-omnivoice-studio-voice.py` now checks target voice directory
   availability before network access, but defers target directory creation
   until after Studio fetch and profile validation. Failed fetches and invalid
@@ -250,8 +250,8 @@ As of 2026-06-01 06:30 America/New_York on branch
   directories with `0700` permissions and write `voice.yaml` plus copied or
   imported `ref.wav` material with `0600` permissions. Forced rewrites use
   same-directory temporary files and replace existing material symlinks instead
-  of following them. Final voice-directory symlinks are refused before local
-  profile material writes.
+  of following them. Symlinked registry roots and final voice-directory
+  symlinks are refused before local profile material writes.
 - `scripts/hermes-omnivoice-tts.py` removes an existing output symlink before
   synthesis, passes command backends a private same-directory temp output path,
   makes successful generated output audio `0600`, and validates command or

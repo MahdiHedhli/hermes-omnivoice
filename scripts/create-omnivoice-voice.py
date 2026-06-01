@@ -107,6 +107,8 @@ def validate_consent_source(value: str) -> str:
 def prepare_voice_dir(voices_dir: Path, voice_id: str, force: bool) -> Path:
     validate_voice_id(voice_id)
     voices_root = voices_dir.expanduser()
+    if voices_root.is_symlink():
+        raise CreateVoiceError("voices root cannot be a symlink")
     voice_dir = voices_root / voice_id
     if voice_dir.is_symlink():
         raise CreateVoiceError("voice directory cannot be a symlink")

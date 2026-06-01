@@ -100,9 +100,9 @@ treated as current consent/profile readiness. Malformed local selection JSON is
 also rejected before it can act as a registry pointer, including non-object
 payloads and non-OmniVoice provider values. `current` reports profile-derived
 speed and voice registry path instead of trusting stale selection-file values.
-Runtime voice profile loading now rejects symlinked voice directories,
-`voice.yaml` files, and cloned `ref_audio` files before synthesis can use local
-registry material.
+Runtime voice profile loading now rejects symlinked voice registry roots, voice
+directories, `voice.yaml` files, and cloned `ref_audio` files before synthesis
+can use local registry material.
 Runtime diagnostics now reuse the wrapper voice-profile validator so acceptance
 cannot count unsafe local registry aliases, cloned `ref_audio` symlinks,
 missing clone audio, or invalid consent metadata as voice-ready.
@@ -113,8 +113,9 @@ Local voice profile writes now use private `0700` profile directories and
 `0600` `voice.yaml`/`ref.wav` files. Create/import forced rewrites use
 same-directory temporary files and replace existing material symlinks rather
 than following them.
-Create/import helpers now also refuse final voice-directory symlinks before
-profile material writes, so forced rewrites cannot alias another local profile.
+Create/import helpers now also refuse symlinked voice registry roots and final
+voice-directory symlinks before profile material writes, so forced rewrites
+cannot alias another local profile.
 Generated TTS output is now hardened too: the wrapper removes existing output
 symlinks before backend synthesis, leaves successful output audio as `0600`,
 passes command backends a private temporary output path, and validates command
@@ -214,6 +215,54 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 07:00 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked remaining blockers; actual Hermes Agent source is still absent,
+    so native-provider work remains deferred.
+  - Hardened runtime profile loading so symlinked voice registry roots are
+    rejected before profile metadata or clone audio can be used.
+  - Hardened local voice creation and Studio import so symlinked registry roots
+    are refused before profile material writes or Studio network requests.
+  - Added regression coverage for wrapper, create-helper, import-helper, and
+    runtime diagnostic registry-root symlink rejection.
+  - Updated setup, custom voice, Studio bridge, README, MVP handoff,
+    weekend-summary, and heartbeat docs for the expanded registry-root guard.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_symlink_voices_root_fails tests.test_omnivoice_tts.CreateVoiceTests.test_create_voice_rejects_voices_root_symlink tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_voices_root_symlink_before_network tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_rejects_symlink_voices_root -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused registry-root symlink guard suite: PASS, 4 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 201 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - A symlinked registry root can silently redirect local voice material and
+    should be treated the same as a symlinked voice directory for MVP safety.
+- Next action:
+  - Continue bounded MVP hardening or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 06:30 America/New_York
 - Completed:

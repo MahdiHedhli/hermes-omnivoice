@@ -246,6 +246,8 @@ def resolve_voice_dir(voices_dir: Path, voice_id: str) -> Path:
             "and cannot be . or .."
         )
     expanded_root = voices_dir.expanduser()
+    if expanded_root.is_symlink():
+        raise OmniVoiceConfigError(f"voices root cannot be a symlink: {expanded_root}")
     raw_child = expanded_root / voice_id
     if raw_child.is_symlink():
         raise OmniVoiceConfigError(f"voice directory cannot be a symlink: {raw_child}")
