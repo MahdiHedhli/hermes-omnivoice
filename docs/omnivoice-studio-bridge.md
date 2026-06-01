@@ -76,15 +76,15 @@ unless explicitly overridden, and it rejects Studio URLs containing userinfo.
 Invalid Studio URL policy failures happen before local registry directory
 creation or network access.
 It also refuses to overwrite an existing non-empty voice directory without
-`--force` and validates downloaded reference audio as WAV before writing it
-into the registry. Empty profile IDs are rejected before local writes or
-network access. Downloaded clone profiles must include `ref_text` before
-imported audio or `voice.yaml` material is written. Failed Studio profile
-fetches and invalid design payloads are rejected before the target voice
-directory is created. Import consent `allowed_uses` are validated before
-network access and written as quoted YAML scalars so CLI input cannot reshape
-the stored registry metadata. Non-positive importer timeouts are rejected
-before local writes or network access.
+`--force`, refuses final voice-directory symlinks, and validates downloaded
+reference audio as WAV before writing it into the registry. Empty profile IDs
+are rejected before local writes or network access. Downloaded clone profiles
+must include `ref_text` before imported audio or `voice.yaml` material is
+written. Failed Studio profile fetches and invalid design payloads are rejected
+before the target voice directory is created. Import consent `allowed_uses` are
+validated before network access and written as quoted YAML scalars so CLI input
+cannot reshape the stored registry metadata. Non-positive importer timeouts are
+rejected before local writes or network access.
 
 ## Validation
 

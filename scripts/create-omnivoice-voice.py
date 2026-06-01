@@ -106,17 +106,21 @@ def validate_consent_source(value: str) -> str:
 
 def prepare_voice_dir(voices_dir: Path, voice_id: str, force: bool) -> Path:
     validate_voice_id(voice_id)
-    voices_root = voices_dir.expanduser().resolve()
-    voice_dir = (voices_root / voice_id).resolve()
+    voices_root = voices_dir.expanduser()
+    voice_dir = voices_root / voice_id
+    if voice_dir.is_symlink():
+        raise CreateVoiceError("voice directory cannot be a symlink")
+    resolved_root = voices_root.resolve()
+    resolved_voice_dir = voice_dir.resolve()
     try:
-        voice_dir.relative_to(voices_root)
+        resolved_voice_dir.relative_to(resolved_root)
     except ValueError as exc:
         raise CreateVoiceError("voice directory escapes the voices root") from exc
-    if voice_dir.exists() and any(voice_dir.iterdir()) and not force:
-        raise CreateVoiceError(f"voice directory already contains files: {voice_dir}")
-    voice_dir.mkdir(parents=True, exist_ok=True)
-    voice_dir.chmod(PRIVATE_DIR_MODE)
-    return voice_dir
+    if resolved_voice_dir.exists() and any(resolved_voice_dir.iterdir()) and not force:
+        raise CreateVoiceError(f"voice directory already contains files: {resolved_voice_dir}")
+    resolved_voice_dir.mkdir(parents=True, exist_ok=True)
+    resolved_voice_dir.chmod(PRIVATE_DIR_MODE)
+    return resolved_voice_dir
 
 
 def validate_wav_file(path: Path) -> None:

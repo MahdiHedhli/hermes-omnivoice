@@ -153,7 +153,8 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
 - Use the profile helpers for local registry writes. They create voice profile
   directories with `0700` permissions and write `voice.yaml` plus copied or
   imported `ref.wav` files with `0600` permissions. Forced rewrites replace
-  existing material symlinks instead of following them.
+  existing material symlinks instead of following them, and final
+  profile-directory symlinks are refused.
 - Generated audio may contain sensitive assistant output. The wrapper removes
   an existing output symlink before synthesis, passes command backends a
   private temporary output path, and leaves successful output files with `0600`

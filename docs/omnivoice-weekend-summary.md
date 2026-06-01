@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 02:30 America/New_York on branch
+Status as of 2026-06-01 03:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,12 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 185 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 187 tests with 1 expected
   opt-in real-backend skip.
+- Voice directory symlink guard: PASS. Create/import helpers refuse final
+  voice-directory symlinks before local profile material writes, while forced
+  rewrites still replace `voice.yaml` and `ref.wav` symlinks instead of
+  following them.
 - Studio import write staging: PASS. Existing occupied target directories are
   still rejected before network access, while failed Studio fetches and invalid
   design payloads no longer create empty target voice directories.
@@ -197,7 +201,8 @@ sample and contains explicit confirmed consent metadata.
 - Voice profile writes: PASS. Create/import helpers write local profile
   directories with `0700` permissions and `voice.yaml` plus copied or imported
   `ref.wav` material with `0600` permissions. Forced rewrites replace existing
-  material symlinks instead of following them.
+  material symlinks instead of following them, and final voice-directory
+  symlinks are refused before writes.
 - Generated audio writes: PASS. The wrapper removes an existing output symlink
   before backend synthesis, passes command backends a private temporary output
   path, leaves successful output audio with `0600` permissions, and validates

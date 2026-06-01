@@ -59,8 +59,12 @@ def validate_timeout(value: int) -> int:
 
 def resolve_voice_dir(voices_dir: Path, voice_id: str) -> Path:
     validate_voice_id(voice_id)
-    resolved_root = voices_dir.expanduser().resolve()
-    resolved_child = (resolved_root / voice_id).resolve()
+    voices_root = voices_dir.expanduser()
+    voice_dir = voices_root / voice_id
+    if voice_dir.is_symlink():
+        raise ImportErrorWithContext("voice directory cannot be a symlink")
+    resolved_root = voices_root.resolve()
+    resolved_child = voice_dir.resolve()
     try:
         resolved_child.relative_to(resolved_root)
     except ValueError as exc:

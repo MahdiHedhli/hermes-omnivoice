@@ -1922,8 +1922,43 @@ class StudioImportTests(unittest.TestCase):
             except OSError as exc:
                 self.skipTest(f"symlink setup unavailable: {exc}")
 
-            with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "escapes"):
+            with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "cannot be a symlink"):
                 studio_import.resolve_voice_dir(root / "voices", "escape")
+
+    def test_importer_rejects_final_voice_dir_symlink_before_network(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            target = voices_root / "target"
+            symlink = voices_root / "marvin"
+            target.mkdir(parents=True)
+            try:
+                symlink.symlink_to(target, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            with unittest.mock.patch.object(studio_import, "request_json") as request_json:
+                errors = io.StringIO()
+                with contextlib.redirect_stderr(errors):
+                    result = studio_import.run(
+                        [
+                            "--studio-url",
+                            "http://127.0.0.1:3900",
+                            "--profile-id",
+                            "studio-123",
+                            "--voice-id",
+                            "marvin",
+                            "--voices-dir",
+                            str(voices_root),
+                            "--confirm-consent",
+                            "--force",
+                        ]
+                    )
+
+            self.assertEqual(result, 1)
+            self.assertIn("voice directory cannot be a symlink", errors.getvalue())
+            request_json.assert_not_called()
+            self.assertFalse((target / "voice.yaml").exists())
 
     def test_importer_rejects_existing_voice_without_force_before_network(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2657,6 +2692,37 @@ class CreateVoiceTests(unittest.TestCase):
                 )
 
             self.assertEqual(result, 1)
+
+    def test_create_voice_rejects_final_voice_dir_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            target = voices_root / "target"
+            symlink = voices_root / "narrator"
+            target.mkdir(parents=True)
+            try:
+                symlink.symlink_to(target, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            errors = io.StringIO()
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(errors):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "design",
+                        "narrator",
+                        "--instruct",
+                        "calm voice",
+                        "--confirm-consent",
+                        "--force",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("voice directory cannot be a symlink", errors.getvalue())
+            self.assertFalse((target / "voice.yaml").exists())
 
 
 class RuntimeCheckTests(unittest.TestCase):

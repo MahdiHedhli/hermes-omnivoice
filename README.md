@@ -12,6 +12,8 @@ This repo is intentionally conservative:
 - Cloned voice reference files are validated as readable WAV audio before use.
 - Local voice profile directories are written private by default; registry YAML
   and copied/imported `ref.wav` files are `0600`.
+- Create/import helpers refuse final voice-directory symlinks so forced writes
+  cannot alias another profile.
 - Generated output audio is validated before final replacement, written as
   `0600`, and an existing output symlink is replaced instead of followed.
 - OmniVoice-Studio is treated as loopback-only by default because it has no

@@ -107,6 +107,8 @@ Local voice profile writes now use private `0700` profile directories and
 `0600` `voice.yaml`/`ref.wav` files. Create/import forced rewrites use
 same-directory temporary files and replace existing material symlinks rather
 than following them.
+Create/import helpers now also refuse final voice-directory symlinks before
+profile material writes, so forced rewrites cannot alias another local profile.
 Generated TTS output is now hardened too: the wrapper removes existing output
 symlinks before backend synthesis, leaves successful output audio as `0600`,
 passes command backends a private temporary output path, and validates command
@@ -198,6 +200,54 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 03:00 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Hardened local voice registry write helpers so a final voice-directory
+    symlink is refused before writes, even with `--force`.
+  - Preserved the intended forced rewrite behavior for `voice.yaml` and
+    `ref.wav` material symlinks while preventing profile-directory aliasing.
+  - Updated README, setup, custom voice, Studio bridge, MVP handoff, and
+    weekend-summary docs for the directory-symlink guard and 187-test snapshot.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -10`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_symlink_voice_dir_escape tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_final_voice_dir_symlink_before_network tests.test_omnivoice_tts.StudioImportTests.test_importer_force_replaces_existing_material_symlinks tests.test_omnivoice_tts.CreateVoiceTests.test_create_voice_rejects_symlink_voice_dir_escape tests.test_omnivoice_tts.CreateVoiceTests.test_create_voice_rejects_final_voice_dir_symlink tests.test_omnivoice_tts.CreateVoiceTests.test_create_clone_force_replaces_existing_material_symlinks -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused voice-directory symlink guard suite: PASS, 6 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 187 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Local voice directories are a write trust boundary; replacing material
+    symlinks is acceptable for forced rewrites, but following a final
+    profile-directory symlink is not.
+- Next action:
+  - Continue bounded MVP hardening or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 02:30 America/New_York
 - Completed:
