@@ -159,9 +159,9 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   imported `ref.wav` files with `0600` permissions. Forced rewrites replace
   existing material symlinks instead of following them, and final
   profile-directory symlinks are refused.
-- Runtime profile loading rejects symlinked `voice.yaml` files and cloned
-  `ref_audio` files, so a local registry entry cannot redirect synthesis
-  material through filesystem aliases.
+- Runtime profile loading rejects symlinked voice directories, `voice.yaml`
+  files, and cloned `ref_audio` files, so a local registry entry cannot
+  redirect synthesis material through filesystem aliases.
 - Generated audio may contain sensitive assistant output. The wrapper removes
   an existing output symlink before synthesis, passes command backends a
   private temporary output path, and leaves successful output files with `0600`

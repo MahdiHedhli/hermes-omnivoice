@@ -391,8 +391,21 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             except OSError as exc:
                 self.skipTest(f"symlink setup unavailable: {exc}")
 
-            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "escapes"):
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "voice directory"):
                 omnivoice.resolve_voice_dir(root / "voices", "escape")
+
+    def test_symlink_voice_dir_alias_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp) / "voices"
+            real_voice = write_voice(voices_root, "real")
+            alias = voices_root / "alias"
+            try:
+                alias.symlink_to(real_voice, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "voice directory"):
+                omnivoice.resolve_voice_dir(voices_root, "alias")
 
     def test_voice_yaml_symlink_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

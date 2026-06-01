@@ -31,13 +31,14 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 05:30 America/New_York on branch
+As of 2026-06-01 06:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 194 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 195 tests and 1 expected
   opt-in real-backend skip.
-- `scripts/hermes-omnivoice-tts.py` now rejects symlinked `voice.yaml` files and
-  cloned `ref_audio` files before using local registry material.
+- `scripts/hermes-omnivoice-tts.py` now rejects symlinked voice directories,
+  `voice.yaml` files, and cloned `ref_audio` files before using local registry
+  material.
 - `scripts/hermes-omnivoice-tts.py` now rejects non-`.wav` output paths before
   backend command execution or Studio API network access.
 - `scripts/check-omnivoice-runtime.py` now reports malformed Studio `/profiles`

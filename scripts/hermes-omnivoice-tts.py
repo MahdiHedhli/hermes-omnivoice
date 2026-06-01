@@ -245,8 +245,12 @@ def resolve_voice_dir(voices_dir: Path, voice_id: str) -> Path:
             "voice id may contain only letters, numbers, dot, underscore, and dash, "
             "and cannot be . or .."
         )
-    resolved_root = voices_dir.expanduser().resolve()
-    resolved_child = (resolved_root / voice_id).resolve()
+    expanded_root = voices_dir.expanduser()
+    raw_child = expanded_root / voice_id
+    if raw_child.is_symlink():
+        raise OmniVoiceConfigError(f"voice directory cannot be a symlink: {raw_child}")
+    resolved_root = expanded_root.resolve()
+    resolved_child = raw_child.resolve()
     try:
         resolved_child.relative_to(resolved_root)
     except ValueError as exc:
