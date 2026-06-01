@@ -1004,6 +1004,36 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             self.assertIn(profile["instruct"], command)
             self.assertNotIn("--ref_audio", command)
 
+    def test_auto_cli_rejects_empty_model_before_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_design_voice(voices_root, "narrator")
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            profile, voice_dir = omnivoice.load_voice_profile(voices_root, "narrator")
+            profile = omnivoice.validate_voice_profile(profile, voice_dir)
+
+            with unittest.mock.patch.object(
+                omnivoice.shutil,
+                "which",
+                return_value="/usr/local/bin/omnivoice-infer",
+            ):
+                with self.assertRaisesRegex(omnivoice.OmniVoiceConfigError, "model must not be empty"):
+                    omnivoice.build_backend_command(
+                        env={
+                            "HERMES_OMNIVOICE_AUTO_CLI": "1",
+                            "HERMES_OMNIVOICE_MODEL": " ",
+                        },
+                        profile=profile,
+                        voice_id="narrator",
+                        voice_dir=voice_dir,
+                        text_file=text_file,
+                        text=text_file.read_text(encoding="utf-8"),
+                        output_path=root / "out.wav",
+                        speed="1.0",
+                    )
+
     def test_design_instruct_rejects_unsupported_english_items(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             voices_root = Path(tmp)
@@ -1585,6 +1615,40 @@ class PythonEnvSetupTests(unittest.TestCase):
             command = json.loads(exports["HERMES_OMNIVOICE_COMMAND_JSON"])
             self.assertEqual(command[0], str(setup_env.venv_python(venv_dir.resolve())))
             self.assertTrue(command[1].endswith("hermes-omnivoice-python-adapter.py"))
+
+    def test_setup_env_rejects_empty_model_before_plan(self) -> None:
+        errors = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            with contextlib.redirect_stderr(errors):
+                result = setup_env.run(
+                    [
+                        "--venv-dir",
+                        str(Path(tmp) / "omnivoice-env"),
+                        "--model",
+                        " ",
+                        "--dry-run",
+                    ]
+                )
+
+        self.assertEqual(result, 1)
+        self.assertIn("model must not be empty", errors.getvalue())
+
+    def test_setup_env_rejects_empty_package_before_plan(self) -> None:
+        errors = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp:
+            with contextlib.redirect_stderr(errors):
+                result = setup_env.run(
+                    [
+                        "--venv-dir",
+                        str(Path(tmp) / "omnivoice-env"),
+                        "--package",
+                        " ",
+                        "--dry-run",
+                    ]
+                )
+
+        self.assertEqual(result, 1)
+        self.assertIn("package must not be empty", errors.getvalue())
 
     def test_setup_env_prefers_supported_python_candidate(self) -> None:
         def fake_which(name: str) -> str | None:

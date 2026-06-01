@@ -172,6 +172,9 @@ The Python adapter now converts invalid backend sample rates into concise
 helper errors instead of raw conversion exceptions.
 The Python adapter now rejects empty model, device, and dtype values before
 loading the OmniVoice backend.
+The Python environment setup helper now rejects empty model and package values
+before export or pip command planning, and auto-CLI mode rejects empty models
+before backend command construction.
 Source discovery and acceptance source readiness now reject invalid scan
 timeouts and traversal bounds before walking the filesystem, preserving bounded
 automation runs.
@@ -183,6 +186,52 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 00:30 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Hardened `scripts/setup-omnivoice-python-env.py` so empty `--model` and
+    `--package` values fail before export or pip command planning.
+  - Hardened wrapper auto-CLI mode so an empty model fails before backend
+    command construction.
+  - Updated custom voice, handoff, and weekend-summary docs for the setup and
+    auto-CLI model validation and 174-test snapshot.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -10`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_auto_cli_builds_official_design_command tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_auto_cli_rejects_empty_model_before_command tests.test_omnivoice_tts.PythonEnvSetupTests.test_setup_env_shell_prints_exportable_environment tests.test_omnivoice_tts.PythonEnvSetupTests.test_setup_env_rejects_empty_model_before_plan tests.test_omnivoice_tts.PythonEnvSetupTests.test_setup_env_rejects_empty_package_before_plan -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+- Tests:
+  - Focused setup/auto-CLI validation suite: PASS, 5 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 174 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Setup-generated exports and auto-CLI fallback commands should reject empty
+    model/package configuration before any backend or installer command runs.
+- Next action:
+  - Continue bounded MVP hardening, or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 00:00 America/New_York
 - Completed:

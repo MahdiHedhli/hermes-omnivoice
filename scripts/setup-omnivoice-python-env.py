@@ -104,6 +104,13 @@ def adapter_command_json(venv_dir: Path, adapter_path: Path) -> list[str]:
     ]
 
 
+def required_text(value: str, name: str) -> str:
+    value = value.strip()
+    if not value:
+        raise SetupError(f"{name} must not be empty")
+    return value
+
+
 def check_env(venv_dir: Path) -> dict:
     python_path = venv_python(venv_dir)
     cli_path = venv_executable(venv_dir, "omnivoice-infer")
@@ -147,6 +154,8 @@ def check_env(venv_dir: Path) -> dict:
 def build_plan(args: argparse.Namespace) -> dict:
     venv_dir = args.venv_dir.expanduser().resolve()
     adapter_path = args.adapter_path.expanduser().resolve()
+    package = required_text(args.package, "package")
+    model = required_text(args.model, "model")
     python_path = venv_python(venv_dir)
     version = detect_python_version(args.python)
     supported = is_supported_python(version)
@@ -161,17 +170,17 @@ def build_plan(args: argparse.Namespace) -> dict:
         "setup_python": args.python,
         "setup_python_version": format_version(version),
         "setup_python_supported": supported,
-        "package": args.package,
+        "package": package,
         "commands": [
             [args.python, "-m", "venv", str(venv_dir)],
-            [str(python_path), "-m", "pip", "install", args.package],
+            [str(python_path), "-m", "pip", "install", package],
         ],
         "command_json": adapter_command_json(venv_dir, adapter_path),
         "env": {
             "HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(
                 adapter_command_json(venv_dir, adapter_path)
             ),
-            "HERMES_OMNIVOICE_MODEL": args.model,
+            "HERMES_OMNIVOICE_MODEL": model,
         },
     }
 

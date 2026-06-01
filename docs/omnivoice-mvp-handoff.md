@@ -31,11 +31,14 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 00:00 America/New_York on branch
+As of 2026-06-01 00:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 171 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 174 tests and 1 expected
   opt-in real-backend skip.
+- `scripts/setup-omnivoice-python-env.py` now rejects empty `--model` and
+  `--package` values before planning exports or pip commands, and wrapper
+  auto-CLI mode rejects an empty model before composing the backend command.
 - `scripts/hermes-omnivoice-python-adapter.py` now rejects empty `--model`,
   `--device`, and `--dtype` values before loading the OmniVoice Python backend.
 - `scripts/hermes-omnivoice-python-adapter.py` now converts invalid

@@ -112,6 +112,9 @@ python scripts/setup-omnivoice-python-env.py --check-only
 python scripts/setup-omnivoice-python-env.py --check-only --shell
 ```
 
+The setup helper rejects empty model and package values before it prints shell
+exports or plans pip commands.
+
 Use `--python` with a Python 3.10 through 3.13 interpreter if the default
 `python3` on the machine is newer than the current OmniVoice runtime stack.
 

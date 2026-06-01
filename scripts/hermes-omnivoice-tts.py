@@ -123,6 +123,13 @@ def validate_max_text_chars(value: int) -> int:
     return value
 
 
+def required_text(value: object, name: str) -> str:
+    text = str(value).strip()
+    if not text:
+        raise OmniVoiceConfigError(f"{name} must not be empty")
+    return text
+
+
 def read_text_file(path: Path, max_chars: int) -> str:
     with path.open("r", encoding="utf-8") as handle:
         text = handle.read(max_chars + 1)
@@ -394,10 +401,11 @@ def build_backend_command(
 
     omnivoice_bin = shutil.which("omnivoice-infer")
     if omnivoice_bin and env.get("HERMES_OMNIVOICE_AUTO_CLI") == "1":
+        model = required_text(env.get("HERMES_OMNIVOICE_MODEL", "k2-fsa/OmniVoice"), "model")
         command = [
             omnivoice_bin,
             "--model",
-            env.get("HERMES_OMNIVOICE_MODEL", "k2-fsa/OmniVoice"),
+            model,
             "--text",
             text,
             "--output",

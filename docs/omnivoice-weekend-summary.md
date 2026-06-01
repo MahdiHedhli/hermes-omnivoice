@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 00:00 America/New_York on branch
+Status as of 2026-06-01 00:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,11 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 171 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 174 tests with 1 expected
   opt-in real-backend skip.
+- Setup and auto-CLI model validation: PASS. Empty setup `--model` and
+  `--package` values fail before export or pip command planning, and wrapper
+  auto-CLI mode rejects an empty model before command construction.
 - Python adapter required-field validation: PASS. Empty `--model`, `--device`,
   and `--dtype` values are rejected before loading the OmniVoice Python
   backend.
