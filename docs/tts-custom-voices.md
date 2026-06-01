@@ -100,7 +100,8 @@ export HERMES_OMNIVOICE_COMMAND_JSON='[
 The wrapper validates the voice profile first, then passes clone or design
 fields to the adapter. The adapter also rejects non-finite or non-positive
 speed values and non-positive sample rates before loading the OmniVoice Python
-backend.
+backend, and reports invalid backend sample rates as adapter errors instead of
+raw conversion exceptions.
 
 Prepare or inspect the adapter environment outside the repo with:
 

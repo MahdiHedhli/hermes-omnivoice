@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 23:00 America/New_York on branch
+Status as of 2026-05-31 23:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,11 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 166 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 168 tests with 1 expected
   opt-in real-backend skip.
+- Python adapter backend sample-rate handling: PASS. Invalid sample rates
+  reported by the backend become concise adapter errors instead of raw
+  conversion exceptions.
 - Python adapter bounds validation: PASS. Non-finite or non-positive
   `--speed` values and non-positive `--sample-rate` values are rejected before
   loading the OmniVoice Python backend.

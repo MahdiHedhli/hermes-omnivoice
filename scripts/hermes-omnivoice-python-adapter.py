@@ -33,6 +33,15 @@ def _validate_sample_rate(sample_rate: int) -> int:
     return sample_rate
 
 
+def _resolve_sample_rate(model, fallback: int) -> int:
+    raw_sample_rate = getattr(model, "sampling_rate", fallback)
+    try:
+        sample_rate = int(raw_sample_rate)
+    except (TypeError, ValueError) as exc:
+        raise PythonAdapterError("sample rate must be an integer greater than 0") from exc
+    return _validate_sample_rate(sample_rate)
+
+
 def _load_backend():
     try:
         import soundfile as sf  # type: ignore
@@ -116,8 +125,7 @@ def synthesize(args: argparse.Namespace) -> None:
         raise PythonAdapterError("OmniVoice did not return audio")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    sampling_rate = int(getattr(model, "sampling_rate", sample_rate))
-    _validate_sample_rate(sampling_rate)
+    sampling_rate = _resolve_sample_rate(model, sample_rate)
     soundfile.write(str(output_path), audios[0], sampling_rate)
 
 

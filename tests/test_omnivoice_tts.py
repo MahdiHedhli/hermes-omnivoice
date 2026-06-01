@@ -235,6 +235,7 @@ class FakeOmniVoiceModel:
 def fake_omnivoice_python_modules():
     FakeOmniVoiceModel.captured_load = {}
     FakeOmniVoiceModel.captured_generate = {}
+    FakeOmniVoiceModel.sampling_rate = 24000
 
     omnivoice_module = types.ModuleType("omnivoice")
     models_module = types.ModuleType("omnivoice.models")
@@ -1402,6 +1403,52 @@ class PythonAdapterTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn("sample rate must be greater than 0", stderr.getvalue())
             load_backend.assert_not_called()
+
+    def test_python_adapter_rejects_backend_zero_sample_rate_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with fake_omnivoice_python_modules() as fake_model, contextlib.redirect_stderr(stderr):
+                fake_model.sampling_rate = 0
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--instruct",
+                        "male, american accent, moderate pitch",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("sample rate must be greater than 0", stderr.getvalue())
+
+    def test_python_adapter_rejects_backend_non_integer_sample_rate_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with fake_omnivoice_python_modules() as fake_model, contextlib.redirect_stderr(stderr):
+                fake_model.sampling_rate = "not-a-rate"
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--instruct",
+                        "male, american accent, moderate pitch",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("sample rate must be an integer greater than 0", stderr.getvalue())
 
 
 class PythonEnvSetupTests(unittest.TestCase):
