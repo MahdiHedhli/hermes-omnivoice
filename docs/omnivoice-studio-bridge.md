@@ -80,11 +80,13 @@ It also refuses to overwrite an existing non-empty voice directory without
 reference audio as WAV before writing it into the registry. Empty profile IDs
 are rejected before local writes or network access. Downloaded clone profiles
 must include `ref_text` before imported audio or `voice.yaml` material is
-written. Failed Studio profile fetches and invalid design payloads are rejected
-before the target voice directory is created. Import consent `allowed_uses` are
-validated before network access and written as quoted YAML scalars so CLI input
-cannot reshape the stored registry metadata. Non-positive importer timeouts are
-rejected before local writes or network access.
+written. Non-object Studio profile JSON is rejected before profile audio is
+requested or local voice material is written. Failed Studio profile fetches and
+invalid design payloads are rejected before the target voice directory is
+created. Import consent `allowed_uses` are validated before network access and
+written as quoted YAML scalars so CLI input cannot reshape the stored registry
+metadata. Non-positive importer timeouts are rejected before local writes or
+network access.
 
 ## Validation
 

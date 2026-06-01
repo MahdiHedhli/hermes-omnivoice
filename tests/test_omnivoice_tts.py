@@ -2062,6 +2062,39 @@ class StudioImportTests(unittest.TestCase):
             self.assertIn("no downloadable audio and no design instruction", errors.getvalue())
             self.assertFalse(voice_dir.exists())
 
+    def test_importer_rejects_non_object_profile_before_audio_request_and_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_dir = root / "voices"
+            with (
+                unittest.mock.patch.object(
+                    studio_import,
+                    "request_json",
+                    return_value=[{"id": "studio-123"}],
+                ),
+                unittest.mock.patch.object(studio_import, "request_bytes") as request_bytes,
+            ):
+                errors = io.StringIO()
+                with contextlib.redirect_stderr(errors):
+                    result = studio_import.run(
+                        [
+                            "--studio-url",
+                            "http://127.0.0.1:3900",
+                            "--profile-id",
+                            "studio-123",
+                            "--voice-id",
+                            "narrator",
+                            "--voices-dir",
+                            str(voices_dir),
+                            "--confirm-consent",
+                        ]
+                    )
+
+            self.assertEqual(result, 1)
+            self.assertIn("profile response must be a JSON object", errors.getvalue())
+            request_bytes.assert_not_called()
+            self.assertFalse((voices_dir / "narrator").exists())
+
     def test_importer_rejects_empty_allowed_use_before_network(self) -> None:
         with unittest.mock.patch.object(studio_import, "request_json") as request_json:
             errors = io.StringIO()

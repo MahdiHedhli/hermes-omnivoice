@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 03:00 America/New_York on branch
+Status as of 2026-06-01 03:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,11 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 187 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 188 tests with 1 expected
   opt-in real-backend skip.
+- Studio profile payload shape: PASS. Non-object Studio profile JSON is
+  rejected before profile audio is requested or local voice material is
+  written.
 - Voice directory symlink guard: PASS. Create/import helpers refuse final
   voice-directory symlinks before local profile material writes, while forced
   rewrites still replace `voice.yaml` and `ref.wav` symlinks instead of

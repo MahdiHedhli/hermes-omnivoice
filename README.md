@@ -14,6 +14,8 @@ This repo is intentionally conservative:
   and copied/imported `ref.wav` files are `0600`.
 - Create/import helpers refuse final voice-directory symlinks so forced writes
   cannot alias another profile.
+- The Studio importer validates profile JSON shape before requesting audio or
+  writing local voice material.
 - Generated output audio is validated before final replacement, written as
   `0600`, and an existing output symlink is replaced instead of followed.
 - OmniVoice-Studio is treated as loopback-only by default because it has no

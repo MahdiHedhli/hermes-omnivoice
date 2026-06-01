@@ -158,6 +158,8 @@ Studio profile import now checks target directory availability before network
 access but defers target directory creation until after Studio fetch and
 profile validation, so failed fetches or invalid design payloads do not leave
 empty target directories behind.
+Studio profile import now also rejects non-object Studio profile JSON before
+requesting profile audio or writing local voice material.
 The TTS wrapper now also rejects non-finite or non-positive speed values and
 non-positive timeouts before backend or Studio startup.
 Generated and static command-provider examples now pass wrapper `--max-chars`
@@ -200,6 +202,54 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 03:30 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Hardened Studio profile import so a profile endpoint that returns valid
+    JSON with the wrong top-level shape is rejected before any audio request or
+    local registry write.
+  - Added regression coverage proving non-object Studio profile JSON leaves no
+    target voice directory and does not call the audio endpoint.
+  - Updated Studio bridge, custom voice, MVP handoff, weekend-summary, and
+    heartbeat docs for the Studio payload-shape guard.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_non_object_profile_before_audio_request_and_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_design_without_instruct_does_not_create_voice_dir tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_clone_without_ref_text_before_material_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_writes_private_profile_material -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused Studio profile payload-shape suite: PASS, 4 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 188 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - OmniVoice-Studio API shape is still not treated as a stable contract, so the
+    bridge validates response structure before interpreting or writing it.
+- Next action:
+  - Continue bounded MVP hardening or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 03:00 America/New_York
 - Completed:

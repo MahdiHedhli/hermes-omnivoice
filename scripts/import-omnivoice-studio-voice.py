@@ -124,7 +124,7 @@ def validate_studio_url(url: str, allow_remote: bool = False) -> str:
     return url.rstrip("/")
 
 
-def request_json(url: str, timeout: int) -> dict:
+def request_json(url: str, timeout: int) -> object:
     request = urllib.request.Request(
         url,
         headers={"Accept": "application/json", "User-Agent": "hermes-omnivoice-import/0.1"},
@@ -148,6 +148,12 @@ def validate_wav_bytes(audio_bytes: bytes) -> None:
             wav.getparams()
     except wave.Error as exc:
         raise ImportErrorWithContext("downloaded Studio reference audio is not a valid WAV") from exc
+
+
+def validate_profile_payload(payload: object) -> dict:
+    if not isinstance(payload, dict):
+        raise ImportErrorWithContext("Studio profile response must be a JSON object")
+    return payload
 
 
 def yaml_scalar(value: object) -> str:
@@ -229,7 +235,9 @@ def run(argv: list[str] | None = None) -> int:
         base_url = validate_studio_url(args.studio_url, args.allow_remote_studio)
         check_voice_dir_available(args.voices_dir, voice_id, args.force)
 
-        profile = request_json(f"{base_url}/profiles/{urllib.parse.quote(profile_id)}", timeout)
+        profile = validate_profile_payload(
+            request_json(f"{base_url}/profiles/{urllib.parse.quote(profile_id)}", timeout)
+        )
 
         audio_bytes = b""
         try:
