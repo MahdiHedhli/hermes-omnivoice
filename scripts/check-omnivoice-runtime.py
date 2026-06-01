@@ -137,7 +137,12 @@ def check_studio(studio_url: str, timeout: int, allow_remote: bool) -> dict:
     elif isinstance(payload, dict) and isinstance(payload.get("profiles"), list):
         profile_count = len(payload["profiles"])
     else:
-        profile_count = None
+        return {
+            "status": "invalid",
+            "url": base_url,
+            "profile_count": 0,
+            "error": "Studio /profiles response must be a JSON array or object with profiles array",
+        }
     return {"status": "reachable", "url": base_url, "profile_count": profile_count}
 
 

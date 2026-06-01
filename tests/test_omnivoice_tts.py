@@ -323,14 +323,18 @@ class ErrorStudioHandler(http.server.BaseHTTPRequestHandler):
 
 
 @contextlib.contextmanager
-def mock_studio_server():
+def mock_studio_server(profiles_payload: object | None = None):
+    previous_payload = MockStudioHandler.profiles_payload
     MockStudioHandler.requests = []
+    if profiles_payload is not None:
+        MockStudioHandler.profiles_payload = profiles_payload
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), MockStudioHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}", MockStudioHandler.requests
     finally:
+        MockStudioHandler.profiles_payload = previous_payload
         server.shutdown()
         thread.join(timeout=5)
         server.server_close()
@@ -2844,6 +2848,24 @@ class RuntimeCheckTests(unittest.TestCase):
         self.assertEqual(report["status"], "reachable")
         self.assertEqual(report["profile_count"], 1)
         self.assertEqual(requests[0]["path"], "/profiles")
+
+    def test_runtime_check_rejects_malformed_studio_profiles_payload(self) -> None:
+        with mock_studio_server({"unexpected": "shape"}) as (studio_url, _requests):
+            report = runtime_check.check_studio(studio_url, 5, False)
+
+        self.assertEqual(report["status"], "invalid")
+        self.assertEqual(report["profile_count"], 0)
+        self.assertIn("profiles response", report["error"])
+        runtime = acceptance.evaluate_runtime(
+            {
+                "studio": report,
+                "backend_command": {"status": "missing"},
+                "omnivoice_cli": {"status": "missing"},
+                "voices_dir": {"profile_count": 1},
+            }
+        )
+        self.assertFalse(runtime["studio_ready"])
+        self.assertFalse(runtime["backend_ready"])
 
     def test_runtime_check_reports_official_cli_auto_gate(self) -> None:
         with unittest.mock.patch.object(

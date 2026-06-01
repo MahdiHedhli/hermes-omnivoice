@@ -31,11 +31,14 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 03:30 America/New_York on branch
+As of 2026-06-01 04:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 188 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 189 tests and 1 expected
   opt-in real-backend skip.
+- `scripts/check-omnivoice-runtime.py` now reports malformed Studio `/profiles`
+  payloads as `invalid`, preventing acceptance from treating a bad Studio API
+  shape as backend-ready.
 - `scripts/import-omnivoice-studio-voice.py` now rejects non-object Studio
   profile JSON before requesting profile audio or writing local voice material.
 - `scripts/create-omnivoice-voice.py` and
