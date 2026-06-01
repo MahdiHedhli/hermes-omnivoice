@@ -149,6 +149,8 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   material.
 - Keep wrapper `--max-chars` aligned with Hermes `max_text_length`; oversized
   input files fail before backend startup.
+- Keep Hermes `output_format: wav` aligned with a `.wav` output path; the
+  wrapper rejects non-`.wav` output paths before backend or Studio startup.
 - Generated command-provider config refuses non-positive `timeout` and
   `max_text_length` overrides before printing YAML.
 - Treat cloned voice consent as a hard gate, not a documentation-only field.

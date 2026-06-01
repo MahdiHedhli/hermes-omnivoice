@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 04:30 America/New_York on branch
+Status as of 2026-06-01 05:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,10 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 190 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 192 tests with 1 expected
   opt-in real-backend skip.
+- Wrapper WAV output guard: PASS. Non-`.wav` output paths are rejected before
+  command backend execution or Studio API network access.
 - Studio runtime profile-list shape: PASS. Runtime diagnostics report malformed
   Studio `/profiles` payloads and non-object profile-list entries as `invalid`,
   so acceptance does not treat them as backend-ready.

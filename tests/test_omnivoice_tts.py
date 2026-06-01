@@ -569,6 +569,45 @@ class OmniVoiceRegistryTests(unittest.TestCase):
             self.assertIn("timeout must be greater than 0", stderr.getvalue())
             self.assertFalse(out_file.exists())
 
+    def test_output_path_must_be_wav_before_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_voice(voices_root)
+            text_file = root / "input.txt"
+            out_file = root / "out.mp3"
+            marker = root / "backend-ran"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stderr(stderr):
+                result = omnivoice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "marvin",
+                    ],
+                    env={
+                        "HERMES_OMNIVOICE_COMMAND_JSON": json.dumps(
+                            [
+                                sys.executable,
+                                "-c",
+                                f"from pathlib import Path; Path({str(marker)!r}).write_text('ran')",
+                            ]
+                        )
+                    },
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("output path must use .wav extension", stderr.getvalue())
+            self.assertFalse(marker.exists())
+            self.assertFalse(out_file.exists())
+
     def test_text_file_must_not_exceed_max_chars(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1176,6 +1215,37 @@ consent:
             self.assertEqual(path_mode(out_file), 0o600)
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
+
+    def test_studio_api_rejects_non_wav_output_before_network(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            write_design_voice(voices_root, "narrator", studio_profile_id="studio-123")
+            text_file = root / "input.txt"
+            out_file = root / "out.mp3"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with mock_studio_server() as (studio_url, requests):
+                with contextlib.redirect_stderr(stderr):
+                    result = omnivoice.run(
+                        [
+                            "--voices-dir",
+                            str(voices_root),
+                            "--text-file",
+                            str(text_file),
+                            "--out",
+                            str(out_file),
+                            "--voice",
+                            "narrator",
+                        ],
+                        env={"HERMES_OMNIVOICE_STUDIO_URL": studio_url},
+                    )
+
+            self.assertEqual(result, 1)
+            self.assertIn("output path must use .wav extension", stderr.getvalue())
+            self.assertEqual(requests, [])
+            self.assertFalse(out_file.exists())
 
     def test_studio_api_http_error_redacts_detail(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

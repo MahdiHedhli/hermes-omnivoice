@@ -123,6 +123,11 @@ def validate_max_text_chars(value: int) -> int:
     return value
 
 
+def validate_output_path(path: Path) -> None:
+    if path.suffix.lower() != ".wav":
+        raise OmniVoiceConfigError("output path must use .wav extension")
+
+
 def required_text(value: object, name: str) -> str:
     text = str(value).strip()
     if not text:
@@ -640,6 +645,7 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
     try:
         text_file = args.text_file.expanduser().resolve()
         output_path = resolve_output_path(args.out)
+        validate_output_path(output_path)
         if not text_file.is_file():
             raise OmniVoiceConfigError(f"text file not found: {text_file}")
 

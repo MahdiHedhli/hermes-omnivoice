@@ -165,6 +165,9 @@ Studio profile import now also rejects non-object Studio profile JSON before
 requesting profile audio or writing local voice material.
 The TTS wrapper now also rejects non-finite or non-positive speed values and
 non-positive timeouts before backend or Studio startup.
+The TTS wrapper now rejects non-`.wav` output paths before backend command
+execution or Studio API network access, keeping the MVP aligned with its
+validated WAV-only output contract.
 Generated and static command-provider examples now pass wrapper `--max-chars`
 alongside Hermes `max_text_length`, and the wrapper rejects oversized text
 input before backend or Studio startup.
@@ -205,6 +208,54 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 05:00 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Hardened the TTS wrapper so non-`.wav` output paths fail before command
+    backend execution or Studio API network access.
+  - Added regression coverage for command and Studio paths proving non-WAV
+    output paths do not spawn a backend, contact Studio, or leave output files.
+  - Updated setup, custom voice, Studio bridge, README, MVP handoff,
+    weekend-summary, and heartbeat docs for the WAV-only output guard.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_output_path_must_be_wav_before_backend tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_studio_api_rejects_non_wav_output_before_network tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_command_success_writes_valid_wav tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_studio_api_success_writes_valid_wav_and_sends_profile_id -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused wrapper WAV output guard suite: PASS, 4 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 192 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - The MVP command-provider contract is WAV-only because examples set
+    `output_format: wav`, Studio requests `audio/wav`, and local validation can
+    prove WAV integrity before returning audio to Hermes.
+- Next action:
+  - Continue bounded MVP hardening or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 04:30 America/New_York
 - Completed:

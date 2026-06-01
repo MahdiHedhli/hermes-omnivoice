@@ -31,11 +31,13 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 04:30 America/New_York on branch
+As of 2026-06-01 05:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 190 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 192 tests and 1 expected
   opt-in real-backend skip.
+- `scripts/hermes-omnivoice-tts.py` now rejects non-`.wav` output paths before
+  backend command execution or Studio API network access.
 - `scripts/check-omnivoice-runtime.py` now reports malformed Studio `/profiles`
   payloads, including non-object profile-list entries, as `invalid`,
   preventing acceptance from treating a bad Studio API shape as backend-ready.

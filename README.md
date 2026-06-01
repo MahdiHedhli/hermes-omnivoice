@@ -154,6 +154,8 @@ is opt-in because the first `omnivoice-infer` run may download model files.
 Unknown placeholders, unsupported placeholder access, and invalid brace syntax
 are treated as wrapper configuration errors before any backend command is
 invoked; escape literal braces in command templates as `{{` and `}}`.
+The wrapper currently supports WAV output only and rejects non-`.wav` output
+paths before backend or Studio startup.
 
 ## Current Limits
 
