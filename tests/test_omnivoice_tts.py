@@ -1799,6 +1799,30 @@ class CreateVoiceTests(unittest.TestCase):
             self.assertIn("speed must be greater than 0", stderr.getvalue())
             self.assertFalse((voices_root / "narrator").exists())
 
+    def test_create_design_voice_rejects_empty_allowed_use_before_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_root = Path(tmp) / "voices"
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "design",
+                        "narrator",
+                        "--instruct",
+                        "calm voice",
+                        "--allowed-use",
+                        "   ",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("allowed uses cannot be empty", stderr.getvalue())
+            self.assertFalse((voices_root / "narrator").exists())
+
     def test_create_clone_voice_requires_confirmed_consent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1935,6 +1959,35 @@ class CreateVoiceTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
             self.assertIn("speed must be greater than 0", stderr.getvalue())
+            self.assertFalse((voices_root / "marvin" / "ref.wav").exists())
+
+    def test_create_clone_voice_rejects_empty_allowed_use_before_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            source_ref = root / "source.wav"
+            write_wav(source_ref)
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "clone",
+                        "marvin",
+                        "--ref-audio",
+                        str(source_ref),
+                        "--ref-text",
+                        "Reference transcript.",
+                        "--allowed-use",
+                        "   ",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("allowed uses cannot be empty", stderr.getvalue())
             self.assertFalse((voices_root / "marvin" / "ref.wav").exists())
 
     def test_create_clone_force_replaces_existing_material_symlinks(self) -> None:

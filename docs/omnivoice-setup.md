@@ -18,6 +18,7 @@ permissions through same-directory temporary files and atomic replacement.
 Forced rewrites replace existing material symlinks instead of following them.
 Non-finite or non-positive `--speed` values are rejected before the helper
 creates a profile directory or copies clone reference audio.
+Empty `--allowed-use` values are also rejected before local profile writes.
 
 Create a designed voice:
 

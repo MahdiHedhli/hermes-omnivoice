@@ -165,6 +165,52 @@ timeouts and traversal bounds before walking the filesystem, preserving bounded
 automation runs.
 Local voice creation now rejects non-finite or non-positive speed values before
 creating profile directories or copying clone reference audio.
+Local voice creation now rejects empty consent allowed-use metadata before
+creating profile directories or copying clone reference audio.
+
+## Latest heartbeat
+
+- Time: 2026-05-31 20:30 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Added tests proving local design and clone voice creation reject empty
+    `--allowed-use` metadata before profile directory creation or clone
+    reference-audio copy.
+  - Updated handoff/setup/custom-voice docs for the new metadata-validation
+    coverage and 156-test snapshot.
+- Commands:
+  - `git status --short --branch`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.CreateVoiceTests.test_create_design_voice_rejects_empty_allowed_use_before_writes tests.test_omnivoice_tts.CreateVoiceTests.test_create_clone_voice_rejects_empty_allowed_use_before_copy tests.test_omnivoice_tts.CreateVoiceTests.test_create_design_voice_rejects_invalid_speed_before_writes tests.test_omnivoice_tts.CreateVoiceTests.test_create_clone_voice_rejects_invalid_speed_before_copy -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+- Tests:
+  - Focused create-voice metadata/speed suite: PASS, 4 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 156 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Empty allowed-use values should be treated as invalid consent metadata and
+    should fail before any local profile material is written.
+- Next action:
+  - Continue bounded MVP hardening, or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
 
 ## Previous heartbeat
 
