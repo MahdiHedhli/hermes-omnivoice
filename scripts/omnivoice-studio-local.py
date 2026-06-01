@@ -24,6 +24,16 @@ class StudioLocalError(RuntimeError):
     pass
 
 
+def normalize_command_timeout(timeout: int | None) -> int | None:
+    if timeout is None:
+        return None
+    if timeout < 0:
+        raise StudioLocalError("command timeout must be greater than or equal to 0")
+    if timeout == 0:
+        return None
+    return timeout
+
+
 def run_command(
     argv: list[str],
     *,
@@ -31,6 +41,7 @@ def run_command(
     capture: bool = False,
     timeout: int | None = None,
 ) -> str:
+    command_timeout = normalize_command_timeout(timeout)
     try:
         completed = subprocess.run(
             argv,
@@ -38,7 +49,7 @@ def run_command(
             check=False,
             text=True,
             capture_output=capture,
-            timeout=timeout if timeout and timeout > 0 else None,
+            timeout=command_timeout,
         )
     except subprocess.TimeoutExpired as exc:
         raise StudioLocalError(
@@ -380,6 +391,7 @@ def run(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
+        args.command_timeout = normalize_command_timeout(args.command_timeout)
         return args.func(args)
     except (OSError, json.JSONDecodeError, StudioLocalError) as exc:
         print(f"omnivoice-studio-local: {exc}", file=sys.stderr)

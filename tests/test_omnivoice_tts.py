@@ -2497,6 +2497,26 @@ class StudioLocalTests(unittest.TestCase):
 
         self.assertIsNone(run.call_args.kwargs["timeout"])
 
+    def test_command_timeout_must_not_be_negative(self) -> None:
+        with unittest.mock.patch.object(studio_local.subprocess, "run") as run:
+            with self.assertRaisesRegex(
+                studio_local.StudioLocalError,
+                "command timeout must be greater than or equal to 0",
+            ):
+                studio_local.run_command(["true"], timeout=-1)
+
+        run.assert_not_called()
+
+    def test_cli_rejects_negative_command_timeout_before_subcommand(self) -> None:
+        stderr = io.StringIO()
+        with unittest.mock.patch.object(studio_local, "command_check") as command_check, \
+            contextlib.redirect_stderr(stderr):
+            result = studio_local.run(["check", "--command-timeout", "-1", "--json"])
+
+        self.assertEqual(result, 1)
+        self.assertIn("command timeout must be greater than or equal to 0", stderr.getvalue())
+        command_check.assert_not_called()
+
     def test_health_timeout_must_be_positive(self) -> None:
         with self.assertRaisesRegex(
             studio_local.StudioLocalError,
