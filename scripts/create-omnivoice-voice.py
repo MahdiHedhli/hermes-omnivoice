@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -80,7 +81,7 @@ def validate_voice_id(voice_id: str) -> None:
 
 
 def validate_speed(speed: float) -> str:
-    if speed <= 0:
+    if not math.isfinite(speed) or speed <= 0:
         raise CreateVoiceError("speed must be greater than 0")
     return f"{speed:g}"
 
@@ -174,6 +175,8 @@ def command_design(args: argparse.Namespace) -> int:
     instruct = args.instruct.strip()
     if not instruct:
         raise CreateVoiceError("design voice requires --instruct")
+    speed = validate_speed(args.speed)
+    allowed_uses = validate_allowed_uses(args.allowed_use)
     voice_dir = prepare_voice_dir(args.voices_dir, args.voice_id, args.force)
     write_voice_yaml(
         path=voice_dir / "voice.yaml",
@@ -181,9 +184,9 @@ def command_design(args: argparse.Namespace) -> int:
         name=args.name or args.voice_id,
         mode="design",
         language=args.language,
-        speed=validate_speed(args.speed),
+        speed=speed,
         consent_source=args.consent_source,
-        allowed_uses=validate_allowed_uses(args.allowed_use),
+        allowed_uses=allowed_uses,
         instruct=instruct,
     )
     print(f"Created design voice {args.voice_id} in {voice_dir}")
@@ -201,6 +204,8 @@ def command_clone(args: argparse.Namespace) -> int:
     ref_text = args.ref_text.strip()
     if not ref_text:
         raise CreateVoiceError("clone voice requires --ref-text")
+    speed = validate_speed(args.speed)
+    allowed_uses = validate_allowed_uses(args.allowed_use)
 
     voice_dir = prepare_voice_dir(args.voices_dir, args.voice_id, args.force)
     ref_dest = voice_dir / "ref.wav"
@@ -213,9 +218,9 @@ def command_clone(args: argparse.Namespace) -> int:
         name=args.name or args.voice_id,
         mode="clone",
         language=args.language,
-        speed=validate_speed(args.speed),
+        speed=speed,
         consent_source=args.consent_source,
-        allowed_uses=validate_allowed_uses(args.allowed_use),
+        allowed_uses=allowed_uses,
         ref_text=ref_text,
         instruct=args.instruct.strip(),
     )

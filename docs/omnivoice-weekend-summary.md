@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-05-31 19:30 America/New_York on branch
+Status as of 2026-05-31 20:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 152 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 154 tests with 1 expected
   opt-in real-backend skip.
 - Validator interpreter alignment: PASS. The fake-backend smoke command now
   uses the configured `PYTHON_BIN` instead of hardcoded `python3`, so full
@@ -75,6 +75,9 @@ sample and contains explicit confirmed consent metadata.
 - Studio import allowed-use metadata handling: PASS. Empty `--allowed-use`
   values are rejected before network access, and imported allowed-use values are
   quoted in `voice.yaml` so CLI input cannot reshape consent metadata.
+- Voice creation speed validation: PASS. Non-finite or non-positive
+  `--speed` values are rejected before profile directory creation or clone
+  reference-audio copy.
 - Studio import timeout validation: PASS. Non-positive importer `--timeout`
   values are rejected before local voice directory creation or Studio network
   access.

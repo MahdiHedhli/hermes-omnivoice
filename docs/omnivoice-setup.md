@@ -16,6 +16,8 @@ imported local profile directories are made private with `0700` permissions;
 `voice.yaml` and any copied or imported `ref.wav` are written with `0600`
 permissions through same-directory temporary files and atomic replacement.
 Forced rewrites replace existing material symlinks instead of following them.
+Non-finite or non-positive `--speed` values are rejected before the helper
+creates a profile directory or copies clone reference audio.
 
 Create a designed voice:
 

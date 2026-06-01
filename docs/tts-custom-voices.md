@@ -124,6 +124,9 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   registry writes or Studio network access.
 - Keep `speed` finite and greater than zero, and keep wrapper `timeout` greater
   than zero; malformed runtime values fail before backend startup.
+- The profile creation helper rejects non-finite or non-positive `--speed`
+  values before it creates local profile directories or copies clone reference
+  audio.
 - Keep wrapper `--max-chars` aligned with Hermes `max_text_length`; oversized
   input files fail before backend startup.
 - Generated command-provider config refuses non-positive `timeout` and

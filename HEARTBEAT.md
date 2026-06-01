@@ -163,6 +163,8 @@ for Docker/Git commands.
 Source discovery and acceptance source readiness now reject invalid scan
 timeouts and traversal bounds before walking the filesystem, preserving bounded
 automation runs.
+Local voice creation now rejects non-finite or non-positive speed values before
+creating profile directories or copying clone reference audio.
 
 ## Previous heartbeat
 
@@ -4022,6 +4024,62 @@ automation runs.
     the source path is available.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 20:00 America/New_York
+- Completed:
+  - Rechecked repo state; branch was clean at commit `aca644e`.
+  - Rechecked default runtime state: no backend command, no Studio URL, no
+    auto CLI by default, and one local designed profile present.
+  - Re-ran bounded Hermes source discovery; it still sees only this bridge repo,
+    not an actual Hermes Agent checkout.
+  - Audited local profile creation speed validation.
+  - Added finite-speed validation to `scripts/create-omnivoice-voice.py`.
+  - Moved create-time speed and allowed-use validation before profile directory
+    creation and before clone reference-audio copy.
+  - Added focused tests proving invalid design and clone speeds leave no local
+    profile material behind.
+  - Updated setup, custom-voice, MVP handoff, weekend summary, and heartbeat
+    docs for the new 154-test validation snapshot.
+- Commands run:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `rg -n "TODO|FIXME|Next action|Open follow-ups|--max-depth|--max-candidates|--max-files|--max-file-bytes|--source|max-depth|max-candidates|max-files|max-file-bytes|max text|timeout|positive|at least" HEARTBEAT.md README.md docs scripts tests examples`
+  - `rg -n "speed|finite|nan|inf|create_.*speed|CreateVoiceTests" tests/test_omnivoice_tts.py scripts/create-omnivoice-voice.py docs/omnivoice-setup.md docs/tts-custom-voices.md`
+  - `python3 -m unittest tests.test_omnivoice_tts.CreateVoiceTests.test_create_design_voice_rejects_invalid_speed_before_writes tests.test_omnivoice_tts.CreateVoiceTests.test_create_clone_voice_rejects_invalid_speed_before_copy tests.test_omnivoice_tts.CreateVoiceTests.test_create_design_voice_validates_with_confirmed_consent tests.test_omnivoice_tts.CreateVoiceTests.test_create_clone_voice_copies_wav_and_validates tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_cli_speed_must_be_finite_positive -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `rm -rf tests/__pycache__ tests/fixtures/__pycache__ scripts/__pycache__`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Create-voice speed focused suite: PASS, 5 tests.
+  - Full bridge validator: PASS, 154 tests, 1 skipped real-backend unittest
+    smoke by default.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - Real-backend smoke script with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV.
+  - Repo artifact scan and whitespace check: PASS.
+- Blockers:
+  - Actual Hermes Agent source is still not present locally; bounded source
+    discovery sees only this bridge repo under the searched roots.
+  - Default shell runtime remains unconfigured unless the generated exports are
+    applied.
+  - Studio live service remains blocked by the missing arm64 published image and
+    source-build timeout noted in earlier heartbeats.
+- Assumptions:
+  - Invalid profile creation inputs should fail before any local profile
+    directory, `voice.yaml`, or cloned reference audio is written.
+  - Native-provider and in-app `/voice` command wiring still wait on the actual
+    Hermes Agent source.
+- Next action:
+  - Continue bounded MVP hardening or install the bridge into the real Hermes
+    Agent checkout once that source path is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 19:30 America/New_York
 - Completed:

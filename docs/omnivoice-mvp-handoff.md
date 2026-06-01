@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 19:30 America/New_York on branch
+As of 2026-05-31 20:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 152 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 154 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -74,6 +74,9 @@ As of 2026-05-31 19:30 America/New_York on branch
   `--allowed-use` values before network access and quotes imported
   `allowed_uses` values in YAML, matching the local voice creator's safer
   metadata-writing path.
+- `scripts/create-omnivoice-voice.py` now rejects non-finite or non-positive
+  `--speed` values before creating a profile directory or copying clone
+  reference audio.
 - `scripts/import-omnivoice-studio-voice.py` now validates non-positive
   `--timeout` values before creating a local voice directory or making Studio
   network requests.
