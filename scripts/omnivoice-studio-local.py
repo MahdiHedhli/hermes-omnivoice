@@ -163,6 +163,12 @@ def validate_health_timeout(timeout: int) -> int:
     return timeout
 
 
+def validate_log_tail(tail: int) -> int:
+    if tail < 0:
+        raise StudioLocalError("log tail must be greater than or equal to 0")
+    return tail
+
+
 def preflight_start(args: argparse.Namespace, config: dict) -> None:
     image = service_image(config, args.profile)
     if args.no_build and args.pull == "never" and image and not local_image_exists(
@@ -302,8 +308,9 @@ def command_status(args: argparse.Namespace) -> int:
 
 
 def command_logs(args: argparse.Namespace) -> int:
+    tail = validate_log_tail(args.tail)
     require_binary("docker")
-    run_command(compose_args(args) + ["logs", "--tail", str(args.tail)], timeout=args.command_timeout)
+    run_command(compose_args(args) + ["logs", "--tail", str(tail)], timeout=args.command_timeout)
     return 0
 
 

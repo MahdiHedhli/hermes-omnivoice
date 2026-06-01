@@ -2524,6 +2524,33 @@ class StudioLocalTests(unittest.TestCase):
         ):
             studio_local.studio_health("http://127.0.0.1:3900", 0)
 
+    def test_log_tail_must_not_be_negative(self) -> None:
+        stderr = io.StringIO()
+        with unittest.mock.patch.object(studio_local, "require_binary") as require_binary, \
+            contextlib.redirect_stderr(stderr):
+            result = studio_local.run(["logs", "--tail", "-1"])
+
+        self.assertEqual(result, 1)
+        self.assertIn("log tail must be greater than or equal to 0", stderr.getvalue())
+        require_binary.assert_not_called()
+
+    def test_log_tail_zero_remains_explicitly_bounded(self) -> None:
+        args = unittest.mock.Mock()
+        args.studio_dir = Path("/tmp/omnivoice-studio-src")
+        args.profile = "cpu"
+        args.tail = 0
+        args.command_timeout = 10
+
+        with unittest.mock.patch.object(studio_local, "require_binary", return_value="/usr/bin/docker"), \
+            unittest.mock.patch.object(
+                studio_local,
+                "compose_file",
+                return_value=Path("/tmp/omnivoice-studio-src/deploy/docker-compose.yml"),
+            ), unittest.mock.patch.object(studio_local, "run_command") as run_command:
+                studio_local.command_logs(args)
+
+        self.assertEqual(run_command.call_args.args[0][-3:], ["logs", "--tail", "0"])
+
     def test_down_args_can_remove_volumes(self) -> None:
         args = unittest.mock.Mock()
         args.studio_dir = Path("/tmp/omnivoice-studio-src")

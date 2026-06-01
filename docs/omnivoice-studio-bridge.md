@@ -116,6 +116,8 @@ Negative command timeouts are rejected before Docker or Git commands can run;
 use `--command-timeout 0` only for an operator-supervised unbounded run.
 The Studio health probe `--timeout` is separate and must stay greater than
 zero.
+The local log helper rejects negative `logs --tail` values before Docker runs,
+so log inspection remains bounded by an explicit line count.
 On Apple Silicon, the published image may be unavailable for the local platform.
 Building from source is possible but can pull multi-GB PyTorch runtime layers
 and may exceed short automation windows before the image export finishes. Keep

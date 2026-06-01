@@ -271,6 +271,8 @@ Docker/Git subprocesses are bounded by `--command-timeout 900` by default; set
 Negative `--command-timeout` values are rejected before Docker or Git commands
 can run.
 The health probe `--timeout` must be greater than zero.
+The `logs --tail` value must be zero or greater so log inspection stays
+bounded by an explicit line count.
 For a local-only startup probe that does not pull or build images, use:
 
 ```bash

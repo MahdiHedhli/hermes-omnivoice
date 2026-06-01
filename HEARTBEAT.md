@@ -162,6 +162,8 @@ preserving `--command-timeout 0` as an explicit unbounded manual escape hatch
 for Docker/Git commands.
 The local Studio helper now rejects negative command timeouts before Docker or
 Git commands can run.
+The local Studio helper now rejects negative log-tail values before Docker can
+run.
 Source discovery and acceptance source readiness now reject invalid scan
 timeouts and traversal bounds before walking the filesystem, preserving bounded
 automation runs.
@@ -173,6 +175,51 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 22:00 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Hardened `scripts/omnivoice-studio-local.py logs` so negative `--tail`
+    values fail before Docker can run, while `--tail 0` remains an explicit
+    bounded request.
+  - Updated Studio setup/bridge and handoff docs for the new log-tail
+    validation and 161-test snapshot.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioLocalTests.test_log_tail_must_not_be_negative tests.test_omnivoice_tts.StudioLocalTests.test_log_tail_zero_remains_explicitly_bounded tests.test_omnivoice_tts.StudioLocalTests.test_command_timeout_must_not_be_negative tests.test_omnivoice_tts.StudioLocalTests.test_command_timeout_zero_remains_unbounded -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+- Tests:
+  - Focused Studio log-tail/timeout suite: PASS, 4 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 161 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Negative Docker log tails can expand output unexpectedly, so Studio log
+    inspection should require zero or a positive explicit line count.
+- Next action:
+  - Continue bounded MVP hardening, or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 21:30 America/New_York
 - Completed:

@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-05-31 21:30 America/New_York on branch
+As of 2026-05-31 22:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 159 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 161 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/validate-omnivoice-bridge.sh` now builds its fake-backend smoke
   command from the configured `PYTHON_BIN`, so alternate interpreter runs do
@@ -74,6 +74,8 @@ As of 2026-05-31 21:30 America/New_York on branch
   unbounded manual escape hatch for Docker/Git commands.
 - `scripts/omnivoice-studio-local.py` now rejects negative
   `--command-timeout` values before Docker or Git commands can run.
+- `scripts/omnivoice-studio-local.py logs` now rejects negative `--tail`
+  values before Docker can run.
 - `scripts/import-omnivoice-studio-voice.py` now validates empty
   `--allowed-use` values before network access and quotes imported
   `allowed_uses` values in YAML, matching the local voice creator's safer
