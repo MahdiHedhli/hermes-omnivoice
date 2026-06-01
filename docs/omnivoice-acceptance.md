@@ -44,6 +44,10 @@ Use `docs/omnivoice-mvp-handoff.md` for the current package state, live
 blockers, install path, and the commands needed to move from static acceptance
 to real synthesis acceptance.
 
+Keep the acceptance runtime probe `--timeout` greater than zero. Invalid values
+fail before Studio probing and are reported as concise `omnivoice-acceptance:`
+errors instead of Python tracebacks.
+
 The acceptance command runs source discovery by default with a short timeout.
 Keep `--source-scan-timeout`, `--source-max-candidates`, `--source-max-files`,
 and `--source-max-file-bytes` greater than zero, and keep

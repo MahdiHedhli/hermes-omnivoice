@@ -3021,6 +3021,31 @@ class AcceptanceTests(unittest.TestCase):
             self.assertIn("{missing_placeholder}", error)
             self.assertNotIn("Traceback", error)
 
+    def test_acceptance_invalid_runtime_timeout_fails_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                result = acceptance.run(
+                    [
+                        "--voices-dir",
+                        str(Path(tmp) / "missing"),
+                        "--source-root",
+                        str(Path(tmp) / "source"),
+                        "--timeout",
+                        "0",
+                        "--json",
+                    ],
+                    env={},
+                )
+
+            error = stderr.getvalue()
+            self.assertEqual(result, 1)
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertIn("omnivoice-acceptance:", error)
+            self.assertIn("timeout must be greater than 0", error)
+            self.assertNotIn("Traceback", error)
+
     def test_acceptance_invalid_source_scan_timeout_fails_without_traceback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             stdout = io.StringIO()

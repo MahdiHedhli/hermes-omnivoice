@@ -167,8 +167,54 @@ Local voice creation now rejects non-finite or non-positive speed values before
 creating profile directories or copying clone reference audio.
 Local voice creation now rejects empty consent allowed-use metadata before
 creating profile directories or copying clone reference audio.
+Acceptance now catches invalid runtime timeout values and reports concise
+`omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-05-31 21:00 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Added acceptance coverage proving invalid runtime `--timeout` values fail
+    through the `omnivoice-acceptance:` diagnostic boundary without tracebacks.
+  - Updated acceptance, handoff, and weekend-summary docs for the new timeout
+    diagnostic coverage and 157-test snapshot.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.AcceptanceTests.test_acceptance_invalid_runtime_timeout_fails_without_traceback tests.test_omnivoice_tts.AcceptanceTests.test_acceptance_invalid_runtime_command_fails_without_traceback tests.test_omnivoice_tts.AcceptanceTests.test_acceptance_invalid_source_scan_timeout_fails_without_traceback -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+- Tests:
+  - Focused acceptance diagnostic suite: PASS, 3 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 157 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Acceptance is an operator-facing command and should keep runtime diagnostic
+    failures concise, including invalid probe bounds.
+- Next action:
+  - Continue bounded MVP hardening, or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-05-31 20:30 America/New_York
 - Completed:
