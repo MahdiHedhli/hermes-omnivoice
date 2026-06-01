@@ -242,8 +242,9 @@ print command arguments. It validates backend command template placeholders,
 reports whether a backend command is configured, whether a loopback Studio
 `/profiles` endpoint is reachable, whether an `omnivoice-infer` CLI is on
 `PATH`, whether auto CLI mode is enabled, and how many local registry profiles
-exist. Malformed Studio `/profiles` JSON is reported as `invalid`, not
-backend-ready. Its Studio probe `--timeout` must be greater than zero.
+exist. Malformed Studio `/profiles` JSON, including profile-list entries that
+are not objects, is reported as `invalid`, not backend-ready. Its Studio probe
+`--timeout` must be greater than zero.
 
 ## Local Studio With Docker
 

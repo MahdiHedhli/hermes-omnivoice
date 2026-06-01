@@ -40,7 +40,8 @@ This repo is intentionally conservative:
   candidate Hermes Agent source trees before native-provider work.
 - `scripts/check-omnivoice-runtime.py`: read-only diagnostics for local backend,
   Studio, CLI, and voice registry availability. Malformed Studio `/profiles`
-  payloads are reported as invalid, not ready.
+  payloads and non-object profile-list entries are reported as invalid, not
+  ready.
 - `scripts/install-hermes-omnivoice-bridge.py`: copies bridge files into a real
   Hermes checkout or staging directory without overwriting by default.
 - `scripts/omnivoice-studio-local.py`: helper for checking, fetching, starting,

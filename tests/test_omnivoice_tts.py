@@ -2867,6 +2867,24 @@ class RuntimeCheckTests(unittest.TestCase):
         self.assertFalse(runtime["studio_ready"])
         self.assertFalse(runtime["backend_ready"])
 
+    def test_runtime_check_rejects_non_object_studio_profile_entries(self) -> None:
+        with mock_studio_server(["studio-123"]) as (studio_url, _requests):
+            report = runtime_check.check_studio(studio_url, 5, False)
+
+        self.assertEqual(report["status"], "invalid")
+        self.assertEqual(report["profile_count"], 0)
+        self.assertIn("entries must be JSON objects", report["error"])
+        runtime = acceptance.evaluate_runtime(
+            {
+                "studio": report,
+                "backend_command": {"status": "missing"},
+                "omnivoice_cli": {"status": "missing"},
+                "voices_dir": {"profile_count": 1},
+            }
+        )
+        self.assertFalse(runtime["studio_ready"])
+        self.assertFalse(runtime["backend_ready"])
+
     def test_runtime_check_reports_official_cli_auto_gate(self) -> None:
         with unittest.mock.patch.object(
             runtime_check.shutil,

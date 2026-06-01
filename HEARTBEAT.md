@@ -129,8 +129,9 @@ contract before reporting an exported backend command as configured, so
 acceptance readiness stays fail-closed when operator command config is malformed.
 Runtime diagnostics now also reject non-positive Studio probe timeouts before
 touching URL handling.
-Runtime diagnostics now report malformed Studio `/profiles` payloads as
-`invalid`, so acceptance cannot treat a bad Studio API shape as backend-ready.
+Runtime diagnostics now report malformed Studio `/profiles` payloads and
+non-object profile-list entries as `invalid`, so acceptance cannot treat a bad
+Studio API shape as backend-ready.
 The wrapper and runtime diagnostics now expose the same command-template
 placeholder allowlist, and tests pin the two together to prevent readiness and
 synthesis behavior from drifting.
@@ -204,6 +205,53 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 04:30 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Hardened runtime Studio readiness checks so non-object entries in a
+    `/profiles` list are reported as `invalid`, not `reachable`.
+  - Added regression coverage proving non-object Studio profile-list entries do
+    not count as Studio-ready or backend-ready in acceptance evaluation.
+  - Updated setup, Studio bridge, README, MVP handoff, weekend-summary, and
+    heartbeat docs for the runtime profile-entry guard.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_accepts_loopback_studio_profiles tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_rejects_malformed_studio_profiles_payload tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_rejects_non_object_studio_profile_entries tests.test_omnivoice_tts.AcceptanceTests.test_acceptance_can_require_real_backend -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused runtime Studio payload and profile-entry suite: PASS, 4 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 190 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - A reachable Studio endpoint is not sufficient evidence of backend readiness
+    unless the profile list contains object entries the bridge can interpret.
+- Next action:
+  - Continue bounded MVP hardening or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 04:00 America/New_York
 - Completed:

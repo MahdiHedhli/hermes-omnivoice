@@ -97,8 +97,9 @@ still required before claiming synthesis quality.
 
 Use `scripts/check-omnivoice-runtime.py --studio-url http://127.0.0.1:3900` as
 a read-only probe before a real smoke test. It checks Studio `/profiles`
-reachability, rejects malformed profile-list payloads as `invalid`, and keeps
-the same loopback-only default as the synthesis wrapper.
+reachability, rejects malformed profile-list payloads or non-object profile
+entries as `invalid`, and keeps the same loopback-only default as the synthesis
+wrapper.
 
 For Docker-based local Studio runs, use:
 
