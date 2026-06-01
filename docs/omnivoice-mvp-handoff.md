@@ -31,11 +31,15 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 01:30 America/New_York on branch
+As of 2026-06-01 02:00 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 181 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 183 tests and 1 expected
   opt-in real-backend skip.
+- `scripts/import-omnivoice-studio-voice.py` now rejects empty Studio profile
+  IDs before local writes or network access, and rejects downloaded clone
+  profiles without `ref_text` before imported audio or `voice.yaml` material is
+  written.
 - `scripts/import-omnivoice-studio-voice.py` now rejects non-loopback and
   credential-bearing Studio URLs before creating local registry directories or
   touching Studio APIs.

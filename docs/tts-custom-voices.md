@@ -129,6 +129,9 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   diagnostics reject URL userinfo.
 - The Studio importer rejects non-loopback or credential-bearing Studio URLs
   before it creates local registry directories or contacts Studio.
+- The Studio importer rejects empty profile IDs before local writes or network
+  access, and cloned Studio profiles must include reference text before
+  imported `ref.wav` or `voice.yaml` material is written.
 - Keep importer `--timeout` greater than zero; invalid values fail before local
   registry writes or Studio network access.
 - Keep `speed` finite and greater than zero, and keep wrapper `timeout` greater

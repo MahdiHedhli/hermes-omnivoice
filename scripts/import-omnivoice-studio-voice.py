@@ -33,6 +33,13 @@ def validate_voice_id(voice_id: str) -> None:
         raise ImportErrorWithContext("voice id contains unsupported characters")
 
 
+def validate_profile_id(profile_id: str) -> str:
+    clean = profile_id.strip()
+    if not clean:
+        raise ImportErrorWithContext("profile id cannot be empty")
+    return clean
+
+
 def validate_allowed_uses(values: list[str] | None) -> list[str]:
     allowed_uses = values or DEFAULT_ALLOWED_USES
     clean: list[str] = []
@@ -205,19 +212,20 @@ def run(argv: list[str] | None = None) -> int:
     try:
         if not args.confirm_consent:
             raise ImportErrorWithContext("refusing import without --confirm-consent")
-        voice_id = args.voice_id or args.profile_id
+        profile_id = validate_profile_id(args.profile_id)
+        voice_id = args.voice_id or profile_id
         validate_voice_id(voice_id)
         allowed_uses = validate_allowed_uses(args.allowed_use)
         timeout = validate_timeout(args.timeout)
         base_url = validate_studio_url(args.studio_url, args.allow_remote_studio)
         voice_dir = prepare_voice_dir(args.voices_dir, voice_id, args.force)
 
-        profile = request_json(f"{base_url}/profiles/{urllib.parse.quote(args.profile_id)}", timeout)
+        profile = request_json(f"{base_url}/profiles/{urllib.parse.quote(profile_id)}", timeout)
 
         audio_bytes = b""
         try:
             audio_bytes = request_bytes(
-                f"{base_url}/profiles/{urllib.parse.quote(args.profile_id)}/audio",
+                f"{base_url}/profiles/{urllib.parse.quote(profile_id)}/audio",
                 timeout,
             )
         except urllib.error.HTTPError as exc:
@@ -227,6 +235,11 @@ def run(argv: list[str] | None = None) -> int:
         has_instruct = bool(str(profile.get("instruct") or "").strip())
         mode = "clone" if audio_bytes else "design"
         if mode == "clone":
+            ref_text = str(profile.get("ref_text") or "").strip()
+            if not ref_text:
+                raise ImportErrorWithContext("Studio clone profile requires ref_text")
+            profile = dict(profile)
+            profile["ref_text"] = ref_text
             validate_wav_bytes(audio_bytes)
             replace_private_file(voice_dir / "ref.wav", "wb", audio_bytes)
         elif not has_instruct:
@@ -241,7 +254,7 @@ def run(argv: list[str] | None = None) -> int:
             mode,
             allowed_uses,
         )
-        print(f"Imported Studio profile {args.profile_id} as {voice_id} in {voice_dir}")
+        print(f"Imported Studio profile {profile_id} as {voice_id} in {voice_dir}")
     except (OSError, urllib.error.URLError, json.JSONDecodeError, ImportErrorWithContext) as exc:
         print(f"import-omnivoice-studio-voice: {exc}", file=sys.stderr)
         return 1

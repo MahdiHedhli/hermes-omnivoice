@@ -149,6 +149,9 @@ profile importer, and runtime diagnostics so credential-bearing Studio URLs do
 not become local config, diagnostics, or log material.
 Studio profile import now validates non-loopback and credential-bearing Studio
 URLs before local registry directory creation or Studio network access.
+Studio profile import now also rejects empty Studio profile IDs before local
+writes or network access, and rejects cloned Studio profiles without
+`ref_text` before imported audio or registry YAML material is written.
 The TTS wrapper now also rejects non-finite or non-positive speed values and
 non-positive timeouts before backend or Studio startup.
 Generated and static command-provider examples now pass wrapper `--max-chars`
@@ -191,6 +194,55 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 02:00 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Hardened `scripts/import-omnivoice-studio-voice.py` so empty Studio
+    `--profile-id` values fail before local writes or Studio network access,
+    even when `--voice-id` is provided.
+  - Hardened cloned Studio imports so downloaded audio without `ref_text`
+    fails before imported `ref.wav` or `voice.yaml` material is written.
+  - Updated Studio bridge, custom voice, MVP handoff, and weekend-summary docs
+    for the importer profile validation and 183-test snapshot.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_empty_profile_id_before_network_and_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_clone_without_ref_text_before_material_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_remote_studio_before_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_studio_url_userinfo_before_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_writes_registry_yaml_compatible_with_wrapper -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused Studio importer profile validation suite: PASS, 5 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 183 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Studio imports should fail before writing local profile material when the
+    Studio identity or clone reference-text metadata would produce an unusable
+    local voice.
+- Next action:
+  - Continue bounded MVP hardening, or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 01:30 America/New_York
 - Completed:
