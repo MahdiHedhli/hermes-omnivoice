@@ -143,6 +143,8 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
 - The profile creation helper rejects non-finite or non-positive `--speed`
   values and empty `--allowed-use` values before it creates local profile
   directories or copies clone reference audio.
+- The profile creation helper rejects symlinked clone `--ref-audio` paths
+  before copying, so source samples cannot be local filesystem aliases.
 - Voice profiles must carry confirmed consent with non-empty `consent.source`
   and at least one non-empty `consent.allowed_uses` entry. The profile creation
   helper rejects empty `--consent-source` values before it writes local profile

@@ -209,7 +209,10 @@ def command_design(args: argparse.Namespace) -> int:
 
 def command_clone(args: argparse.Namespace) -> int:
     require_consent(args)
-    ref_audio = args.ref_audio.expanduser().resolve()
+    raw_ref_audio = args.ref_audio.expanduser()
+    if raw_ref_audio.is_symlink():
+        raise CreateVoiceError("clone reference audio cannot be a symlink")
+    ref_audio = raw_ref_audio.resolve()
     if ref_audio.suffix.lower() != ".wav":
         raise CreateVoiceError("clone reference audio must be a WAV file")
     if not ref_audio.is_file():

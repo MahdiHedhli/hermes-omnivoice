@@ -113,6 +113,8 @@ Local voice profile writes now use private `0700` profile directories and
 `0600` `voice.yaml`/`ref.wav` files. Create/import forced rewrites use
 same-directory temporary files and replace existing material symlinks rather
 than following them.
+Clone voice creation now rejects symlinked `--ref-audio` source paths before
+validating or copying the reference sample into the local registry.
 Create/import helpers now also refuse symlinked voice registry roots and final
 voice-directory symlinks before profile material writes, so forced rewrites
 cannot alias another local profile.
@@ -221,6 +223,53 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 08:30 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked remaining blockers; actual Hermes Agent source is still absent,
+    so native-provider work remains deferred.
+  - Hardened `scripts/create-omnivoice-voice.py clone` so symlinked
+    `--ref-audio` source paths are rejected before WAV validation or local
+    registry copy.
+  - Added regression coverage proving a symlinked source WAV fails closed and
+    leaves no copied `ref.wav` behind.
+  - Updated setup, custom voice, README, MVP handoff, weekend-summary, and
+    heartbeat docs for the clone reference-input symlink guard.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -10`
+  - `python3 -m unittest tests.test_omnivoice_tts.CreateVoiceTests.test_create_clone_voice_rejects_ref_audio_symlink_before_copy tests.test_omnivoice_tts.CreateVoiceTests.test_create_clone_voice_copies_wav_and_validates tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_ref_audio_symlink_fails tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_loads_valid_clone_voice -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused clone reference-input symlink guard suite: PASS, 4 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 204 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - A symlinked clone reference input is a local filesystem alias and should be
+    refused before the helper copies sensitive voice material into the registry.
+- Next action:
+  - Continue bounded MVP hardening or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 08:00 America/New_York
 - Completed:

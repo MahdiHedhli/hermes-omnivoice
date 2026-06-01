@@ -2713,6 +2713,38 @@ class CreateVoiceTests(unittest.TestCase):
                 str((voices_root / "marvin" / "ref.wav").resolve()),
             )
 
+    def test_create_clone_voice_rejects_ref_audio_symlink_before_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            source_ref = root / "source.wav"
+            ref_symlink = root / "alias.wav"
+            write_wav(source_ref)
+            try:
+                ref_symlink.symlink_to(source_ref)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+                result = create_voice.run(
+                    [
+                        "--voices-dir",
+                        str(voices_root),
+                        "clone",
+                        "marvin",
+                        "--ref-audio",
+                        str(ref_symlink),
+                        "--ref-text",
+                        "Reference transcript.",
+                        "--confirm-consent",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("clone reference audio cannot be a symlink", stderr.getvalue())
+            self.assertFalse((voices_root / "marvin" / "ref.wav").exists())
+
     def test_create_clone_voice_writes_private_profile_material(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

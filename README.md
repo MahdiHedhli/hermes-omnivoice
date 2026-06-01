@@ -9,7 +9,8 @@ This repo is intentionally conservative:
   out of git.
 - Cloned voices require `consent.status: confirmed`, a non-empty
   `consent.source`, and at least one non-empty `consent.allowed_uses` entry.
-- Cloned voice reference files are validated as readable WAV audio before use.
+- Cloned voice reference files are validated as readable WAV audio before use,
+  and clone creation rejects symlinked `--ref-audio` inputs before copying.
 - Local voice profile directories are written private by default; registry YAML
   and copied/imported `ref.wav` files are `0600`.
 - Runtime profile loading rejects symlinked voice registry roots, voice

@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 08:00 America/New_York on branch
+Status as of 2026-06-01 08:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -8,8 +8,8 @@ Status as of 2026-06-01 08:00 America/New_York on branch
 - Hermes command-provider wrapper: `scripts/hermes-omnivoice-tts.py`.
 - Local voice registry with consent gates under
   `~/.hermes/voices/omnivoice/<voice_id>/voice.yaml`.
-- Designed and cloned voice creation helper with WAV validation for cloned
-  reference samples.
+- Designed and cloned voice creation helper with WAV validation and symlink
+  rejection for cloned reference samples.
 - OmniVoice-Studio profile importer using loopback-only HTTP APIs by default.
 - Direct OmniVoice Python API adapter and opt-in official CLI support.
 - Runtime diagnostics, acceptance checks, install helper, voice helper CLI, and
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 203 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 204 tests with 1 expected
   opt-in real-backend skip.
 - Runtime voice readiness guard: PASS. Runtime diagnostics reuse the wrapper
   voice-profile validator so acceptance does not count unsafe registry aliases,
@@ -56,6 +56,9 @@ sample and contains explicit confirmed consent metadata.
   registry roots and final voice-directory symlinks before local profile
   material writes, while forced rewrites still replace `voice.yaml` and
   `ref.wav` symlinks instead of following them.
+- Clone reference input symlink guard: PASS. The local voice creation helper
+  rejects symlinked clone `--ref-audio` source paths before copying reference
+  audio into the local registry.
 - Studio import write staging: PASS. Existing occupied target directories are
   still rejected before network access, while failed Studio fetches and invalid
   design payloads no longer create empty target voice directories.

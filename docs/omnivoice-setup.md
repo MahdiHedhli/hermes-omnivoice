@@ -21,6 +21,8 @@ symlinks so a forced write cannot alias another local voice profile.
 Non-finite or non-positive `--speed` values are rejected before the helper
 creates a profile directory or copies clone reference audio.
 Empty `--allowed-use` values are also rejected before local profile writes.
+Clone creation also rejects symlinked `--ref-audio` inputs before copying, so a
+reference sample path cannot silently alias another local file.
 
 Create a designed voice:
 
@@ -48,8 +50,9 @@ python scripts/create-omnivoice-voice.py clone marvin \
 
 The clone command copies the reference sample into the local registry as
 `ref.wav`, validates that the sample is a readable WAV file, and refuses to
-write over an existing voice directory unless `--force` is set. The copied
-sample is private local voice material; keep that registry outside the repo.
+write over an existing voice directory unless `--force` is set. Symlinked
+reference sample paths are refused before copy. The copied sample is private
+local voice material; keep that registry outside the repo.
 
 Example clone profile:
 
