@@ -100,6 +100,8 @@ treated as current consent/profile readiness. Malformed local selection JSON is
 also rejected before it can act as a registry pointer, including non-object
 payloads and non-OmniVoice provider values. `current` reports profile-derived
 speed and voice registry path instead of trusting stale selection-file values.
+The voice helper `list` command now rejects symlinked voice registry roots
+before enumerating local profile names.
 Runtime voice profile loading now rejects symlinked voice registry roots, voice
 directories, `voice.yaml` files, and cloned `ref_audio` files before synthesis
 can use local registry material.
@@ -223,6 +225,53 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 09:00 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked remaining blockers; actual Hermes Agent source is still absent,
+    so native-provider work remains deferred.
+  - Hardened `scripts/hermes-omnivoice-voices.py list` so symlinked
+    `--voices-dir` roots are rejected before profile names are enumerated.
+  - Added regression coverage proving the list command fails closed for a
+    symlinked registry root.
+  - Updated custom voice, README, MVP handoff, weekend-summary, and heartbeat
+    docs for the helper list registry-root guard.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -10`
+  - `python3 -m unittest tests.test_omnivoice_tts.VoiceCliTests.test_list_command_rejects_voices_root_symlink tests.test_omnivoice_tts.VoiceCliTests.test_list_profiles_marks_ready_and_invalid_entries tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_rejects_symlink_voices_root tests.test_omnivoice_tts.OmniVoiceRegistryTests.test_symlink_voices_root_fails -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused helper list registry-root guard suite: PASS, 4 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 205 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Voice registry root symlinks are a trust-boundary violation even for read
+    oriented helper commands because listing can disclose profile names from an
+    aliased registry.
+- Next action:
+  - Continue bounded MVP hardening or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 08:30 America/New_York
 - Completed:

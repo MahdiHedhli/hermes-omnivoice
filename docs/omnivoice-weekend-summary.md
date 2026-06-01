@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 08:30 America/New_York on branch
+Status as of 2026-06-01 09:00 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 204 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 205 tests with 1 expected
   opt-in real-backend skip.
 - Runtime voice readiness guard: PASS. Runtime diagnostics reuse the wrapper
   voice-profile validator so acceptance does not count unsafe registry aliases,
@@ -216,6 +216,8 @@ sample and contains explicit confirmed consent metadata.
   same-directory temporary file and atomic replace, and replaces destination
   symlinks instead of following them. Failed temp writes are cleaned up before
   the error is returned.
+- Voice helper registry listing: PASS. `scripts/hermes-omnivoice-voices.py
+  list` refuses symlinked voice registry roots before enumerating profile names.
 - Voice profile writes: PASS. Create/import helpers write local profile
   directories with `0700` permissions and `voice.yaml` plus copied or imported
   `ref.wav` material with `0600` permissions. Forced rewrites replace existing

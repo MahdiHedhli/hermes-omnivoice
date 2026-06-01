@@ -4702,6 +4702,24 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(by_id["marvin"]["status"], "ready")
             self.assertEqual(by_id["bad"]["status"], "invalid")
 
+    def test_list_command_rejects_voices_root_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "real-voices"
+            write_voice(target, "marvin")
+            symlink = root / "voices"
+            try:
+                symlink.symlink_to(target, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+                result = voices_cli.run(["--voices-dir", str(symlink), "list"])
+
+            self.assertEqual(result, 1)
+            self.assertIn("voices root cannot be a symlink", stderr.getvalue())
+
     def test_config_command_prints_command_provider_yaml(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

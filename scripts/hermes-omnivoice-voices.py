@@ -52,6 +52,8 @@ def list_profiles(voices_dir: Path) -> list[dict]:
     root = voices_dir.expanduser()
     if not root.exists():
         return []
+    if root.is_symlink():
+        raise RuntimeError(f"voices root cannot be a symlink: {root}")
     profiles = []
     for child in sorted(root.iterdir(), key=lambda item: item.name):
         if not child.is_dir() or not (child / "voice.yaml").exists():

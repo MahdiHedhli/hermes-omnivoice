@@ -43,7 +43,7 @@ This repo is intentionally conservative:
 - `scripts/import-omnivoice-studio-voice.py`: imports a Studio profile into the
   Hermes local registry after explicit consent confirmation.
 - `scripts/hermes-omnivoice-voices.py`: list, inspect, preview, and print sample
-  config for local voices.
+  config for local voices; registry listing refuses symlinked voice roots.
 - `scripts/find-hermes-source.py`: read-only helper for finding and scoring
   candidate Hermes Agent source trees before native-provider work.
 - `scripts/check-omnivoice-runtime.py`: read-only diagnostics for local backend,

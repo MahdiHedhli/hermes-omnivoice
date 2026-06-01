@@ -188,6 +188,8 @@ python scripts/hermes-omnivoice-voices.py config narrator
 
 The preview command uses `scripts/hermes-omnivoice-tts.py`, so it requires the
 same local Studio URL or backend command configuration as Hermes TTS. The
+`list` command refuses symlinked voice registry roots before enumerating local
+profile names, matching the wrapper's registry trust boundary. The
 preview helper validates `--speed` and `--timeout` overrides before launching
 the wrapper subprocess, and preserves the final output path so the wrapper can
 replace an existing preview output symlink instead of following it. The
