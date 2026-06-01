@@ -25,15 +25,34 @@ Static MVP acceptance currently passes without a real model backend. Live
 backend acceptance now passes on this machine when the prepared OmniVoice
 Python adapter command is exported; the default shell remains unconfigured so
 it does not claim backend readiness by accident.
+The bridge has also been deployed and validated on the homelab Hermes host at
+`/opt/hermes-local-tts/omnivoice-bridge`. The live Hermes config now includes
+an available `tts.providers.omnivoice` command provider using the
+`homelab_narrator` designed voice and isolated Python adapter runtime, while
+the active provider remains `xtts-v2`.
 Acceptance also reports package-only handoff files separately, so the copied
 `scripts/omnivoice-acceptance.py` remains useful after a default install into a
 real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 09:30 America/New_York on branch
+As of 2026-06-01 16:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
+- Homelab Hermes command-provider validation passes against the real Hermes
+  TTS tool. `tools.tts_tool.text_to_speech_tool` was run with provider
+  `omnivoice`, called the installed wrapper and real OmniVoice Python backend,
+  and returned a valid Opus output through Hermes' existing voice-compatible
+  conversion path.
+- Homelab installed `scripts/omnivoice-acceptance.py --require-real-backend`
+  passes for static MVP readiness, real backend readiness, and Hermes source
+  readiness.
+- Homelab installed `scripts/test-omnivoice-tts.sh` passes with the real Python
+  backend and generates a valid temporary WAV from the required smoke text.
+- The homelab OmniVoice provider is staged but not active. Live config keeps
+  `tts.provider: xtts-v2` and adds `tts.providers.omnivoice` with
+  `voice: homelab_narrator`, `timeout: 600`, `output_format: wav`,
+  `voice_compatible: true`, and `max_text_length: 2000`.
 - `scripts/validate-omnivoice-bridge.sh` passes with 206 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/check-omnivoice-runtime.py` now reuses the wrapper voice-profile
@@ -319,6 +338,25 @@ Review the `.gitignore` status in the installer report. Add
 OmniVoice local-artifact block to the target checkout or refresh an existing
 managed block to the current pattern list.
 
+The homelab deployment installed the default runtime payload outside the dirty
+Hermes source checkout:
+
+```text
+/opt/hermes-local-tts/omnivoice-bridge
+```
+
+The target voice registry is:
+
+```text
+/home/claude/.hermes/voices/omnivoice
+```
+
+The backend runtime is isolated from the repo:
+
+```text
+/home/claude/.cache/hermes/omnivoice-python
+```
+
 ## Configure A Real Backend
 
 Use one backend path at a time.
@@ -438,13 +476,16 @@ python scripts/hermes-omnivoice-voices.py preview narrator --out /tmp/narrator.w
 - The published Studio image has no `linux/arm64/v8` manifest on this Mac, and
   a source-build attempt exceeded a 300 second heartbeat window while exporting
   the Docker image.
-- No real OmniVoice backend command is exported in the default shell, and
-  `omnivoice-infer` is not enabled through `HERMES_OMNIVOICE_AUTO_CLI=1`.
-- The isolated OmniVoice venv and local `heartbeat_narrator` designed profile
-  are ready, but the adapter command still needs to be exported for backend
-  readiness in any new shell.
-- The real Hermes Agent source is not present in this checkout, so native
-  provider wiring and in-app `/voice` commands are deferred.
+- No real OmniVoice backend command is exported in the local bridge repo's
+  default shell, and `omnivoice-infer` is not enabled through
+  `HERMES_OMNIVOICE_AUTO_CLI=1`.
+- The homelab Hermes runtime has the backend command embedded in
+  `tts.providers.omnivoice`, so remote backend readiness does not depend on a
+  login shell export.
+- The real Hermes Agent source is not present in this local checkout. Homelab
+  source exists remotely, but it is already dirty with unrelated changes; native
+  provider wiring and in-app `/voice` commands are deferred until a clean source
+  branch can be used.
 
 ## Security Invariants
 

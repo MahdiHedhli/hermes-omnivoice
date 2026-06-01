@@ -2,8 +2,9 @@
 
 ## Command Provider Example
 
-The exact Hermes TTS schema still needs to be verified against the real Hermes
-Agent source. The intended shape is:
+The command-provider schema has been verified against the homelab Hermes source
+and live config. Hermes command providers support the placeholders used below,
+including `{input_path}`, `{output_path}`, `{voice}`, and `{speed}`.
 
 ```yaml
 tts:
@@ -15,13 +16,17 @@ tts:
       voice: narrator
       speed: 1.0
       output_format: wav
-      timeout: 180
+      timeout: 600
       voice_compatible: true
       max_text_length: 2000
 ```
 
-If Hermes uses different placeholder names, adapt the command string to the real
-schema while preserving:
+For a staged rollout, keep the current active provider and add only
+`tts.providers.omnivoice`. The homelab validation left `tts.provider: xtts-v2`
+active while proving the `omnivoice` provider with an in-memory provider
+override.
+
+The command string must preserve:
 
 - text input path
 - output audio path
@@ -52,7 +57,7 @@ tts:
       voice: narrator
       speed: 1.0
       output_format: wav
-      timeout: 180
+      timeout: 600
 ```
 
 For Studio-created voices, import the profile first with

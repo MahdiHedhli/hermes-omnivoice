@@ -225,49 +225,73 @@ allowed-use metadata, and local voice creation rejects empty consent sources
 before writing profile material.
 Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
+The bridge has now been installed on the homelab Hermes host outside the
+Hermes source checkout at `/opt/hermes-local-tts/omnivoice-bridge`, with an
+isolated OmniVoice Python runtime under the `claude` account. Live Hermes
+configuration includes an available `omnivoice` command provider using the
+`homelab_narrator` designed profile, while the active production provider
+remains `xtts-v2`.
 
 ## Latest heartbeat
 
-- Time: 2026-06-01 10:00 America/New_York
+- Time: 2026-06-01 16:30 America/New_York
 - Completed:
   - Confirmed the branch was clean at heartbeat start.
-  - Re-ran the lightweight acceptance, runtime, and source-discovery gates.
-  - Confirmed static MVP/package readiness still passes.
-  - Confirmed the default shell runtime is intentionally unconfigured until a
-    backend command, Studio URL, or explicit auto-CLI mode is exported.
-  - Confirmed actual Hermes Agent source is still absent under the bounded
-    search roots, so native-provider work remains deferred.
-  - Left implementation files unchanged because the next meaningful work
-    requires either a configured runtime shell or the real Hermes Agent source.
+  - Used the homelab Hermes path instead of Lume: Mac Studio SSH hop to
+    `hermes-01` at `100.114.4.26`.
+  - Installed the bridge runtime to
+    `/opt/hermes-local-tts/omnivoice-bridge` as `claude`, outside the dirty
+    Hermes source checkout.
+  - Created a consent-confirmed designed profile `homelab_narrator` under
+    `/home/claude/.hermes/voices/omnivoice`.
+  - Installed the isolated OmniVoice Python runtime at
+    `/home/claude/.cache/hermes/omnivoice-python`; no Studio service was
+    exposed.
+  - Added `tts.providers.omnivoice` to live Hermes config with the real Python
+    adapter command and a 600 second timeout, while preserving active
+    `tts.provider: xtts-v2`.
+  - Proved Hermes' own `tools.tts_tool.text_to_speech_tool` can synthesize via
+    the `omnivoice` command provider and return a valid Opus file through the
+    existing voice-compatible conversion path.
+  - Confirmed remote Hermes source git status still only shows pre-existing
+    homelab changes; the bridge install did not modify the source checkout.
 - Commands:
   - `git status --short --branch`
-  - `python3 scripts/omnivoice-acceptance.py --json`
-  - `python3 scripts/check-omnivoice-runtime.py --json`
-  - `python3 scripts/find-hermes-source.py --json`
-  - `sed -n '1,260p' HEARTBEAT.md`
-  - `sed -n '260,420p' HEARTBEAT.md`
+  - `python3 scripts/install-hermes-omnivoice-bridge.py --target-root /tmp/hermes-omnivoice-bridge-package --with-examples --update-gitignore --force`
+  - `scripts/create-omnivoice-voice.py design homelab_narrator ... --confirm-consent --force`
+  - `scripts/setup-omnivoice-python-env.py --json`
+  - `scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `scripts/test-omnivoice-tts.sh`
+  - `tools.tts_tool.text_to_speech_tool(...)` with in-memory provider override
+    to `omnivoice`
+  - `git status --short --branch` in `/opt/hermes-agent/source` as `claude`
 - Tests:
-  - `scripts/omnivoice-acceptance.py --json`: PASS for static MVP and package
-    files; real backend and Hermes source gates remain false in the default
-    shell.
-  - `scripts/check-omnivoice-runtime.py --json`: PASS diagnostic run; reports
-    one valid local profile and no configured backend command, Studio URL, or
-    auto CLI.
-  - `scripts/find-hermes-source.py --json`: PASS diagnostic run; only this
-    bridge repo was found and it is not a likely Hermes Agent checkout.
+  - Homelab installed acceptance with `--require-real-backend`: PASS for
+    static MVP readiness, real backend readiness, and Hermes source readiness.
+  - Homelab installed `scripts/test-omnivoice-tts.sh`: PASS, generated a valid
+    temporary WAV from the required smoke text using the real Python backend.
+  - Live Hermes command-provider smoke: PASS, returned
+    `/tmp/.../hermes-omnivoice-real-smoke.ogg` identified as Opus audio at
+    24000 Hz.
+  - Manual real wrapper synthesis with 600 second timeout: PASS in about 52
+    seconds, generated 16-bit mono WAV at 24000 Hz.
 - Blockers:
-  - Actual Hermes Agent source checkout is still not present under the bounded
-    search roots, so native-provider work remains deferred.
-  - Default shell runtime is still unconfigured until the prepared Python
-    adapter exports, Studio URL, command backend, or auto-CLI mode are
-    explicitly enabled.
+  - Live OmniVoice-Studio API is not running on `hermes-01`; the proven route is
+    the local Python adapter using voices created/imported into the Hermes
+    registry.
+  - Native provider work remains deferred because the live Hermes source tree
+    is already dirty with unrelated homelab changes and the command-provider
+    MVP is working.
 - Assumptions:
-  - The command-provider MVP is the correct stopping point until the real
-    Hermes Agent checkout is available for schema/provider verification.
+  - Keeping `xtts-v2` as the active provider is the safer rollout posture; an
+    operator can switch to `omnivoice` after reviewing latency and disk impact.
+  - The designed `homelab_narrator` profile is acceptable for validation
+    because it uses no cloned reference sample and has explicit consent
+    metadata.
 - Next action:
-  - Configure/export the proven local Python adapter command for another
-    strict synthesis check, or switch to native-provider work when an actual
-    Hermes Agent checkout is available.
+  - Decide whether to switch live Hermes `tts.provider` to `omnivoice` for an
+    operator trial, or keep it as an available provider and add a small
+    documented voice-selection workflow.
 
 ## Previous heartbeat
 

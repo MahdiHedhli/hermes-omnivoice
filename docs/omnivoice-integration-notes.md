@@ -17,11 +17,16 @@ Findings:
   read-only helper. It scores candidate source trees by Hermes/TTS indicators,
   skips secret-named files, and marks this bridge repo separately so it is not
   mistaken for Hermes Agent.
+- A later homelab check found real Hermes source at `/opt/hermes-agent/source`
+  on `hermes-01`. Hermes already supports command TTS providers under
+  `tts.providers.<name>` with placeholders including `{input_path}`,
+  `{output_path}`, `{voice}`, and `{speed}`.
 - The least invasive path is a command-provider MVP: Hermes writes input text to
   a file, calls `scripts/hermes-omnivoice-tts.py`, and consumes the generated
   audio file.
-- A future heartbeat should inspect the real Hermes Agent repo or installed
-  source before attempting a native provider.
+- The real homelab source checkout was already dirty with unrelated changes, so
+  the bridge was installed outside that checkout and native-provider work
+  remains deferred.
 
 ## MVP Decision
 
