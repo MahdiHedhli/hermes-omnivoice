@@ -16,6 +16,7 @@ import threading
 import types
 import unittest
 import unittest.mock
+import urllib.error
 import wave
 
 
@@ -1949,6 +1950,82 @@ class StudioImportTests(unittest.TestCase):
 
             self.assertEqual(result, 1)
             self.assertIn("already contains files", errors.getvalue())
+
+    def test_importer_network_failure_does_not_create_voice_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_dir = root / "voices"
+            with unittest.mock.patch.object(
+                studio_import,
+                "request_json",
+                side_effect=urllib.error.URLError("offline"),
+            ) as request_json:
+                with unittest.mock.patch.object(studio_import, "request_bytes") as request_bytes:
+                    errors = io.StringIO()
+                    with contextlib.redirect_stderr(errors):
+                        result = studio_import.run(
+                            [
+                                "--studio-url",
+                                "http://127.0.0.1:3900",
+                                "--profile-id",
+                                "studio-123",
+                                "--voice-id",
+                                "marvin",
+                                "--voices-dir",
+                                str(voices_dir),
+                                "--confirm-consent",
+                            ]
+                        )
+
+            self.assertEqual(result, 1)
+            self.assertIn("offline", errors.getvalue())
+            request_json.assert_called_once()
+            request_bytes.assert_not_called()
+            self.assertFalse((voices_dir / "marvin").exists())
+
+    def test_importer_design_without_instruct_does_not_create_voice_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_dir = root / "voices"
+            profile = {
+                "id": "studio-123",
+                "name": "Narrator",
+                "language": "en",
+            }
+            with (
+                unittest.mock.patch.object(studio_import, "request_json", return_value=profile),
+                unittest.mock.patch.object(
+                    studio_import,
+                    "request_bytes",
+                    side_effect=urllib.error.HTTPError(
+                        url="http://127.0.0.1:3900/profiles/studio-123/audio",
+                        code=404,
+                        msg="missing",
+                        hdrs={},
+                        fp=None,
+                    ),
+                ),
+            ):
+                errors = io.StringIO()
+                with contextlib.redirect_stderr(errors):
+                    result = studio_import.run(
+                        [
+                            "--studio-url",
+                            "http://127.0.0.1:3900",
+                            "--profile-id",
+                            "studio-123",
+                            "--voice-id",
+                            "narrator",
+                            "--voices-dir",
+                            str(voices_dir),
+                            "--confirm-consent",
+                        ]
+                    )
+
+            voice_dir = voices_dir / "narrator"
+            self.assertEqual(result, 1)
+            self.assertIn("no downloadable audio and no design instruction", errors.getvalue())
+            self.assertFalse(voice_dir.exists())
 
     def test_importer_rejects_empty_allowed_use_before_network(self) -> None:
         with unittest.mock.patch.object(studio_import, "request_json") as request_json:

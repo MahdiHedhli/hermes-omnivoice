@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 02:00 America/New_York on branch
+Status as of 2026-06-01 02:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,11 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 183 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 185 tests with 1 expected
   opt-in real-backend skip.
+- Studio import write staging: PASS. Existing occupied target directories are
+  still rejected before network access, while failed Studio fetches and invalid
+  design payloads no longer create empty target voice directories.
 - Studio import profile validation: PASS. Empty Studio profile IDs fail before
   local writes or network access, and downloaded clone profiles must include
   `ref_text` before imported `ref.wav` or `voice.yaml` material is written.

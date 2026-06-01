@@ -152,6 +152,10 @@ URLs before local registry directory creation or Studio network access.
 Studio profile import now also rejects empty Studio profile IDs before local
 writes or network access, and rejects cloned Studio profiles without
 `ref_text` before imported audio or registry YAML material is written.
+Studio profile import now checks target directory availability before network
+access but defers target directory creation until after Studio fetch and
+profile validation, so failed fetches or invalid design payloads do not leave
+empty target directories behind.
 The TTS wrapper now also rejects non-finite or non-positive speed values and
 non-positive timeouts before backend or Studio startup.
 Generated and static command-provider examples now pass wrapper `--max-chars`
@@ -194,6 +198,54 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 02:30 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Split Studio importer target checks so occupied voice directories are still
+    rejected before network access, but new target directory creation waits
+    until after Studio profile fetch and profile/audio validation.
+  - Added importer regression coverage proving failed Studio profile fetches
+    and invalid design profiles do not create empty target voice directories.
+  - Updated Studio bridge, custom voice, MVP handoff, and weekend-summary docs
+    for the importer write-staging behavior and 185-test snapshot.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_existing_voice_without_force_before_network tests.test_omnivoice_tts.StudioImportTests.test_importer_network_failure_does_not_create_voice_dir tests.test_omnivoice_tts.StudioImportTests.test_importer_design_without_instruct_does_not_create_voice_dir tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_clone_without_ref_text_before_material_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_writes_private_profile_material -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused Studio importer write-staging suite: PASS, 5 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 185 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Studio import failures should leave no new local voice directory unless the
+    imported profile has passed the required safety and usability checks.
+- Next action:
+  - Continue bounded MVP hardening, or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 02:00 America/New_York
 - Completed:

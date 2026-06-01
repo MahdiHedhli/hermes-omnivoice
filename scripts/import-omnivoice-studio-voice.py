@@ -68,10 +68,15 @@ def resolve_voice_dir(voices_dir: Path, voice_id: str) -> Path:
     return resolved_child
 
 
-def prepare_voice_dir(voices_dir: Path, voice_id: str, force: bool) -> Path:
+def check_voice_dir_available(voices_dir: Path, voice_id: str, force: bool) -> Path:
     voice_dir = resolve_voice_dir(voices_dir, voice_id)
     if voice_dir.exists() and any(voice_dir.iterdir()) and not force:
         raise ImportErrorWithContext(f"voice directory already contains files: {voice_dir}")
+    return voice_dir
+
+
+def prepare_voice_dir(voices_dir: Path, voice_id: str, force: bool) -> Path:
+    voice_dir = check_voice_dir_available(voices_dir, voice_id, force)
     voice_dir.mkdir(parents=True, exist_ok=True)
     voice_dir.chmod(PRIVATE_DIR_MODE)
     return voice_dir
@@ -218,7 +223,7 @@ def run(argv: list[str] | None = None) -> int:
         allowed_uses = validate_allowed_uses(args.allowed_use)
         timeout = validate_timeout(args.timeout)
         base_url = validate_studio_url(args.studio_url, args.allow_remote_studio)
-        voice_dir = prepare_voice_dir(args.voices_dir, voice_id, args.force)
+        check_voice_dir_available(args.voices_dir, voice_id, args.force)
 
         profile = request_json(f"{base_url}/profiles/{urllib.parse.quote(profile_id)}", timeout)
 
@@ -241,12 +246,14 @@ def run(argv: list[str] | None = None) -> int:
             profile = dict(profile)
             profile["ref_text"] = ref_text
             validate_wav_bytes(audio_bytes)
-            replace_private_file(voice_dir / "ref.wav", "wb", audio_bytes)
         elif not has_instruct:
             raise ImportErrorWithContext(
                 "Studio profile has no downloadable audio and no design instruction"
             )
 
+        voice_dir = prepare_voice_dir(args.voices_dir, voice_id, args.force)
+        if mode == "clone":
+            replace_private_file(voice_dir / "ref.wav", "wb", audio_bytes)
         write_voice_yaml(
             voice_dir / "voice.yaml",
             profile,
