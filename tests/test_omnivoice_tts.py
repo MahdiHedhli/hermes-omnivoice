@@ -1450,6 +1450,84 @@ class PythonAdapterTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn("sample rate must be an integer greater than 0", stderr.getvalue())
 
+    def test_python_adapter_rejects_empty_model_before_backend_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with unittest.mock.patch.object(python_adapter, "_load_backend") as load_backend, \
+                contextlib.redirect_stderr(stderr):
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--instruct",
+                        "male, american accent, moderate pitch",
+                        "--model",
+                        " ",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("model must not be empty", stderr.getvalue())
+            load_backend.assert_not_called()
+
+    def test_python_adapter_rejects_empty_device_before_backend_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with unittest.mock.patch.object(python_adapter, "_load_backend") as load_backend, \
+                contextlib.redirect_stderr(stderr):
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--instruct",
+                        "male, american accent, moderate pitch",
+                        "--device",
+                        " ",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("device must not be empty", stderr.getvalue())
+            load_backend.assert_not_called()
+
+    def test_python_adapter_rejects_empty_dtype_before_backend_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes custom voice synthesis test.", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with unittest.mock.patch.object(python_adapter, "_load_backend") as load_backend, \
+                contextlib.redirect_stderr(stderr):
+                result = python_adapter.run(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--instruct",
+                        "male, american accent, moderate pitch",
+                        "--dtype",
+                        " ",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("dtype must not be empty", stderr.getvalue())
+            load_backend.assert_not_called()
+
 
 class PythonEnvSetupTests(unittest.TestCase):
     def test_setup_env_dry_run_plans_command_json_without_creating_venv(self) -> None:

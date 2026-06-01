@@ -21,6 +21,13 @@ def _optional(value: str | None) -> str | None:
     return value or None
 
 
+def _required_text(value: str, name: str) -> str:
+    value = value.strip()
+    if not value:
+        raise PythonAdapterError(f"{name} must not be empty")
+    return value
+
+
 def _validate_speed(speed: float) -> float:
     if not math.isfinite(speed) or speed <= 0:
         raise PythonAdapterError("speed must be a finite number greater than 0")
@@ -82,6 +89,9 @@ def _resolve_dtype(torch_module, dtype_name: str):
 def synthesize(args: argparse.Namespace) -> None:
     text_file = args.text_file.expanduser().resolve()
     output_path = args.out.expanduser().resolve()
+    model_name = _required_text(args.model, "model")
+    device_name = _required_text(args.device, "device")
+    dtype_name = _required_text(args.dtype, "dtype")
     speed = _validate_speed(args.speed)
     sample_rate = _validate_sample_rate(args.sample_rate)
     ref_audio = _optional(args.ref_audio)
@@ -102,12 +112,12 @@ def synthesize(args: argparse.Namespace) -> None:
         raise PythonAdapterError("provide ref_audio/ref_text for clone mode or instruct for design mode")
 
     OmniVoice, soundfile, torch_module = _load_backend()
-    device = args.device
+    device = device_name
     if device == "auto":
         device = _get_best_device(torch_module)
-    dtype = _resolve_dtype(torch_module, args.dtype)
+    dtype = _resolve_dtype(torch_module, dtype_name)
 
-    model = OmniVoice.from_pretrained(args.model, device_map=device, dtype=dtype)
+    model = OmniVoice.from_pretrained(model_name, device_map=device, dtype=dtype)
     generate_kwargs = {
         "text": text_file.read_text(encoding="utf-8"),
         "speed": speed,
