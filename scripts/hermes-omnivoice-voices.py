@@ -194,6 +194,9 @@ def command_set(args: argparse.Namespace) -> int:
 
 def command_current(args: argparse.Namespace) -> int:
     selection_path = args.selection_file.expanduser()
+    if selection_path.is_symlink():
+        print(f"Selection file cannot be a symlink: {selection_path}", file=sys.stderr)
+        return 1
     if not selection_path.is_file():
         print(f"No OmniVoice selection found: {selection_path}", file=sys.stderr)
         return 1

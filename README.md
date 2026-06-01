@@ -26,6 +26,8 @@ This repo is intentionally conservative:
 - Symlinked TTS text inputs are rejected before backend startup.
 - The preview helper preserves the wrapper's final output path handling, so
   preview output symlinks are replaced instead of followed.
+- The voice helper rejects symlinked selection files before reading current
+  voice state.
 - OmniVoice-Studio is treated as loopback-only by default because it has no
   built-in authentication.
 - The first integration path is a command provider, not a native Hermes patch,

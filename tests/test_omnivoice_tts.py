@@ -5028,6 +5028,35 @@ class VoiceCliTests(unittest.TestCase):
             self.assertEqual(current["voice"], "marvin")
             self.assertEqual(current["status"], "ready")
 
+    def test_current_command_rejects_selection_file_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            target = root / "target-selection.json"
+            selection_file = root / "selection.json"
+            write_voice(voices_root, "marvin")
+            target.write_text(
+                json.dumps(
+                    {
+                        "provider": "omnivoice",
+                        "voice": "marvin",
+                        "voices_dir": str(voices_root),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            try:
+                selection_file.symlink_to(target)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            stderr = io.StringIO()
+
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+                result = voices_cli.run(["--selection-file", str(selection_file), "current"])
+
+            self.assertEqual(result, 1)
+            self.assertIn("Selection file cannot be a symlink", stderr.getvalue())
+
     def test_set_command_writes_selection_file_with_private_permissions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

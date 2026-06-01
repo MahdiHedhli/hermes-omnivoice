@@ -203,7 +203,8 @@ filesystem or subprocess failures instead of Python tracebacks. The
 stale or invalid local selection state fails closed, including malformed
 registry pointer metadata and non-OmniVoice selection records. It reports
 profile-derived speed and registry path instead of trusting stale values from
-the selection file. The `config` command prints a command-provider YAML example
+the selection file, and refuses symlinked selection files before reading. The
+`config` command prints a command-provider YAML example
 for the selected voice and includes the configured `--voices-dir` path in the
 generated wrapper command. It refuses missing or invalid profiles instead of
 printing config that Hermes would fail at runtime.

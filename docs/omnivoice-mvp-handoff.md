@@ -31,10 +31,10 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 09:00 America/New_York on branch
+As of 2026-06-01 09:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 205 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 206 tests and 1 expected
   opt-in real-backend skip.
 - `scripts/check-omnivoice-runtime.py` now reuses the wrapper voice-profile
   validator when reporting local voice readiness, so acceptance cannot count
@@ -245,7 +245,8 @@ As of 2026-06-01 09:00 America/New_York on branch
   selection JSON, including non-object payloads and non-OmniVoice provider
   values, instead of treating it as a valid registry pointer. Reported speed
   and voice registry path come from the revalidated profile context rather than
-  stale selection metadata.
+  stale selection metadata, and symlinked selection files are refused before
+  reading.
 - `scripts/hermes-omnivoice-voices.py list` refuses symlinked voice registry
   roots before enumerating profile names, matching the wrapper runtime
   registry boundary.

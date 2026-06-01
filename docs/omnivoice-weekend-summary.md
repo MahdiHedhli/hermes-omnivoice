@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 09:00 America/New_York on branch
+Status as of 2026-06-01 09:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,7 +35,7 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 205 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 206 tests with 1 expected
   opt-in real-backend skip.
 - Runtime voice readiness guard: PASS. Runtime diagnostics reuse the wrapper
   voice-profile validator so acceptance does not count unsafe registry aliases,
@@ -210,7 +210,8 @@ sample and contains explicit confirmed consent metadata.
   voice no longer has valid consent/profile inputs or malformed registry
   pointer metadata, including non-object selection JSON and non-OmniVoice
   provider values. It reports profile-derived speed and registry path instead
-  of trusting stale selection metadata.
+  of trusting stale selection metadata, and refuses symlinked selection files
+  before reading.
 - Selection-state writes: PASS. `scripts/hermes-omnivoice-voices.py set`
   writes the local selection file with `0600` permissions through a
   same-directory temporary file and atomic replace, and replaces destination
