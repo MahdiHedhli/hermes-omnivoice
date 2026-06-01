@@ -228,6 +228,49 @@ Acceptance now catches invalid runtime timeout values and reports concise
 
 ## Latest heartbeat
 
+- Time: 2026-06-01 10:00 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Re-ran the lightweight acceptance, runtime, and source-discovery gates.
+  - Confirmed static MVP/package readiness still passes.
+  - Confirmed the default shell runtime is intentionally unconfigured until a
+    backend command, Studio URL, or explicit auto-CLI mode is exported.
+  - Confirmed actual Hermes Agent source is still absent under the bounded
+    search roots, so native-provider work remains deferred.
+  - Left implementation files unchanged because the next meaningful work
+    requires either a configured runtime shell or the real Hermes Agent source.
+- Commands:
+  - `git status --short --branch`
+  - `python3 scripts/omnivoice-acceptance.py --json`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `sed -n '1,260p' HEARTBEAT.md`
+  - `sed -n '260,420p' HEARTBEAT.md`
+- Tests:
+  - `scripts/omnivoice-acceptance.py --json`: PASS for static MVP and package
+    files; real backend and Hermes source gates remain false in the default
+    shell.
+  - `scripts/check-omnivoice-runtime.py --json`: PASS diagnostic run; reports
+    one valid local profile and no configured backend command, Studio URL, or
+    auto CLI.
+  - `scripts/find-hermes-source.py --json`: PASS diagnostic run; only this
+    bridge repo was found and it is not a likely Hermes Agent checkout.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports, Studio URL, command backend, or auto-CLI mode are
+    explicitly enabled.
+- Assumptions:
+  - The command-provider MVP is the correct stopping point until the real
+    Hermes Agent checkout is available for schema/provider verification.
+- Next action:
+  - Configure/export the proven local Python adapter command for another
+    strict synthesis check, or switch to native-provider work when an actual
+    Hermes Agent checkout is available.
+
+## Previous heartbeat
+
 - Time: 2026-06-01 09:30 America/New_York
 - Completed:
   - Confirmed the branch was clean at heartbeat start.
