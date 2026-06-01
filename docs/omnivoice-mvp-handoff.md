@@ -31,11 +31,14 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 01:00 America/New_York on branch
+As of 2026-06-01 01:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 179 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 181 tests and 1 expected
   opt-in real-backend skip.
+- `scripts/import-omnivoice-studio-voice.py` now rejects non-loopback and
+  credential-bearing Studio URLs before creating local registry directories or
+  touching Studio APIs.
 - Voice profile validation now requires non-empty `consent.source` and at
   least one non-empty `consent.allowed_uses` entry, and the voice creation
   helper rejects empty `--consent-source` values before writing profile

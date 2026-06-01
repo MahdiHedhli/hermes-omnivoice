@@ -127,6 +127,8 @@ Use `--python` with a Python 3.10 through 3.13 interpreter if the default
   service.
 - Do not put credentials in Studio URLs; wrapper, importer, and runtime
   diagnostics reject URL userinfo.
+- The Studio importer rejects non-loopback or credential-bearing Studio URLs
+  before it creates local registry directories or contacts Studio.
 - Keep importer `--timeout` greater than zero; invalid values fail before local
   registry writes or Studio network access.
 - Keep `speed` finite and greater than zero, and keep wrapper `timeout` greater

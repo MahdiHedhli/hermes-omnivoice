@@ -147,6 +147,8 @@ printing failures while preserving useful failure context.
 Studio URL validation now rejects URL userinfo in the TTS wrapper, Studio
 profile importer, and runtime diagnostics so credential-bearing Studio URLs do
 not become local config, diagnostics, or log material.
+Studio profile import now validates non-loopback and credential-bearing Studio
+URLs before local registry directory creation or Studio network access.
 The TTS wrapper now also rejects non-finite or non-positive speed values and
 non-positive timeouts before backend or Studio startup.
 Generated and static command-provider examples now pass wrapper `--max-chars`
@@ -189,6 +191,54 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 01:30 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Hardened `scripts/import-omnivoice-studio-voice.py` so non-loopback or
+    credential-bearing Studio URLs fail before local voice directory creation
+    or Studio network access.
+  - Added importer regression coverage proving invalid Studio URL policy does
+    not call the Studio API and leaves no stale voice directory behind.
+  - Updated Studio bridge, custom voice, MVP handoff, and weekend-summary docs
+    for the importer URL preflight and 181-test snapshot.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_remote_studio_before_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_studio_url_userinfo_before_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_invalid_timeout_before_network_and_writes tests.test_omnivoice_tts.StudioImportTests.test_importer_rejects_empty_allowed_use_before_network tests.test_omnivoice_tts.StudioImportTests.test_importer_writes_registry_yaml_compatible_with_wrapper -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused Studio importer URL preflight suite: PASS, 5 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 181 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Studio URL policy failures should be handled before local registry writes,
+    so bad import config cannot leave stale profile directories behind.
+- Next action:
+  - Continue bounded MVP hardening, or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 01:00 America/New_York
 - Completed:

@@ -73,6 +73,8 @@ scripts/import-omnivoice-studio-voice.py --studio-url http://127.0.0.1:3900 --pr
 The importer writes only metadata and user-confirmed reference audio into
 `~/.hermes/voices/omnivoice/<voice_id>/`. It refuses non-loopback Studio URLs
 unless explicitly overridden, and it rejects Studio URLs containing userinfo.
+Invalid Studio URL policy failures happen before local registry directory
+creation or network access.
 It also refuses to overwrite an existing non-empty voice directory without
 `--force` and validates downloaded reference audio as WAV before writing it
 into the registry. Import consent `allowed_uses` are validated before network

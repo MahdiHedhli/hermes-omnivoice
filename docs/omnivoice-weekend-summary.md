@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 01:00 America/New_York on branch
+Status as of 2026-06-01 01:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,11 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 179 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 181 tests with 1 expected
   opt-in real-backend skip.
+- Studio import URL preflight: PASS. Non-loopback and credential-bearing
+  Studio URLs are rejected before local registry directory creation or Studio
+  network access.
 - Consent metadata validation: PASS. Voice profile validation now requires
   non-empty `consent.source` and at least one non-empty
   `consent.allowed_uses` entry, and the voice creation helper rejects empty
@@ -220,7 +223,8 @@ sample and contains explicit confirmed consent metadata.
 - Generated output audio is private by default and should stay in Hermes/temp
   output locations, not in the repo.
 - Non-loopback Studio URLs are refused by default.
-- Studio URLs containing userinfo are refused.
+- Studio URLs containing userinfo are refused. The importer rejects invalid
+  Studio URL policy before local registry directory creation.
 - Non-finite or non-positive speed values and non-positive wrapper timeouts are
   refused before backend startup.
 - Oversized text input is refused by the wrapper before backend startup.

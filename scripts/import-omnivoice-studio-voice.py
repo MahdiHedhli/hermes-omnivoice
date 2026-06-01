@@ -209,9 +209,9 @@ def run(argv: list[str] | None = None) -> int:
         validate_voice_id(voice_id)
         allowed_uses = validate_allowed_uses(args.allowed_use)
         timeout = validate_timeout(args.timeout)
+        base_url = validate_studio_url(args.studio_url, args.allow_remote_studio)
         voice_dir = prepare_voice_dir(args.voices_dir, voice_id, args.force)
 
-        base_url = validate_studio_url(args.studio_url, args.allow_remote_studio)
         profile = request_json(f"{base_url}/profiles/{urllib.parse.quote(args.profile_id)}", timeout)
 
         audio_bytes = b""

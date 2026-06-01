@@ -1816,6 +1816,56 @@ class StudioImportTests(unittest.TestCase):
         with self.assertRaisesRegex(studio_import.ImportErrorWithContext, "userinfo"):
             studio_import.validate_studio_url("http://user:cred@127.0.0.1:3900")
 
+    def test_importer_rejects_remote_studio_before_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_dir = Path(tmp) / "voices"
+            with unittest.mock.patch.object(studio_import, "request_json") as request_json:
+                errors = io.StringIO()
+                with contextlib.redirect_stderr(errors):
+                    result = studio_import.run(
+                        [
+                            "--studio-url",
+                            "http://10.0.0.5:3900",
+                            "--profile-id",
+                            "studio-123",
+                            "--voice-id",
+                            "marvin",
+                            "--voices-dir",
+                            str(voices_dir),
+                            "--confirm-consent",
+                        ]
+                    )
+
+            self.assertEqual(result, 1)
+            self.assertIn("non-loopback Studio URL", errors.getvalue())
+            request_json.assert_not_called()
+            self.assertFalse((voices_dir / "marvin").exists())
+
+    def test_importer_rejects_studio_url_userinfo_before_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            voices_dir = Path(tmp) / "voices"
+            with unittest.mock.patch.object(studio_import, "request_json") as request_json:
+                errors = io.StringIO()
+                with contextlib.redirect_stderr(errors):
+                    result = studio_import.run(
+                        [
+                            "--studio-url",
+                            "http://user:cred@127.0.0.1:3900",
+                            "--profile-id",
+                            "studio-123",
+                            "--voice-id",
+                            "marvin",
+                            "--voices-dir",
+                            str(voices_dir),
+                            "--confirm-consent",
+                        ]
+                    )
+
+            self.assertEqual(result, 1)
+            self.assertIn("URL must not include userinfo", errors.getvalue())
+            request_json.assert_not_called()
+            self.assertFalse((voices_dir / "marvin").exists())
+
     def test_importer_rejects_dot_segment_voice_id_before_network(self) -> None:
         errors = io.StringIO()
         with contextlib.redirect_stderr(errors):
