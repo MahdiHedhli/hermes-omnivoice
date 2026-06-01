@@ -31,11 +31,15 @@ real Hermes checkout.
 
 ## Current Acceptance Snapshot
 
-As of 2026-06-01 06:00 America/New_York on branch
+As of 2026-06-01 06:30 America/New_York on branch
 `feature/omnivoice-custom-voices`:
 
-- `scripts/validate-omnivoice-bridge.sh` passes with 195 tests and 1 expected
+- `scripts/validate-omnivoice-bridge.sh` passes with 198 tests and 1 expected
   opt-in real-backend skip.
+- `scripts/check-omnivoice-runtime.py` now reuses the wrapper voice-profile
+  validator when reporting local voice readiness, so acceptance cannot count
+  unsafe registry aliases, cloned `ref_audio` symlinks, missing clone audio, or
+  invalid consent metadata as voice-ready.
 - `scripts/hermes-omnivoice-tts.py` now rejects symlinked voice directories,
   `voice.yaml` files, and cloned `ref_audio` files before using local registry
   material.

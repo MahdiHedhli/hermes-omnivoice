@@ -94,6 +94,10 @@ Command backends must also pass placeholder validation in
 placeholder access, or malformed brace syntax do not count as configured
 runtime readiness. If that diagnostic validation fails, acceptance exits with
 a concise `omnivoice-acceptance:` error instead of a Python traceback.
+Voice registry readiness uses the same local profile validation as the wrapper:
+symlinked registry roots, voice directories, `voice.yaml` files, clone
+reference audio aliases, missing clone audio, and invalid consent metadata are
+not counted as usable local profiles.
 
 Use `python scripts/setup-omnivoice-python-env.py --dry-run` before creating
 the local Python backend environment. Use `--check-only --require-ready` after

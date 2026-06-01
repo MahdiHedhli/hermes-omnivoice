@@ -245,9 +245,12 @@ print command arguments. It validates backend command template placeholders,
 reports whether a backend command is configured, whether a loopback Studio
 `/profiles` endpoint is reachable, whether an `omnivoice-infer` CLI is on
 `PATH`, whether auto CLI mode is enabled, and how many local registry profiles
-exist. Malformed Studio `/profiles` JSON, including profile-list entries that
-are not objects, is reported as `invalid`, not backend-ready. Its Studio probe
-`--timeout` must be greater than zero.
+pass the wrapper voice-profile validator. Malformed Studio `/profiles` JSON,
+including profile-list entries that are not objects, is reported as `invalid`,
+not backend-ready. Its Studio probe `--timeout` must be greater than zero. The
+voice registry probe ignores symlinked registry roots, voice directories,
+`voice.yaml` files, clone reference audio aliases, missing clone audio, and
+invalid consent metadata, so those entries do not make acceptance voice-ready.
 
 ## Local Studio With Docker
 

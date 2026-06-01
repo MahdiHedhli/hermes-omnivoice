@@ -103,6 +103,9 @@ speed and voice registry path instead of trusting stale selection-file values.
 Runtime voice profile loading now rejects symlinked voice directories,
 `voice.yaml` files, and cloned `ref_audio` files before synthesis can use local
 registry material.
+Runtime diagnostics now reuse the wrapper voice-profile validator so acceptance
+cannot count unsafe local registry aliases, cloned `ref_audio` symlinks,
+missing clone audio, or invalid consent metadata as voice-ready.
 Selection writes now use a private `0600` same-directory temporary file and
 atomic replace, replacing destination symlinks rather than following them and
 cleaning up failed temp writes before returning errors.
@@ -211,6 +214,55 @@ Acceptance now catches invalid runtime timeout values and reports concise
 `omnivoice-acceptance:` errors instead of tracebacks.
 
 ## Latest heartbeat
+
+- Time: 2026-06-01 06:30 America/New_York
+- Completed:
+  - Confirmed the branch was clean at heartbeat start.
+  - Rechecked default OmniVoice runtime diagnostics and Hermes source discovery;
+    default runtime remains intentionally unconfigured and no actual Hermes
+    Agent checkout was found.
+  - Hardened runtime diagnostics so local voice readiness reuses the wrapper
+    voice-profile validator instead of counting metadata files alone.
+  - Added regression coverage proving unsafe registry aliases and cloned
+    `ref_audio` symlinks are ignored and acceptance does not report
+    `voices_ready` from them.
+  - Updated setup, acceptance, README, MVP handoff, weekend-summary, and
+    heartbeat docs for the runtime voice-readiness guard.
+- Commands:
+  - `git status --short --branch`
+  - `git log --oneline --decorate -8`
+  - `python3 scripts/check-omnivoice-runtime.py --json`
+  - `python3 scripts/find-hermes-source.py --json`
+  - `python3 -m unittest tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_rejects_symlink_voices_root tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_ignores_symlink_voice_profiles_for_readiness tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_ignores_clone_ref_audio_symlink_for_readiness tests.test_omnivoice_tts.RuntimeCheckTests.test_runtime_check_reports_missing_backend_without_failing tests.test_omnivoice_tts.AcceptanceTests.test_acceptance_can_require_real_backend -v`
+  - `scripts/validate-omnivoice-bridge.sh`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && python3 scripts/omnivoice-acceptance.py --require-real-backend --json`
+  - `eval "$(python3 scripts/setup-omnivoice-python-env.py --check-only --shell)" && scripts/test-omnivoice-tts.sh`
+  - `python3 scripts/check-omnivoice-artifacts.py --json`
+  - `git diff --check`
+  - `find . -type d -name __pycache__ -print`
+- Tests:
+  - Focused runtime voice-readiness guard suite: PASS, 5 tests.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 198 tests with 1 skipped
+    opt-in real-backend unittest; fake smoke PASS; unconfigured default smoke
+    SKIP.
+  - Strict real-backend acceptance with prepared Python adapter exports: PASS.
+  - `scripts/test-omnivoice-tts.sh` with prepared Python adapter exports: PASS,
+    generated a valid temporary WAV from the required smoke text.
+  - Artifact scan, `git diff --check`, and `__pycache__` cleanup check: PASS.
+- Blockers:
+  - Actual Hermes Agent source checkout is still not present under the bounded
+    search roots, so native-provider work remains deferred.
+  - Default shell runtime is still unconfigured until the prepared Python
+    adapter exports are evaluated.
+- Assumptions:
+  - Runtime readiness should not be looser than synthesis-time registry
+    validation; unsafe local aliases are diagnostic evidence, not usable voice
+    profiles.
+- Next action:
+  - Continue bounded MVP hardening or switch to native-provider work when an
+    actual Hermes Agent checkout is available.
+
+## Previous heartbeat
 
 - Time: 2026-06-01 06:00 America/New_York
 - Completed:

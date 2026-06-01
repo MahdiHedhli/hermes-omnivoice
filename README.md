@@ -14,6 +14,8 @@ This repo is intentionally conservative:
   and copied/imported `ref.wav` files are `0600`.
 - Runtime profile loading rejects symlinked voice directories, `voice.yaml`
   files, and cloned `ref_audio` files.
+- Runtime diagnostics reuse the wrapper voice-profile validator when reporting
+  local voice readiness.
 - Create/import helpers refuse final voice-directory symlinks so forced writes
   cannot alias another profile.
 - The Studio importer validates profile JSON shape before requesting audio or

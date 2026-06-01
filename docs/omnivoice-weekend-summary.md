@@ -1,6 +1,6 @@
 # OmniVoice Weekend Summary
 
-Status as of 2026-06-01 06:00 America/New_York on branch
+Status as of 2026-06-01 06:30 America/New_York on branch
 `feature/omnivoice-custom-voices`.
 
 ## Delivered MVP
@@ -35,8 +35,12 @@ sample and contains explicit confirmed consent metadata.
 
 ## Latest Validation
 
-- `scripts/validate-omnivoice-bridge.sh`: PASS, 195 tests with 1 expected
+- `scripts/validate-omnivoice-bridge.sh`: PASS, 198 tests with 1 expected
   opt-in real-backend skip.
+- Runtime voice readiness guard: PASS. Runtime diagnostics reuse the wrapper
+  voice-profile validator so acceptance does not count unsafe registry aliases,
+  cloned `ref_audio` symlinks, missing clone audio, or invalid consent metadata
+  as voice-ready.
 - Runtime registry symlink guard: PASS. Symlinked voice directories,
   `voice.yaml` files, and cloned `ref_audio` files are rejected before
   synthesis uses local registry material.

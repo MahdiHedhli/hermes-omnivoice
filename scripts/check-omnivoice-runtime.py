@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -33,6 +34,7 @@ COMMAND_PLACEHOLDERS = {
     "ref_text",
     "instruct",
 }
+WRAPPER_MODULE = None
 
 
 class RuntimeCheckError(RuntimeError):
@@ -165,16 +167,58 @@ def check_omnivoice_cli(env: dict[str, str]) -> dict:
     }
 
 
+def load_wrapper_module():
+    global WRAPPER_MODULE
+    if WRAPPER_MODULE is not None:
+        return WRAPPER_MODULE
+    script_path = Path(__file__).resolve().with_name("hermes-omnivoice-tts.py")
+    spec = importlib.util.spec_from_file_location("hermes_omnivoice_tts_runtime", script_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeCheckError(f"cannot load OmniVoice wrapper module: {script_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    WRAPPER_MODULE = module
+    return module
+
+
+def is_usable_voice_profile(voices_dir: Path, voice_id: str) -> bool:
+    wrapper = load_wrapper_module()
+    try:
+        profile, voice_dir = wrapper.load_voice_profile(voices_dir, voice_id)
+        wrapper.validate_voice_profile(profile, voice_dir)
+    except wrapper.OmniVoiceConfigError:
+        return False
+    return True
+
+
 def check_voices_dir(voices_dir: Path) -> dict:
     root = voices_dir.expanduser()
     if not root.exists():
         return {"status": "missing", "path": str(root), "profile_count": 0}
-    if not root.is_dir():
+    if root.is_symlink() or not root.is_dir():
         return {"status": "invalid", "path": str(root), "profile_count": 0}
-    profile_count = sum(
-        1 for child in root.iterdir() if child.is_dir() and (child / "voice.yaml").exists()
-    )
-    return {"status": "present", "path": str(root), "profile_count": profile_count}
+    profile_count = 0
+    invalid_profile_count = 0
+    for child in root.iterdir():
+        if child.is_symlink():
+            invalid_profile_count += 1
+            continue
+        if not child.is_dir():
+            continue
+        profile_path = child / "voice.yaml"
+        if profile_path.is_symlink():
+            invalid_profile_count += 1
+            continue
+        if profile_path.exists() and is_usable_voice_profile(root, child.name):
+            profile_count += 1
+        elif profile_path.exists():
+            invalid_profile_count += 1
+    return {
+        "status": "present",
+        "path": str(root),
+        "profile_count": profile_count,
+        "invalid_profile_count": invalid_profile_count,
+    }
 
 
 def build_report(args: argparse.Namespace, env: dict[str, str]) -> dict:
@@ -217,6 +261,8 @@ def print_human(report: dict) -> None:
     print(f"- Voices dir: {voices['status']}")
     print(f"  Path: {voices['path']}")
     print(f"  Profiles: {voices['profile_count']}")
+    if voices.get("invalid_profile_count"):
+        print(f"  Invalid profiles ignored: {voices['invalid_profile_count']}")
 
 
 def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int:

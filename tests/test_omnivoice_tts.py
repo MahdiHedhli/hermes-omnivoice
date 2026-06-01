@@ -2896,6 +2896,85 @@ class RuntimeCheckTests(unittest.TestCase):
             self.assertEqual(report["backend_command"]["status"], "missing")
             self.assertEqual(report["voices_dir"]["status"], "missing")
 
+    def test_runtime_check_rejects_symlink_voices_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "real-voices"
+            target.mkdir()
+            symlink = root / "voices"
+            try:
+                symlink.symlink_to(target, target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            report = runtime_check.check_voices_dir(symlink)
+
+            self.assertEqual(report["status"], "invalid")
+            self.assertEqual(report["profile_count"], 0)
+
+    def test_runtime_check_ignores_symlink_voice_profiles_for_readiness(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            voices_root.mkdir()
+            real_voice = root / "real"
+            write_voice(real_voice, "target")
+            try:
+                (voices_root / "alias").symlink_to(real_voice / "target", target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+            metadata_symlink = voices_root / "metadata-symlink"
+            metadata_symlink.mkdir()
+            (metadata_symlink / "real.yaml").write_text("id: metadata-symlink\n", encoding="utf-8")
+            try:
+                (metadata_symlink / "voice.yaml").symlink_to(metadata_symlink / "real.yaml")
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            report = runtime_check.check_voices_dir(voices_root)
+            runtime = acceptance.evaluate_runtime(
+                {
+                    "studio": {"status": "missing"},
+                    "backend_command": {"status": "missing"},
+                    "omnivoice_cli": {"status": "missing"},
+                    "voices_dir": report,
+                }
+            )
+
+            self.assertEqual(report["status"], "present")
+            self.assertEqual(report["profile_count"], 0)
+            self.assertEqual(report["invalid_profile_count"], 2)
+            self.assertFalse(runtime["voices_ready"])
+
+    def test_runtime_check_ignores_clone_ref_audio_symlink_for_readiness(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            voices_root.mkdir()
+            voice_dir = write_voice(voices_root, "marvin")
+            external_ref = root / "external.wav"
+            write_wav(external_ref)
+            (voice_dir / "ref.wav").unlink()
+            try:
+                (voice_dir / "ref.wav").symlink_to(external_ref)
+            except OSError as exc:
+                self.skipTest(f"symlink setup unavailable: {exc}")
+
+            report = runtime_check.check_voices_dir(voices_root)
+            runtime = acceptance.evaluate_runtime(
+                {
+                    "studio": {"status": "missing"},
+                    "backend_command": {"status": "missing"},
+                    "omnivoice_cli": {"status": "missing"},
+                    "voices_dir": report,
+                }
+            )
+
+            self.assertEqual(report["status"], "present")
+            self.assertEqual(report["profile_count"], 0)
+            self.assertEqual(report["invalid_profile_count"], 1)
+            self.assertFalse(runtime["voices_ready"])
+
     def test_runtime_check_refuses_invalid_timeout(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             stderr = io.StringIO()
