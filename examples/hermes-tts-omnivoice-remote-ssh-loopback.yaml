@@ -1,0 +1,20 @@
+# Example only. Keep the active default on xtts-v2 until a bounded operator
+# trial passes and rollback has been verified.
+#
+# Required host-local environment:
+#   OMNIVOICE_REMOTE_TRANSPORT=ssh-loopback
+#   OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62
+#   OMNIVOICE_REMOTE_LOOPBACK_URL=http://127.0.0.1:8880
+#   OMNIVOICE_REMOTE_TOKEN_FILE=/path/to/private/token-file
+tts:
+  provider: xtts-v2
+  providers:
+    omnivoice-remote-ssh-loopback:
+      type: command
+      command: "python /opt/hermes-local-tts/omnivoice-bridge/scripts/hermes-omnivoice-remote.py --transport ssh-loopback --remote-url http://127.0.0.1:8880 --voice {voice} --speed {speed} --text-file {input_path} --out {output_path} --max-chars 2000"
+      voice: homelab_narrator
+      speed: 1.0
+      output_format: wav
+      timeout: 600
+      voice_compatible: true
+      max_text_length: 2000

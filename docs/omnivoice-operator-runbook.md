@@ -191,8 +191,23 @@ in manual operation and a clean Hermes source branch is available.
 ## Remote Mac Studio Variant
 
 For a faster remote backend over Tailscale, use
-`scripts/hermes-omnivoice-remote.py` and the `omnivoice-remote` command-provider
-example in `docs/omnivoice-remote-mvp.md`. The same operator rules apply:
-keep `xtts-v2` as the default, require bearer auth, keep the service reachable
-only through Tailscale, run smoke tests first, and roll back explicitly on
-failure.
+`scripts/hermes-omnivoice-remote.py` with `--transport ssh-loopback` and the
+`omnivoice-remote-ssh-loopback` command-provider example in
+`docs/omnivoice-remote-mvp.md`.
+
+Current proven Mac Studio route:
+
+```bash
+export OMNIVOICE_REMOTE_TRANSPORT=ssh-loopback
+export OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62
+export OMNIVOICE_REMOTE_LOOPBACK_URL=http://127.0.0.1:8880
+export OMNIVOICE_REMOTE_TOKEN_FILE=/path/to/private/omnivoice-token
+scripts/test-omnivoice-remote.sh
+```
+
+The Mac Studio service remains loopback-only, bearer auth is required, and the
+token should come from a protected mode `600` file. Direct HTTP mode remains
+supported but is not the proven path while direct Tailscale HTTP to
+`100.78.163.62:8880` times out. The same operator rules apply: keep `xtts-v2`
+as the default, run smoke tests first, do not rely on automatic fallback, and
+roll back explicitly on failure.

@@ -50,6 +50,7 @@ PACKAGE_REQUIRED_FILES = [
     "scripts/check-omnivoice-artifacts.py",
     "examples/hermes-tts-omnivoice.yaml",
     "examples/hermes-tts-omnivoice-remote.yaml",
+    "examples/hermes-tts-omnivoice-remote-ssh-loopback.yaml",
     "examples/voices/marvin/voice.yaml",
     "examples/voices/narrator/voice.yaml",
     ".env.example",

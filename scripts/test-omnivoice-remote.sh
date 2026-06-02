@@ -8,13 +8,33 @@ SPEED="${OMNIVOICE_REMOTE_TEST_SPEED:-1.0}"
 FORMAT="${OMNIVOICE_REMOTE_TEST_FORMAT:-wav}"
 TIMEOUT="${OMNIVOICE_REMOTE_TEST_TIMEOUT:-600}"
 OUT_DIR="${OMNIVOICE_REMOTE_TEST_OUT_DIR:-$HOME/.cache/hermes/omnivoice-remote-smoke}"
+TRANSPORT="${OMNIVOICE_REMOTE_TRANSPORT:-http}"
 BASE_URL="${OMNIVOICE_REMOTE_BASE_URL:-}"
+SSH_HOST="${OMNIVOICE_REMOTE_SSH_HOST:-}"
+SSH_PORT="${OMNIVOICE_REMOTE_SSH_PORT:-22}"
+SSH_IDENTITY_FILE="${OMNIVOICE_REMOTE_SSH_IDENTITY_FILE:-}"
+LOOPBACK_URL="${OMNIVOICE_REMOTE_LOOPBACK_URL:-http://127.0.0.1:8880}"
+TOKEN_FILE="${OMNIVOICE_REMOTE_TOKEN_FILE:-}"
 TOKEN="${OMNIVOICE_REMOTE_API_TOKEN:-}"
 
-if [[ -z "$BASE_URL" || -z "$TOKEN" ]]; then
-  echo "SKIP: set OMNIVOICE_REMOTE_BASE_URL and OMNIVOICE_REMOTE_API_TOKEN to run remote OmniVoice smoke" >&2
-  exit 77
-fi
+case "$TRANSPORT" in
+  http)
+    if [[ -z "$BASE_URL" || ( -z "$TOKEN_FILE" && -z "$TOKEN" ) ]]; then
+      echo "SKIP: set OMNIVOICE_REMOTE_BASE_URL and OMNIVOICE_REMOTE_TOKEN_FILE or OMNIVOICE_REMOTE_API_TOKEN for HTTP smoke" >&2
+      exit 77
+    fi
+    ;;
+  ssh-loopback)
+    if [[ -z "$SSH_HOST" || ( -z "$TOKEN_FILE" && -z "$TOKEN" ) ]]; then
+      echo "SKIP: set OMNIVOICE_REMOTE_SSH_HOST and OMNIVOICE_REMOTE_TOKEN_FILE or OMNIVOICE_REMOTE_API_TOKEN for SSH loopback smoke" >&2
+      exit 77
+    fi
+    ;;
+  *)
+    echo "FAIL: OMNIVOICE_REMOTE_TRANSPORT must be http or ssh-loopback" >&2
+    exit 1
+    ;;
+esac
 
 umask 077
 mkdir -p "$OUT_DIR"
@@ -24,29 +44,53 @@ out_file="$OUT_DIR/remote-smoke-$timestamp.$FORMAT"
 
 printf '%s\n' "Hermes OmniVoice remote synthesis test." >"$text_file"
 
-"$PYTHON_BIN" - "$BASE_URL" "$TOKEN" <<'PY'
+"$PYTHON_BIN" - "$ROOT_DIR" <<'PY'
 from __future__ import annotations
 
+import importlib.util
 import json
+import os
+from pathlib import Path
 import sys
-from urllib import error, request
 
-base_url = sys.argv[1].rstrip("/")
-token = sys.argv[2]
-req = request.Request(
-    f"{base_url}/health",
-    headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+
+root = Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location(
+    "hermes_omnivoice_remote",
+    root / "scripts" / "hermes-omnivoice-remote.py",
 )
+if spec is None or spec.loader is None:
+    print("remote health failed: unable to load wrapper", file=sys.stderr)
+    sys.exit(1)
+remote = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(remote)
+
+env = dict(os.environ)
 try:
-    with request.urlopen(req, timeout=10) as response:
-        payload = response.read(4096)
-except error.HTTPError as exc:
-    if exc.code == 404:
+    transport = remote.parse_transport(env.get("OMNIVOICE_REMOTE_TRANSPORT", "http"))
+    token = remote.resolve_api_token("", "", env)
+    timeout = remote.parse_positive_float(env.get("OMNIVOICE_REMOTE_HEALTH_TIMEOUT", "10"), "health timeout")
+    ssh_port = remote.parse_ssh_port(env.get("OMNIVOICE_REMOTE_SSH_PORT", "22"))
+    ssh_identity = remote.normalize_optional_identity_file(
+        env.get("OMNIVOICE_REMOTE_SSH_IDENTITY_FILE", "")
+    )
+    status, payload, _content_type = remote.health_check(
+        transport=transport,
+        http_base_url=env.get("OMNIVOICE_REMOTE_BASE_URL", ""),
+        remote_loopback_url=env.get("OMNIVOICE_REMOTE_LOOPBACK_URL", "http://127.0.0.1:8880"),
+        token=token,
+        timeout=timeout,
+        health_path="/health",
+        ssh_host=env.get("OMNIVOICE_REMOTE_SSH_HOST", ""),
+        ssh_port=ssh_port,
+        ssh_identity_file=ssh_identity,
+        allow_public_base_url=env.get("OMNIVOICE_REMOTE_ALLOW_PUBLIC") == "1",
+    )
+except Exception as exc:
+    message = str(exc)
+    if "HTTP 404" in message:
         print("WARN: /health not available; continuing to speech smoke")
         sys.exit(0)
-    print(f"remote health failed: HTTP {exc.code}", file=sys.stderr)
-    sys.exit(1)
-except Exception as exc:
     print(f"remote health failed: {exc}", file=sys.stderr)
     sys.exit(1)
 
@@ -54,17 +98,33 @@ try:
     json.loads(payload.decode("utf-8"))
 except Exception:
     pass
-print("remote health: PASS")
+print(f"remote health: PASS ({status})")
 PY
 
-start_time="$("$PYTHON_BIN" -c 'import time; print(f"{time.time():.3f}")')"
-"$PYTHON_BIN" "$ROOT_DIR/scripts/hermes-omnivoice-remote.py" \
-  --text-file "$text_file" \
-  --out "$out_file" \
-  --voice "$VOICE" \
-  --speed "$SPEED" \
-  --format "$FORMAT" \
+wrapper_args=(
+  --transport "$TRANSPORT"
+  --text-file "$text_file"
+  --out "$out_file"
+  --voice "$VOICE"
+  --speed "$SPEED"
+  --format "$FORMAT"
   --timeout "$TIMEOUT"
+)
+
+case "$TRANSPORT" in
+  http)
+    wrapper_args+=(--base-url "$BASE_URL")
+    ;;
+  ssh-loopback)
+    wrapper_args+=(--ssh-host "$SSH_HOST" --ssh-port "$SSH_PORT" --remote-url "$LOOPBACK_URL")
+    if [[ -n "$SSH_IDENTITY_FILE" ]]; then
+      wrapper_args+=(--ssh-identity-file "$SSH_IDENTITY_FILE")
+    fi
+    ;;
+esac
+
+start_time="$("$PYTHON_BIN" -c 'import time; print(f"{time.time():.3f}")')"
+"$PYTHON_BIN" "$ROOT_DIR/scripts/hermes-omnivoice-remote.py" "${wrapper_args[@]}"
 end_time="$("$PYTHON_BIN" -c 'import time; print(f"{time.time():.3f}")')"
 latency="$("$PYTHON_BIN" - "$start_time" "$end_time" <<'PY'
 import sys
@@ -74,6 +134,7 @@ PY
 
 test -s "$out_file"
 echo "PASS: generated $out_file"
+echo "Transport: $TRANSPORT"
 echo "Latency: $latency"
 if command -v ffprobe >/dev/null 2>&1; then
   ffprobe -v error "$out_file" >/dev/null

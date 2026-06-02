@@ -94,10 +94,10 @@ consent:
 ## Configure A Backend
 
 For a remote Mac Studio FastAPI backend over Tailscale, see
-`docs/omnivoice-remote-mvp.md`. The remote path uses
-`scripts/hermes-omnivoice-remote.py`, `OMNIVOICE_REMOTE_BASE_URL`, and
-`OMNIVOICE_REMOTE_API_TOKEN`; it is separate from the local wrapper backend
-options below.
+`docs/omnivoice-remote-mvp.md`. The current proven Mac Studio route uses
+`scripts/hermes-omnivoice-remote.py`, `OMNIVOICE_REMOTE_TRANSPORT=ssh-loopback`,
+`OMNIVOICE_REMOTE_SSH_HOST`, and a protected `OMNIVOICE_REMOTE_TOKEN_FILE`.
+It is separate from the local wrapper backend options below.
 
 Option A: point the wrapper at a local OmniVoice-Studio backend:
 

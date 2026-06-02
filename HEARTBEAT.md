@@ -19,6 +19,47 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-02 12:43 America/New_York
+- Completed:
+  - Added SSH loopback transport support to
+    `scripts/hermes-omnivoice-remote.py` while preserving direct `http` mode.
+  - Added protected token-file support with token-file precedence over
+    `OMNIVOICE_REMOTE_API_TOKEN`.
+  - Updated `scripts/test-omnivoice-remote.sh` for `http` and `ssh-loopback`
+    smoke tests with health checks, local artifact output, and expected skip
+    behavior when env is missing.
+  - Added `examples/hermes-tts-omnivoice-remote-ssh-loopback.yaml` and updated
+    README, setup, remote MVP, and operator runbook docs.
+  - Recorded the current proven Mac Studio route:
+    `hermes-ops@100.78.163.62` over SSH to loopback
+    `http://127.0.0.1:8880`.
+- Tests:
+  - `python3 -m unittest discover -s tests -v`: PASS, 224 tests with 3
+    expected skips.
+  - `python3 scripts/omnivoice-acceptance.py --require-package-files`: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, including remote smoke skip
+    behavior when remote env is unconfigured.
+  - `python3 scripts/check-omnivoice-artifacts.py`: PASS.
+  - `scripts/test-omnivoice-remote.sh` with remote env cleared: SKIP with
+    status 77 as expected.
+  - `git diff --check`: PASS.
+  - `shellcheck`: not installed on this workstation.
+  - Live SSH loopback smoke: SKIPPED locally because
+    `OMNIVOICE_REMOTE_SSH_HOST` and token env are not present in this process.
+- Blockers:
+  - Direct HTTP to `100.78.163.62:8880` still times out and remains a separate
+    network diagnostic follow-up.
+  - Do not expose the Mac Studio OmniVoice service beyond loopback.
+- Assumptions:
+  - Mac Studio service remains bearer-authenticated, MPS-backed, and
+    loopback-only.
+  - Token files are protected mode `600`; real token paths stay out of git.
+- Next action:
+  - Commit the SSH loopback transport slice, then run live remote smoke from
+    an environment with SSH host and token file configured.
+
+## Previous Heartbeat
+
 - Time: 2026-06-02 10:30 America/New_York
 - Completed:
   - Started the remote FastAPI MVP lane on

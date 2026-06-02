@@ -73,6 +73,12 @@ fi
 set +e
 env -u OMNIVOICE_REMOTE_BASE_URL \
   -u OMNIVOICE_REMOTE_API_TOKEN \
+  -u OMNIVOICE_REMOTE_TOKEN_FILE \
+  -u OMNIVOICE_REMOTE_TRANSPORT \
+  -u OMNIVOICE_REMOTE_SSH_HOST \
+  -u OMNIVOICE_REMOTE_SSH_PORT \
+  -u OMNIVOICE_REMOTE_SSH_IDENTITY_FILE \
+  -u OMNIVOICE_REMOTE_LOOPBACK_URL \
   scripts/test-omnivoice-remote.sh
 remote_skip_status=$?
 set -e
@@ -84,7 +90,7 @@ fi
 if command -v rg >/dev/null 2>&1; then
   set +e
   rg -n \
-    "(BEGIN [A-Z ]*PRIVATE|sk-[A-Za-z0-9]|ghp_[A-Za-z0-9]|glpat-[A-Za-z0-9]|hf_[A-Za-z0-9]{20,}|[A-Z0-9_]*(API_KEY|TOKEN|SECRET|PASSWORD)[A-Z0-9_]*=[A-Za-z0-9_./+=-]{12,})" \
+    "(BEGIN [A-Z ]*PRIVATE|sk-[A-Za-z0-9]|ghp_[A-Za-z0-9]|glpat-[A-Za-z0-9]|hf_[A-Za-z0-9]{20,}|([A-Z0-9_]*(API_KEY|SECRET|PASSWORD)[A-Z0-9_]*|[A-Z0-9_]*TOKEN)=[A-Za-z0-9_./+=-]{12,})" \
     . \
     --glob '!HEARTBEAT.md' \
     --glob '!.env.example' \

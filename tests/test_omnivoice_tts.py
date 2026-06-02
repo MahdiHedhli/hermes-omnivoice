@@ -11,6 +11,7 @@ import shlex
 import shutil
 import socket
 import stat
+import struct
 import subprocess
 import sys
 import tempfile
@@ -449,6 +450,20 @@ def mock_remote_server(
         server.shutdown()
         thread.join(timeout=5)
         server.server_close()
+
+
+def remote_ssh_stdout(body: bytes | None = None, content_type: str = "audio/wav") -> bytes:
+    payload = body or wav_bytes()
+    metadata = json.dumps(
+        {"status": 200, "content_type": content_type},
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return struct.pack(">I", len(metadata)) + metadata + payload
+
+
+def write_private_token(path: Path, token: str = "file-token") -> None:
+    path.write_text(token, encoding="utf-8")
+    path.chmod(0o600)
 
 
 class OmniVoiceRegistryTests(unittest.TestCase):
@@ -1554,6 +1569,8 @@ class RemoteOmniVoiceTests(unittest.TestCase):
                         "homelab_narrator",
                         "--speed",
                         "1.25",
+                        "--transport",
+                        "http",
                     ],
                     {
                         "OMNIVOICE_REMOTE_BASE_URL": base_url,
@@ -1574,6 +1591,98 @@ class RemoteOmniVoiceTests(unittest.TestCase):
             self.assertEqual(path_mode(out_file), 0o600)
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
+
+    def test_transport_selection_from_env_uses_ssh_loopback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            token_file = root / "remote.token"
+            text_file.write_text("Hermes ssh loopback speech.", encoding="utf-8")
+            write_private_token(token_file, "file-token")
+            completed = subprocess.CompletedProcess(
+                args=["ssh"],
+                returncode=0,
+                stdout=remote_ssh_stdout(),
+                stderr=b"",
+            )
+            with unittest.mock.patch.object(
+                remote_omnivoice.subprocess,
+                "run",
+                return_value=completed,
+            ) as run_mock:
+                result, error = self.run_remote(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "homelab_narrator",
+                    ],
+                    {
+                        "OMNIVOICE_REMOTE_TRANSPORT": "ssh-loopback",
+                        "OMNIVOICE_REMOTE_SSH_HOST": "hermes-ops@100.78.163.62",
+                        "OMNIVOICE_REMOTE_TOKEN_FILE": str(token_file),
+                    },
+                )
+
+            self.assertEqual(result, 0, error)
+            run_mock.assert_called_once()
+            command = run_mock.call_args.args[0]
+            self.assertEqual(command[0], "ssh")
+            self.assertIn("hermes-ops@100.78.163.62", command)
+            self.assertNotIn("file-token", " ".join(command))
+            envelope = json.loads(run_mock.call_args.kwargs["input"].decode("utf-8"))
+            self.assertEqual(envelope["token"], "file-token")
+            self.assertEqual(envelope["url"], "http://127.0.0.1:8880/v1/audio/speech")
+            self.assertEqual(envelope["payload"]["input"], "Hermes ssh loopback speech.")
+            self.assertEqual(path_mode(out_file), 0o600)
+
+    def test_token_file_is_preferred_over_api_token(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            token_file = root / "remote.token"
+            text_file.write_text("Hermes ssh loopback speech.", encoding="utf-8")
+            write_private_token(token_file, "token-from-file")
+            completed = subprocess.CompletedProcess(
+                args=["ssh"],
+                returncode=0,
+                stdout=remote_ssh_stdout(),
+                stderr=b"",
+            )
+            with unittest.mock.patch.object(
+                remote_omnivoice.subprocess,
+                "run",
+                return_value=completed,
+            ) as run_mock:
+                result, error = self.run_remote(
+                    [
+                        "--transport",
+                        "ssh-loopback",
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "homelab_narrator",
+                        "--ssh-host",
+                        "hermes-ops@100.78.163.62",
+                        "--api-token",
+                        "token-from-argv",
+                    ],
+                    {
+                        "OMNIVOICE_REMOTE_TOKEN_FILE": str(token_file),
+                        "OMNIVOICE_REMOTE_API_TOKEN": "token-from-env",
+                    },
+                )
+
+            self.assertEqual(result, 0, error)
+            envelope = json.loads(run_mock.call_args.kwargs["input"].decode("utf-8"))
+            self.assertEqual(envelope["token"], "token-from-file")
+            self.assertNotIn("token-from-file", " ".join(run_mock.call_args.args[0]))
 
     def test_missing_text_file_fails_before_network(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1645,6 +1754,32 @@ class RemoteOmniVoiceTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn("base URL is required", error)
 
+    def test_missing_ssh_host_fails_in_ssh_loopback_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            token_file = root / "remote.token"
+            text_file.write_text("Hermes remote speech.", encoding="utf-8")
+            write_private_token(token_file)
+            result, error = self.run_remote(
+                [
+                    "--transport",
+                    "ssh-loopback",
+                    "--text-file",
+                    str(text_file),
+                    "--out",
+                    str(root / "out.wav"),
+                    "--voice",
+                    "narrator",
+                    "--token-file",
+                    str(token_file),
+                ],
+                {},
+            )
+
+            self.assertEqual(result, 1)
+            self.assertIn("SSH host is required", error)
+
     def test_missing_token_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1666,6 +1801,31 @@ class RemoteOmniVoiceTests(unittest.TestCase):
             self.assertEqual(result, 1)
             self.assertIn("API token is required", error)
             self.assertEqual(requests, [])
+
+    def test_token_file_must_be_private(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            token_file = root / "remote.token"
+            text_file.write_text("Hermes remote speech.", encoding="utf-8")
+            token_file.write_text("file-token", encoding="utf-8")
+            token_file.chmod(0o644)
+            result, error = self.run_remote(
+                [
+                    "--text-file",
+                    str(text_file),
+                    "--out",
+                    str(root / "out.wav"),
+                    "--voice",
+                    "narrator",
+                    "--token-file",
+                    str(token_file),
+                ],
+                {"OMNIVOICE_REMOTE_BASE_URL": "http://127.0.0.1:9999"},
+            )
+
+            self.assertEqual(result, 1)
+            self.assertIn("token file must not be group/world-accessible", error)
 
     def test_http_timeout_fails_cleanly(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1755,6 +1915,49 @@ class RemoteOmniVoiceTests(unittest.TestCase):
             self.assertNotIn("secret-token", error)
             self.assertFalse(out_file.exists())
 
+    def test_ssh_command_failure_redacts_token(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            token_file = root / "remote.token"
+            text_file.write_text("Hermes ssh loopback speech.", encoding="utf-8")
+            write_private_token(token_file, "file-token")
+            completed = subprocess.CompletedProcess(
+                args=["ssh"],
+                returncode=255,
+                stdout=b"",
+                stderr=b"Permission denied Authorization: Bearer file-token and file-token",
+            )
+            with unittest.mock.patch.object(
+                remote_omnivoice.subprocess,
+                "run",
+                return_value=completed,
+            ):
+                result, error = self.run_remote(
+                    [
+                        "--transport",
+                        "ssh-loopback",
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "narrator",
+                        "--ssh-host",
+                        "hermes-ops@100.78.163.62",
+                        "--token-file",
+                        str(token_file),
+                    ],
+                    {},
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("ssh loopback request failed", error)
+            self.assertIn("<redacted>", error)
+            self.assertNotIn("file-token", error)
+            self.assertFalse(out_file.exists())
+
     def test_non_audio_response_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1778,6 +1981,50 @@ class RemoteOmniVoiceTests(unittest.TestCase):
                         "OMNIVOICE_REMOTE_BASE_URL": base_url,
                         "OMNIVOICE_REMOTE_API_TOKEN": "secret-token",
                     },
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("did not return valid wav audio", error)
+            self.assertFalse(out_file.exists())
+
+    def test_ssh_loopback_non_audio_response_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            token_file = root / "remote.token"
+            text_file.write_text("Hermes ssh loopback speech.", encoding="utf-8")
+            write_private_token(token_file)
+            completed = subprocess.CompletedProcess(
+                args=["ssh"],
+                returncode=0,
+                stdout=remote_ssh_stdout(
+                    body=b'{"error":"not audio"}',
+                    content_type="application/json",
+                ),
+                stderr=b"",
+            )
+            with unittest.mock.patch.object(
+                remote_omnivoice.subprocess,
+                "run",
+                return_value=completed,
+            ):
+                result, error = self.run_remote(
+                    [
+                        "--transport",
+                        "ssh-loopback",
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "narrator",
+                        "--ssh-host",
+                        "hermes-ops@100.78.163.62",
+                        "--token-file",
+                        str(token_file),
+                    ],
+                    {},
                 )
 
             self.assertEqual(result, 1)
@@ -1809,18 +2056,50 @@ class RemoteOmniVoiceTests(unittest.TestCase):
 
 class RemoteOmniVoiceIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
+        self.env = dict(os.environ)
+        self.transport = self.env.get("OMNIVOICE_REMOTE_TRANSPORT", "http")
         self.base_url = os.environ.get("OMNIVOICE_REMOTE_BASE_URL", "")
-        self.token = os.environ.get("OMNIVOICE_REMOTE_API_TOKEN", "")
-        if not self.base_url or not self.token:
-            self.skipTest("set OMNIVOICE_REMOTE_BASE_URL and OMNIVOICE_REMOTE_API_TOKEN")
+        self.ssh_host = os.environ.get("OMNIVOICE_REMOTE_SSH_HOST", "")
+        self.has_token = bool(
+            os.environ.get("OMNIVOICE_REMOTE_API_TOKEN")
+            or os.environ.get("OMNIVOICE_REMOTE_TOKEN_FILE")
+        )
+        if self.transport == "http" and (not self.base_url or not self.has_token):
+            self.skipTest(
+                "set OMNIVOICE_REMOTE_BASE_URL and OMNIVOICE_REMOTE_TOKEN_FILE "
+                "or OMNIVOICE_REMOTE_API_TOKEN"
+            )
+        if self.transport == "ssh-loopback" and (not self.ssh_host or not self.has_token):
+            self.skipTest(
+                "set OMNIVOICE_REMOTE_SSH_HOST and OMNIVOICE_REMOTE_TOKEN_FILE "
+                "or OMNIVOICE_REMOTE_API_TOKEN"
+            )
+        if self.transport not in {"http", "ssh-loopback"}:
+            self.skipTest("set OMNIVOICE_REMOTE_TRANSPORT to http or ssh-loopback")
 
     def test_remote_health_check(self) -> None:
-        req = remote_omnivoice.request.Request(
-            remote_omnivoice.join_url(self.base_url.rstrip("/"), "/health"),
-            headers={"Authorization": f"Bearer {self.token}", "Accept": "application/json"},
+        token = remote_omnivoice.resolve_api_token("", "", self.env)
+        ssh_identity = remote_omnivoice.normalize_optional_identity_file(
+            self.env.get("OMNIVOICE_REMOTE_SSH_IDENTITY_FILE", "")
         )
-        with remote_omnivoice.request.urlopen(req, timeout=10) as response:
-            self.assertEqual(response.status, 200)
+        status, _payload, _content_type = remote_omnivoice.health_check(
+            transport=self.transport,
+            http_base_url=self.base_url,
+            remote_loopback_url=self.env.get(
+                "OMNIVOICE_REMOTE_LOOPBACK_URL",
+                "http://127.0.0.1:8880",
+            ),
+            token=token,
+            timeout=float(self.env.get("OMNIVOICE_REMOTE_HEALTH_TIMEOUT", "10")),
+            health_path="/health",
+            ssh_host=self.ssh_host,
+            ssh_port=remote_omnivoice.parse_ssh_port(
+                self.env.get("OMNIVOICE_REMOTE_SSH_PORT", "22")
+            ),
+            ssh_identity_file=ssh_identity,
+            allow_public_base_url=self.env.get("OMNIVOICE_REMOTE_ALLOW_PUBLIC") == "1",
+        )
+        self.assertEqual(status, 200)
 
     def test_remote_speech_generation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1839,7 +2118,7 @@ class RemoteOmniVoiceIntegrationTests(unittest.TestCase):
                     "--timeout",
                     os.environ.get("OMNIVOICE_REMOTE_TEST_TIMEOUT", "600"),
                 ],
-                env=dict(os.environ),
+                env=self.env,
             )
 
             self.assertEqual(result, 0)

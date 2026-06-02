@@ -42,7 +42,7 @@ This repo is intentionally conservative:
 
 - `scripts/hermes-omnivoice-tts.py`: Hermes TTS command-provider wrapper.
 - `scripts/hermes-omnivoice-remote.py`: Hermes command-provider wrapper for an
-  authenticated OmniVoice FastAPI service over Tailscale.
+  authenticated OmniVoice FastAPI service over direct HTTP or SSH loopback.
 - `scripts/hermes-omnivoice-python-adapter.py`: optional command adapter for
   calling the OmniVoice Python API directly.
 - `scripts/setup-omnivoice-python-env.py`: dry-run/check-first helper for an
@@ -68,8 +68,8 @@ This repo is intentionally conservative:
   enabling, and rolling back the Hermes active TTS provider.
 - `scripts/omnivoice-qc-sample.sh`: repeatable subjective QC sample generator
   that writes local audio outside the repo by default.
-- `scripts/test-omnivoice-remote.sh`: opt-in remote FastAPI smoke test that
-  writes samples outside the repo.
+- `scripts/test-omnivoice-remote.sh`: opt-in remote FastAPI smoke test for
+  direct HTTP or SSH loopback that writes samples outside the repo.
 - `scripts/omnivoice-acceptance.py`: summarizes static MVP readiness and live
   backend readiness.
 - `scripts/validate-omnivoice-bridge.sh`: deterministic local validation,
@@ -216,14 +216,19 @@ invoked; escape literal braces in command templates as `{{` and `}}`.
 The wrapper currently supports WAV output only and rejects non-`.wav` output
 paths before backend or Studio startup.
 
-For a remote Mac Studio backend over Tailscale, use the separate authenticated
-FastAPI client wrapper:
+For the current proven Mac Studio backend path, keep the FastAPI service bound
+to loopback on the Mac Studio and reach it through SSH:
 
 ```bash
-export OMNIVOICE_REMOTE_BASE_URL=http://mac-studio.tailnet.ts.net:8880
-export OMNIVOICE_REMOTE_API_TOKEN=<local-only-token>
+export OMNIVOICE_REMOTE_TRANSPORT=ssh-loopback
+export OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62
+export OMNIVOICE_REMOTE_LOOPBACK_URL=http://127.0.0.1:8880
+export OMNIVOICE_REMOTE_TOKEN_FILE=/path/to/private/omnivoice-token
 scripts/test-omnivoice-remote.sh
 ```
+
+Direct HTTP mode remains supported, but direct HTTP to the Mac Studio
+Tailscale IP is not the proven route while that path times out.
 
 The remote path is documented in
 [`docs/omnivoice-remote-mvp.md`](docs/omnivoice-remote-mvp.md). Keep
