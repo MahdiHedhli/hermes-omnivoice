@@ -35,3 +35,12 @@ cache/
 .env
 .env.*
 *.local
+
+# Private operator/environment notes from live deployments.
+HEARTBEAT.private.md
+*.private.md
+*.internal.md
+*.env-details.md
+docs/private/
+docs/*-private.md
+operator-trial-private/

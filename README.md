@@ -203,6 +203,7 @@ paths before backend or Studio startup.
 ## More Detail
 
 - [Setup](docs/omnivoice-setup.md)
+- [Operator trial](docs/omnivoice-operator-trial.md)
 - [MVP handoff](docs/omnivoice-mvp-handoff.md)
 - [Weekend summary](docs/omnivoice-weekend-summary.md)
 - [Studio bridge](docs/omnivoice-studio-bridge.md)

@@ -347,6 +347,42 @@ material, generated audio, model weights, caches, and local config. Add
 managed block and is idempotent. If a managed block already exists but is
 missing newer patterns, `--update-gitignore` refreshes that block in place.
 
+## Enable Or Disable The Provider
+
+For a reversible operator trial, add `tts.providers.omnivoice` first while
+keeping the current `tts.provider` unchanged. Confirm the provider command,
+voice registry, consent metadata, and backend runtime before switching the
+active provider.
+
+Enable OmniVoice:
+
+```python
+from hermes_cli.config import load_config, save_config
+
+cfg = load_config()
+cfg.setdefault("tts", {})["provider"] = "omnivoice"
+save_config(cfg)
+```
+
+Disable OmniVoice and roll back:
+
+```python
+from hermes_cli.config import load_config, save_config
+
+cfg = load_config()
+cfg.setdefault("tts", {})["provider"] = "<previous-provider>"
+save_config(cfg)
+```
+
+Keep a rollback helper outside the Hermes source checkout before an operator
+trial. If Hermes has no long-running service unit and the TTS tool reads config
+on invocation, saving config is enough for the next live tool-path smoke. If a
+deployment wraps Hermes in a long-running service that caches config, use that
+deployment's normal reload or restart command after saving config.
+
+After either switch, run a live Hermes TTS smoke through the real tool path and
+confirm the active provider plus generated media before proceeding.
+
 Run the smoke test only after configuring a real backend command, Studio URL,
 or opt-in CLI backend:
 

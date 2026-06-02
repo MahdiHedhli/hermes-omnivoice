@@ -19,6 +19,39 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-02 09:45 America/New_York
+- Completed:
+  - Added `.gitignore` coverage for private operator/environment detail files.
+  - Ran a bounded active-provider trial on a private Hermes deployment.
+  - Confirmed preflight state: previous active provider was `xtts-v2`,
+    `tts.providers.omnivoice` existed, the bridge and voice profile were
+    present, and consent metadata was confirmed.
+  - Created a host-local rollback helper outside the Hermes source checkout.
+  - Temporarily switched `tts.provider` to `omnivoice`.
+  - Ran three requested live Hermes TTS requests through
+    `tools.tts_tool.text_to_speech_tool`.
+  - Rolled back to `xtts-v2` and confirmed rollback with a post-rollback TTS
+    smoke.
+- Tests:
+  - Short OmniVoice trial: PASS, 49.43s latency, 2.486s Opus output.
+  - Medium OmniVoice trial: PASS, 78.67s latency, 4.707s Opus output.
+  - Edge OmniVoice trial: PASS, 84.56s latency, 4.976s Opus output.
+  - Fallback probe: no automatic fallback observed for a failing command
+    provider.
+  - Rollback provider smoke: PASS, active provider restored to `xtts-v2`.
+- Blockers:
+  - Native provider work remains deferred until a clean Hermes source branch is
+    available.
+  - Automatic provider fallback is not available; rollback is explicit operator
+    action.
+- Assumptions:
+  - Operator-trial docs should remain public-safe and avoid private hostnames,
+    IPs, workstation paths, or operator-specific runtime paths.
+- Next action:
+  - Run package validation and commit the docs/ignore update.
+
+## Previous Heartbeat
+
 - Time: 2026-06-02 09:15 America/New_York
 - Completed:
   - Temporarily switched a private Hermes deployment from its previous TTS
