@@ -23,6 +23,14 @@ cd "$ROOT_DIR"
   tests/test_omnivoice_tts.py \
   tests/fixtures/fake_omnivoice_backend.py
 
+bash -n \
+  scripts/validate-omnivoice-bridge.sh \
+  scripts/test-omnivoice-tts.sh \
+  scripts/omnivoice-status.sh \
+  scripts/omnivoice-enable.sh \
+  scripts/omnivoice-disable.sh \
+  scripts/omnivoice-qc-sample.sh
+
 "$PYTHON_BIN" scripts/omnivoice-acceptance.py --require-package-files --json >/dev/null
 
 SMOKE_COMMAND_JSON="$(

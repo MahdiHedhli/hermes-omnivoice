@@ -354,7 +354,45 @@ keeping the current `tts.provider` unchanged. Confirm the provider command,
 voice registry, consent metadata, and backend runtime before switching the
 active provider.
 
-Enable OmniVoice:
+Check current status without exposing command arguments:
+
+```bash
+scripts/omnivoice-status.sh --hermes-root /path/to/hermes-agent --dry-run
+```
+
+Dry-run the provider switch first:
+
+```bash
+scripts/omnivoice-enable.sh \
+  --hermes-root /path/to/hermes-agent \
+  --runtime-home /path/to/runtime-home \
+  --dry-run
+```
+
+Enable OmniVoice after reviewing the dry run:
+
+```bash
+scripts/omnivoice-enable.sh \
+  --hermes-root /path/to/hermes-agent \
+  --runtime-home /path/to/runtime-home
+```
+
+Disable OmniVoice and roll back:
+
+```bash
+scripts/omnivoice-disable.sh \
+  --hermes-root /path/to/hermes-agent \
+  --runtime-home /path/to/runtime-home \
+  --provider xtts-v2
+```
+
+The enable script validates `tts.providers.omnivoice`, redacts command
+arguments in output, requires `timeout >= 600`, and backs up
+`~/.hermes/config.yaml` before saving. Run these scripts as the Hermes runtime
+user, or pass `--runtime-home` for the home directory whose Hermes config
+should be loaded.
+
+Manual enable:
 
 ```python
 from hermes_cli.config import load_config, save_config
@@ -364,7 +402,7 @@ cfg.setdefault("tts", {})["provider"] = "omnivoice"
 save_config(cfg)
 ```
 
-Disable OmniVoice and roll back:
+Manual rollback:
 
 ```python
 from hermes_cli.config import load_config, save_config
@@ -382,6 +420,15 @@ deployment's normal reload or restart command after saving config.
 
 After either switch, run a live Hermes TTS smoke through the real tool path and
 confirm the active provider plus generated media before proceeding.
+
+For subjective listening checks after acceptance passes, use:
+
+```bash
+scripts/omnivoice-qc-sample.sh --voice <voice_id>
+```
+
+Generated QC audio is written outside the repo by default. Score it with
+`docs/omnivoice-qc.md`.
 
 Run the smoke test only after configuring a real backend command, Studio URL,
 or opt-in CLI backend:

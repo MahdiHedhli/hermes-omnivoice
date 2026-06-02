@@ -19,6 +19,44 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-02 10:04 America/New_York
+- Completed:
+  - Added an operator-ready runbook for the validated command-provider MVP.
+  - Added a repeatable subjective QC sample generator and listening rubric.
+  - Added conservative provider status, enable, and disable scripts with
+    dry-run mode, config-shape validation, redacted command reporting, and
+    backup-before-write behavior.
+  - Updated README/setup docs to state that OmniVoice is validated for manual
+    operator use while `xtts-v2` remains the default.
+  - Generated five local QC WAV samples with a consent-confirmed designed
+    voice, moved them outside the repo, and posted them in chat as local
+    artifacts.
+- Tests:
+  - `python3 scripts/omnivoice-acceptance.py --require-real-backend`: PASS.
+  - `scripts/test-omnivoice-tts.sh`: PASS with real backend command exports.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, 206 tests with one expected
+    opt-in real-backend skip; fake smoke passed and unconfigured smoke skipped
+    with status 77.
+  - `python3 scripts/check-omnivoice-artifacts.py`: PASS after QC samples were
+    moved outside the repo.
+  - Operator script dry-runs with a temporary Hermes config fixture: PASS for
+    status, enable, disable, and QC planning.
+  - `git diff --check`: PASS.
+  - `shellcheck`: not installed on this workstation.
+- Blockers:
+  - Native provider and `/voice` UX remain explicitly out of scope for this
+    lane.
+  - Automatic provider fallback is not available; rollback remains explicit
+    operator action.
+  - Subjective human listening/scoring is still pending.
+- Assumptions:
+  - Public docs should stay free of private hostnames, IPs, local operator
+    paths, generated audio, and backend command details.
+- Next action:
+  - Commit docs and safe scripts only.
+
+## Previous Heartbeat
+
 - Time: 2026-06-02 09:45 America/New_York
 - Completed:
   - Added `.gitignore` coverage for private operator/environment detail files.
@@ -50,7 +88,7 @@ restored the previous provider.
 - Next action:
   - Run package validation and commit the docs/ignore update.
 
-## Previous Heartbeat
+## Earlier Heartbeat
 
 - Time: 2026-06-02 09:15 America/New_York
 - Completed:

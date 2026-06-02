@@ -21,6 +21,10 @@ BASE_MANIFEST = [
     "scripts/find-hermes-source.py",
     "scripts/check-omnivoice-runtime.py",
     "scripts/omnivoice-studio-local.py",
+    "scripts/omnivoice-status.sh",
+    "scripts/omnivoice-enable.sh",
+    "scripts/omnivoice-disable.sh",
+    "scripts/omnivoice-qc-sample.sh",
     "scripts/omnivoice-acceptance.py",
     "scripts/test-omnivoice-tts.sh",
     "docs/omnivoice-integration-notes.md",
@@ -29,6 +33,8 @@ BASE_MANIFEST = [
     "docs/omnivoice-studio-bridge.md",
     "docs/omnivoice-weekend-summary.md",
     "docs/omnivoice-acceptance.md",
+    "docs/omnivoice-operator-runbook.md",
+    "docs/omnivoice-qc.md",
     "docs/tts-custom-voices.md",
 ]
 EXAMPLE_MANIFEST = [

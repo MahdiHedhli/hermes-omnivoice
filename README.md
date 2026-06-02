@@ -3,6 +3,11 @@
 Local command-provider bridge for using OmniVoice or OmniVoice-Studio voices
 from Hermes Agent TTS.
 
+Status: the OmniVoice command-provider MVP has been validated through a real
+Hermes TTS tool-path trial. The active default remains `xtts-v2`; OmniVoice is
+documented for manual operator use with explicit rollback. Native provider work
+and `/voice` UX are deferred.
+
 This repo is intentionally conservative:
 
 - Voice samples, generated audio, model weights, caches, and local config stay
@@ -56,6 +61,11 @@ This repo is intentionally conservative:
   Hermes checkout or staging directory without overwriting by default.
 - `scripts/omnivoice-studio-local.py`: helper for checking, fetching, starting,
   stopping, and inspecting loopback-only OmniVoice-Studio with Docker Compose.
+- `scripts/omnivoice-status.sh`, `scripts/omnivoice-enable.sh`, and
+  `scripts/omnivoice-disable.sh`: conservative operator scripts for checking,
+  enabling, and rolling back the Hermes active TTS provider.
+- `scripts/omnivoice-qc-sample.sh`: repeatable subjective QC sample generator
+  that writes local audio outside the repo by default.
 - `scripts/omnivoice-acceptance.py`: summarizes static MVP readiness and live
   backend readiness.
 - `scripts/validate-omnivoice-bridge.sh`: deterministic local validation,
@@ -140,6 +150,11 @@ For a staged Hermes rollout, add an `omnivoice` provider under
 After a smoke test, switch the active provider to `omnivoice` only when latency,
 quality, and local disk use are acceptable.
 
+For manual operator use, follow
+[`docs/omnivoice-operator-runbook.md`](docs/omnivoice-operator-runbook.md).
+The runbook includes dry-run enable/disable commands, rollback to `xtts-v2`,
+known latency, and the no-automatic-fallback warning.
+
 For local model-backed synthesis without Studio, prepare an isolated OmniVoice
 runtime outside the repo and use the exported command-provider environment:
 
@@ -156,6 +171,12 @@ Generate a preview:
 python scripts/hermes-omnivoice-voices.py set narrator
 python scripts/hermes-omnivoice-voices.py current
 python scripts/hermes-omnivoice-voices.py preview marvin --out /tmp/marvin-preview.wav
+```
+
+Generate local subjective QC samples after backend acceptance passes:
+
+```bash
+scripts/omnivoice-qc-sample.sh --voice narrator
 ```
 
 Print a Hermes command-provider config for a selected voice:
@@ -195,15 +216,23 @@ paths before backend or Studio startup.
 
 - Real model-backed synthesis works through the prepared local Python adapter
   when its shell exports are applied and a consented local voice profile exists.
+- The command-provider MVP is validated for manual operator use, but
+  `xtts-v2` remains the recommended default provider for routine low-latency
+  operation.
+- No automatic provider fallback was observed for a failing OmniVoice command
+  provider, so rollback is an explicit operator action.
 - Native Hermes provider wiring is deferred; the command-provider path is the
   supported MVP.
+- `/voice` commands or other runtime voice UX are deferred.
 - The fake backend in `tests/fixtures` verifies wrapper I/O only. It is not a
   TTS engine.
 
 ## More Detail
 
 - [Setup](docs/omnivoice-setup.md)
+- [Operator runbook](docs/omnivoice-operator-runbook.md)
 - [Operator trial](docs/omnivoice-operator-trial.md)
+- [Subjective QC](docs/omnivoice-qc.md)
 - [MVP handoff](docs/omnivoice-mvp-handoff.md)
 - [Weekend summary](docs/omnivoice-weekend-summary.md)
 - [Studio bridge](docs/omnivoice-studio-bridge.md)
