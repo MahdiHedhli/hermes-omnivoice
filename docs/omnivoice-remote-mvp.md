@@ -195,6 +195,32 @@ Codex work, post them in chat as local artifacts and keep them out of git.
 
 ## Latest SSH Loopback Attempt
 
+2026-06-02 admin helper smoke from ColPanicM2:
+
+- The requested `/Volumes/mhedhli/.ssh/colpanicm2_macstudio_admin_ed25519`
+  key path was not mounted in this Codex process, so the same-named local
+  admin key at `/Users/mhedhli/.ssh/colpanicm2_macstudio_admin_ed25519` was
+  used.
+- Only `mhedhli@100.78.163.62` was used. No `hermes-ops` SSH, `sudo`, or
+  token/env file reads were performed.
+- `/Users/mhedhli/.local/bin/omnivoice-client-smoke health` returned
+  `ok=true`, `provider=omnivoice`, `device=mps`, `model_id=k2-fsa/OmniVoice`,
+  `sample_rate=24000`, and `voice_count=1`.
+- `/Users/mhedhli/.local/bin/omnivoice-client-smoke voices` returned
+  `homelab_narrator`, a consent-confirmed designed voice with no reference
+  audio.
+- Speech smoke with `ColPanicM2 OmniVoice integration smoke test.` returned
+  HTTP 200, `ok=true`, 153,644 bytes, 3.200 seconds audio, 2.166 seconds
+  reported latency, and RTF 0.6769.
+- Only the returned WAV artifact was copied back locally for review. Token and
+  env files stayed on the Mac Studio and were not inspected.
+
+This proves the Mac Studio service, protected local token path, MPS backend,
+and operator helper are working through the admin SSH route. It does not yet
+prove the repo's Hermes command-provider wrapper path, because the current
+wrapper still expects a local token file or a transport that can call the
+Mac Studio helper directly.
+
 2026-06-02 local workstation preflight:
 
 - Repo branch and required wrapper/smoke/example files were present.

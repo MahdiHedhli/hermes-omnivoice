@@ -19,6 +19,49 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-02 17:09 America/New_York
+- Completed:
+  - Retried Mac Studio OmniVoice validation through the approved admin SSH
+    route, without using `hermes-ops`, `sudo`, or token/env file reads.
+  - The requested `/Volumes/mhedhli/.ssh/colpanicm2_macstudio_admin_ed25519`
+    key path was not mounted in this process; the same-named local admin key at
+    `/Users/mhedhli/.ssh/colpanicm2_macstudio_admin_ed25519` was present with
+    private file permissions and was used for this smoke.
+  - Confirmed `/Users/mhedhli/.local/bin/omnivoice-client-smoke health`
+    returns `ok=true`, `provider=omnivoice`, `device=mps`,
+    `model_id=k2-fsa/OmniVoice`, `sample_rate=24000`, and `voice_count=1`.
+  - Confirmed the helper lists `homelab_narrator` as a consent-confirmed
+    designed voice with no reference audio.
+  - Generated one remote speech sample through the helper using the prompt
+    `ColPanicM2 OmniVoice integration smoke test.`
+  - Copied back only the generated WAV artifact path returned by the helper to
+    `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/`; no token/env
+    files were read or copied.
+- Tests:
+  - Admin SSH helper health: PASS.
+  - Admin SSH helper voice list: PASS.
+  - Admin SSH helper speech smoke: PASS, HTTP 200, 153,644-byte WAV, 3.200
+    seconds audio, 2.166 seconds reported latency, RTF 0.6769.
+  - Repo remote wrapper smoke: NOT RUN in this slice; the helper proves the
+    Mac Studio service/token path, but the current repo wrapper still needs a
+    local token file or a dedicated helper transport.
+  - Live Hermes tool-path smoke: NOT RUN.
+  - Rollback: NOT NEEDED; Hermes config was not changed.
+- Blockers:
+  - A Hermes-side command-provider trial still needs either a safe wrapper path
+    to call the operator helper or a local protected token file usable by the
+    existing SSH loopback wrapper.
+  - Direct HTTP to `100.78.163.62:8880` remains a separate diagnostic follow-up.
+- Assumptions:
+  - Continue to keep Mac Studio token/env files opaque and out of git.
+  - Generated audio artifacts remain local-only and outside the repo checkout.
+- Next action:
+  - Add or configure a Hermes-compatible remote helper transport, then run the
+    live Hermes `tools.tts_tool.text_to_speech_tool` path with generated
+    samples posted as chat artifacts.
+
+## Previous Heartbeat
+
 - Time: 2026-06-02 15:05 America/New_York
 - Completed:
   - Started SSH loopback live validation preflight for

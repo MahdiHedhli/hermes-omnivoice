@@ -220,3 +220,14 @@ Loopback TCP accepted connections and unauthenticated `/health` returned HTTP
 401, but noninteractive `sudo -u hermes-ops` required a password and no local
 protected token file was available. The SSH loopback synthesis smoke remains
 blocked on `hermes-ops` SSH auth or a local mode `600` token file.
+
+Follow-up admin helper smoke from 2026-06-02: the Mac Studio now has
+`/Users/mhedhli/.local/bin/omnivoice-client-smoke`, which reads its bearer
+token from a protected Mac Studio-local env file. From ColPanicM2, use only
+the admin SSH route to `mhedhli@100.78.163.62`; do not SSH as `hermes-ops`, do
+not use `sudo`, and do not read or copy the helper env file. The helper passed
+health, voice-list, and speech smoke with `homelab_narrator`; the generated
+WAV was 153,644 bytes, 3.200 seconds audio, with 2.166 seconds reported
+latency. This validates the Mac Studio service and helper path, but live
+Hermes command-provider testing still needs a Hermes-compatible helper
+transport or a local protected token file for the existing wrapper.
