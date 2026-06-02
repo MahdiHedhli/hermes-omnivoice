@@ -9,6 +9,7 @@ import ipaddress
 import json
 import math
 import os
+import posixpath
 from pathlib import Path
 import re
 import socket
@@ -305,6 +306,47 @@ def normalize_optional_identity_file(raw_path: str) -> Path | None:
     return path
 
 
+def normalize_optional_remote_helper(raw_path: str) -> str:
+    helper = raw_path.strip()
+    if not helper:
+        return ""
+    if any(char.isspace() for char in helper):
+        raise RemoteOmniVoiceError("remote helper path must not contain whitespace")
+    if not helper.startswith("/"):
+        raise RemoteOmniVoiceError("remote helper path must be absolute")
+    if any(part in {"", ".", ".."} for part in helper.split("/")[1:]):
+        raise RemoteOmniVoiceError("remote helper path must not contain dot segments")
+    return helper
+
+
+def normalize_remote_artifact_prefix(raw_prefix: str) -> str:
+    prefix = raw_prefix.strip() or "/Users/hermes-ops/Services/omnivoice/"
+    if any(char.isspace() for char in prefix):
+        raise RemoteOmniVoiceError("remote artifact prefix must not contain whitespace")
+    if not prefix.startswith("/"):
+        raise RemoteOmniVoiceError("remote artifact prefix must be absolute")
+    normalized = posixpath.normpath(prefix)
+    if normalized == "/":
+        raise RemoteOmniVoiceError("remote artifact prefix must not be filesystem root")
+    return normalized.rstrip("/") + "/"
+
+
+def validate_remote_artifact_path(remote_path: str, allowed_prefix: str) -> str:
+    path = remote_path.strip()
+    if not path:
+        raise RemoteOmniVoiceError("remote helper did not return an artifact path")
+    if any(ord(char) < 32 or char.isspace() for char in path):
+        raise RemoteOmniVoiceError("remote helper returned an unsafe artifact path")
+    if not path.startswith("/"):
+        raise RemoteOmniVoiceError("remote helper returned a non-absolute artifact path")
+    normalized = posixpath.normpath(path)
+    if normalized != path:
+        raise RemoteOmniVoiceError("remote helper returned an unnormalized artifact path")
+    if not normalized.startswith(allowed_prefix):
+        raise RemoteOmniVoiceError("remote helper returned an artifact outside the allowed prefix")
+    return normalized
+
+
 def wav_is_valid(data: bytes) -> bool:
     return len(data) >= 44 and data[:4] == b"RIFF" and data[8:12] == b"WAVE"
 
@@ -480,6 +522,55 @@ def build_ssh_command(
     return command
 
 
+def build_ssh_remote_command(
+    *,
+    ssh_host: str,
+    ssh_port: int,
+    ssh_identity_file: Path | None,
+    timeout: float,
+    remote_command: str,
+) -> list[str]:
+    connect_timeout = max(1, min(int(math.ceil(timeout)), 30))
+    command = [
+        "ssh",
+        "-p",
+        str(ssh_port),
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        f"ConnectTimeout={connect_timeout}",
+    ]
+    if ssh_identity_file is not None:
+        command.extend(["-i", str(ssh_identity_file)])
+    command.extend([ssh_host, remote_command])
+    return command
+
+
+def build_scp_from_remote_command(
+    *,
+    ssh_host: str,
+    ssh_port: int,
+    ssh_identity_file: Path | None,
+    timeout: float,
+    remote_path: str,
+    local_path: Path,
+) -> list[str]:
+    connect_timeout = max(1, min(int(math.ceil(timeout)), 30))
+    command = [
+        "scp",
+        "-P",
+        str(ssh_port),
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        f"ConnectTimeout={connect_timeout}",
+    ]
+    if ssh_identity_file is not None:
+        command.extend(["-i", str(ssh_identity_file)])
+    command.extend([f"{ssh_host}:{remote_path}", str(local_path)])
+    return command
+
+
 def request_ssh_loopback(
     *,
     url: str,
@@ -595,6 +686,100 @@ def request_health_ssh_loopback(
     )
 
 
+def request_audio_ssh_helper(
+    *,
+    helper_path: str,
+    payload: dict[str, object],
+    audio_format: str,
+    timeout: float,
+    ssh_host: str,
+    ssh_port: int,
+    ssh_identity_file: Path | None,
+    artifact_prefix: str,
+) -> tuple[bytes, str]:
+    helper_payload = {
+        "text": payload.get("input", ""),
+        "input": payload.get("input", ""),
+        "voice": payload.get("voice", ""),
+        "speed": payload.get("speed", 1.0),
+        "format": audio_format,
+        "response_format": audio_format,
+        "model": payload.get("model", "omnivoice"),
+    }
+    if payload.get("language"):
+        helper_payload["language"] = payload["language"]
+    command = build_ssh_remote_command(
+        ssh_host=ssh_host,
+        ssh_port=ssh_port,
+        ssh_identity_file=ssh_identity_file,
+        timeout=timeout,
+        remote_command=helper_path,
+    )
+    try:
+        completed = subprocess.run(
+            command,
+            input=json.dumps(helper_payload).encode("utf-8"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=timeout + 30,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise RemoteOmniVoiceError("ssh executable not found") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RemoteOmniVoiceError("ssh remote helper request timed out") from exc
+
+    stderr = completed.stderr.decode("utf-8", errors="replace").strip()
+    if completed.returncode != 0:
+        raise RemoteOmniVoiceError(
+            f"ssh remote helper failed with exit code {completed.returncode}"
+            + (f": {redact(stderr)}" if stderr else "")
+        )
+    try:
+        metadata = json.loads(completed.stdout.decode("utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RemoteOmniVoiceError("ssh remote helper returned invalid JSON") from exc
+    if not isinstance(metadata, dict):
+        raise RemoteOmniVoiceError("ssh remote helper returned invalid metadata")
+    if metadata.get("ok") is not True:
+        message = str(metadata.get("error", "unknown remote helper failure"))
+        raise RemoteOmniVoiceError(f"ssh remote helper failed: {redact(message)}")
+    remote_path = validate_remote_artifact_path(
+        str(metadata.get("path") or metadata.get("remote_path") or ""),
+        artifact_prefix,
+    )
+
+    with tempfile.NamedTemporaryFile(prefix="hermes-omnivoice-remote-", suffix=".audio") as tmp:
+        scp_command = build_scp_from_remote_command(
+            ssh_host=ssh_host,
+            ssh_port=ssh_port,
+            ssh_identity_file=ssh_identity_file,
+            timeout=timeout,
+            remote_path=remote_path,
+            local_path=Path(tmp.name),
+        )
+        try:
+            scp_completed = subprocess.run(
+                scp_command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=timeout + 30,
+                check=False,
+            )
+        except FileNotFoundError as exc:
+            raise RemoteOmniVoiceError("scp executable not found") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise RemoteOmniVoiceError("scp remote artifact copy timed out") from exc
+        scp_stderr = scp_completed.stderr.decode("utf-8", errors="replace").strip()
+        if scp_completed.returncode != 0:
+            raise RemoteOmniVoiceError(
+                f"scp remote artifact copy failed with exit code {scp_completed.returncode}"
+                + (f": {redact(scp_stderr)}" if scp_stderr else "")
+            )
+        data = Path(tmp.name).read_bytes()
+    return data, f"audio/{audio_format}"
+
+
 def synthesize(
     *,
     transport: str,
@@ -612,6 +797,8 @@ def synthesize(
     ssh_host: str,
     ssh_port: int,
     ssh_identity_file: Path | None,
+    remote_helper: str,
+    remote_artifact_prefix: str,
     allow_public_base_url: bool,
 ) -> tuple[bytes, str]:
     payload = build_speech_payload(
@@ -630,6 +817,18 @@ def synthesize(
             payload=payload,
             audio_format=audio_format,
             timeout=timeout,
+        )
+
+    if remote_helper:
+        return request_audio_ssh_helper(
+            helper_path=remote_helper,
+            payload=payload,
+            audio_format=audio_format,
+            timeout=timeout,
+            ssh_host=validate_ssh_host(ssh_host),
+            ssh_port=ssh_port,
+            ssh_identity_file=ssh_identity_file,
+            artifact_prefix=remote_artifact_prefix,
         )
 
     loopback_base_url = normalize_loopback_url(remote_loopback_url)
@@ -689,6 +888,8 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
     parser.add_argument("--ssh-host", default="")
     parser.add_argument("--ssh-port", default="")
     parser.add_argument("--ssh-identity-file", default="")
+    parser.add_argument("--remote-helper", default="")
+    parser.add_argument("--remote-artifact-prefix", default="")
     parser.add_argument("--remote-url", default="")
     parser.add_argument("--format", default="wav", choices=sorted(AUDIO_EXTENSIONS))
     parser.add_argument("--timeout", default=600, type=float)
@@ -714,7 +915,17 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
             raise RemoteOmniVoiceError("voice must not be empty")
         if not args.model.strip():
             raise RemoteOmniVoiceError("model must not be empty")
-        token = resolve_api_token(args.token_file, args.api_token, runtime_env)
+        remote_helper = normalize_optional_remote_helper(
+            args.remote_helper or runtime_env.get("OMNIVOICE_REMOTE_HELPER", "")
+        )
+        remote_artifact_prefix = normalize_remote_artifact_prefix(
+            args.remote_artifact_prefix
+            or runtime_env.get("OMNIVOICE_REMOTE_ARTIFACT_PREFIX", "")
+        )
+        if transport == "ssh-loopback" and remote_helper:
+            token = ""
+        else:
+            token = resolve_api_token(args.token_file, args.api_token, runtime_env)
         allow_public = (
             args.allow_public_base_url
             or runtime_env.get("OMNIVOICE_REMOTE_ALLOW_PUBLIC") == "1"
@@ -743,6 +954,8 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
                 args.ssh_identity_file
                 or runtime_env.get("OMNIVOICE_REMOTE_SSH_IDENTITY_FILE", "")
             ),
+            remote_helper=remote_helper,
+            remote_artifact_prefix=remote_artifact_prefix,
             allow_public_base_url=allow_public,
         )
         validate_audio_response(data, content_type, args.format)

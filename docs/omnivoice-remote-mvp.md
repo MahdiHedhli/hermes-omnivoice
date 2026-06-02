@@ -5,7 +5,9 @@ transports for a stronger OmniVoice host:
 
 - `http`: direct HTTP(S) to an authenticated remote FastAPI base URL.
 - `ssh-loopback`: SSH to the Mac Studio and call the loopback-only FastAPI
-  service from inside that SSH session.
+  service from inside that SSH session. The proven Hermes path uses a
+  Mac Studio-local helper that reads the bearer token from a protected file on
+  the Mac Studio, so Hermes does not need a copied token.
 
 Direct HTTP remains supported, but it is not the proven Mac Studio path right
 now. Direct HTTP to `100.78.163.62:8880` timed out from clients even though TCP
@@ -17,7 +19,7 @@ Hermes Agent on hermes-01
   -> scripts/hermes-omnivoice-remote.py --transport ssh-loopback
   -> ssh hermes-ops@100.78.163.62
   -> remote helper calls http://127.0.0.1:8880/v1/audio/speech
-  -> audio bytes stream back over SSH
+  -> wrapper copies back only the returned generated WAV artifact
   -> wrapper validates and atomically writes Hermes output path
 ```
 
@@ -30,12 +32,17 @@ remote trial.
   `127.0.0.1:8880`.
 - Hermes reaches it through SSH to `hermes-ops@100.78.163.62`.
 - Bearer auth is enforced by the service.
-- Prefer `OMNIVOICE_REMOTE_TOKEN_FILE` over `OMNIVOICE_REMOTE_API_TOKEN`.
-- Token files must be mode `600`; the wrapper rejects group/world-accessible
-  token files.
+- For the proven helper path, the bearer token stays in a protected
+  Mac Studio-local file read by
+  `/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech`.
+- For direct HTTP or direct SSH-loopback HTTP mode, prefer
+  `OMNIVOICE_REMOTE_TOKEN_FILE` over `OMNIVOICE_REMOTE_API_TOKEN`.
+- Token files copied to any client host must be mode `600`; the wrapper rejects
+  group/world-accessible token files.
 - Do not put credentials in URLs; the wrapper rejects URL userinfo.
-- In `ssh-loopback` mode, the token is sent to the remote helper on stdin, not
-  as an `ssh` or `curl` argument.
+- In helper mode, the token is not sent from Hermes at all. In direct
+  `ssh-loopback` HTTP mode, the token is sent to the remote HTTP helper on
+  stdin, not as an `ssh` or `curl` argument.
 - Do not expose OmniVoice-Studio or OmniVoice FastAPI broadly on the LAN.
 - Do not commit generated audio, voice samples, model files, caches, tokens,
   populated env files, or host-local configs.
@@ -89,7 +96,9 @@ Current Mac Studio path:
 export OMNIVOICE_REMOTE_TRANSPORT=ssh-loopback
 export OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62
 export OMNIVOICE_REMOTE_LOOPBACK_URL=http://127.0.0.1:8880
-export OMNIVOICE_REMOTE_TOKEN_FILE=/path/to/private/omnivoice-token
+export OMNIVOICE_REMOTE_SSH_IDENTITY_FILE=/home/claude/.ssh/hermes_ops_macstudio_ed25519
+export OMNIVOICE_REMOTE_HELPER=/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech
+export OMNIVOICE_REMOTE_ARTIFACT_PREFIX=/Users/hermes-ops/Services/omnivoice/
 export OMNIVOICE_REMOTE_VOICE=homelab_narrator
 ```
 
@@ -114,7 +123,7 @@ tts:
   providers:
     omnivoice-remote-ssh-loopback:
       type: command
-      command: "python /opt/hermes-local-tts/omnivoice-bridge/scripts/hermes-omnivoice-remote.py --transport ssh-loopback --remote-url http://127.0.0.1:8880 --voice {voice} --speed {speed} --text-file {input_path} --out {output_path} --max-chars 2000"
+      command: "python3 /opt/hermes-local-tts/omnivoice-bridge/scripts/hermes-omnivoice-remote.py --transport ssh-loopback --ssh-host hermes-ops@100.78.163.62 --ssh-identity-file /home/claude/.ssh/hermes_ops_macstudio_ed25519 --remote-helper /Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech --remote-artifact-prefix /Users/hermes-ops/Services/omnivoice/ --voice {voice} --speed {speed} --text-file {input_path} --out {output_path} --max-chars 2000 --timeout 600"
       voice: homelab_narrator
       speed: 1.0
       output_format: wav
@@ -136,6 +145,10 @@ source ~/.hermes/omnivoice-remote.env
 
 python scripts/hermes-omnivoice-remote.py \
   --transport ssh-loopback \
+  --ssh-host hermes-ops@100.78.163.62 \
+  --ssh-identity-file /home/claude/.ssh/hermes_ops_macstudio_ed25519 \
+  --remote-helper /Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech \
+  --remote-artifact-prefix /Users/hermes-ops/Services/omnivoice/ \
   --text-file /tmp/hermes-input.txt \
   --out /tmp/hermes-remote-output.wav \
   --voice homelab_narrator \
@@ -160,7 +173,7 @@ The wrapper fails closed on:
 - missing or empty text,
 - missing base URL in `http` mode,
 - missing SSH host in `ssh-loopback` mode,
-- missing token or unsafe token-file permissions,
+- missing token or unsafe token-file permissions in token-file modes,
 - public-looking direct HTTP base URL without explicit override,
 - SSH failure,
 - loopback service timeout or connection refusal,
@@ -181,7 +194,7 @@ python3 scripts/omnivoice-acceptance.py --require-package-files
 python3 scripts/check-omnivoice-artifacts.py
 ```
 
-Remote smoke, only when SSH and the token file are available:
+Remote smoke, only when SSH and either the helper workflow or a token-file workflow are available:
 
 ```bash
 source ~/.hermes/omnivoice-remote.env
@@ -194,6 +207,32 @@ validates non-empty audio, prints latency, and writes samples under
 Codex work, post them in chat as local artifacts and keep them out of git.
 
 ## Latest SSH Loopback Attempt
+
+2026-06-02 live Hermes tool-path trial:
+
+- Preflight active provider: `xtts-v2`.
+- Config path: `/home/claude/.hermes/config.yaml`; backup created at
+  `/home/claude/.hermes/config.yaml.pre-omnivoice-remote-20260602T220337Z.bak`.
+- Staged provider: `tts.providers.omnivoice-remote-ssh-loopback`.
+- First activation attempt found the command used `python`, which was not on
+  Hermes' command-provider PATH. Hermes was rolled back to `xtts-v2`, rollback
+  smoke passed, and the provider command was corrected to `python3`.
+- Second activation attempt passed all live Hermes
+  `tools.tts_tool.text_to_speech_tool` prompts through the remote Mac Studio
+  helper, then rolled back to `xtts-v2`.
+- Final active provider: `xtts-v2`.
+- Subjective listening: not performed in this run; samples were copied locally
+  for operator review.
+
+| Case | Result | Latency | Duration | Size | Format | Artifact |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| Short | PASS | 2.056s | 2.956500s | 24,046 bytes | Ogg Opus, mono, 24000 Hz | `/home/claude/.cache/hermes/omnivoice-remote-live-trial/20260602T220621Z/short.ogg` |
+| Medium | PASS | 2.254s | 4.196500s | 34,082 bytes | Ogg Opus, mono, 24000 Hz | `/home/claude/.cache/hermes/omnivoice-remote-live-trial/20260602T220621Z/medium.ogg` |
+| Edge | PASS | 2.579s | 5.386500s | 43,769 bytes | Ogg Opus, mono, 24000 Hz | `/home/claude/.cache/hermes/omnivoice-remote-live-trial/20260602T220621Z/edge.ogg` |
+| Rollback `xtts-v2` | PASS | 54.308s | 4.871167s | 39,556 bytes | Ogg Opus, mono, 24000 Hz | `/home/claude/.cache/hermes/omnivoice-remote-live-trial/20260602T220621Z/rollback_xtts_v2.ogg` |
+
+The same samples were copied to the local, out-of-repo review cache at
+`/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-20260602T220621Z/`.
 
 2026-06-02 admin helper smoke from ColPanicM2:
 
@@ -215,11 +254,9 @@ Codex work, post them in chat as local artifacts and keep them out of git.
 - Only the returned WAV artifact was copied back locally for review. Token and
   env files stayed on the Mac Studio and were not inspected.
 
-This proves the Mac Studio service, protected local token path, MPS backend,
-and operator helper are working through the admin SSH route. It does not yet
-prove the repo's Hermes command-provider wrapper path, because the current
-wrapper still expects a local token file or a transport that can call the
-Mac Studio helper directly.
+This proved the Mac Studio service, protected local token path, MPS backend,
+and operator helper through the admin SSH route. The later live Hermes trial
+above supersedes this as the command-provider proof.
 
 2026-06-02 local workstation preflight:
 
@@ -238,18 +275,19 @@ Mac Studio helper directly.
 - Result: SSH loopback synthesis smoke, direct wrapper samples, and live Hermes
   tool-path trial were skipped. No sample artifacts were generated.
 
-Required next step: install the operator public key for
-`hermes-ops@100.78.163.62` or provide a local mode `600`
-`OMNIVOICE_REMOTE_TOKEN_FILE` that can be used with the existing admin SSH
-route, without printing or committing the token.
+This was a historical blocked attempt. The later helper-based Hermes trial used
+the host-local `claude` restricted key on `hermes-01` and did not require a
+copied token file.
 
 ## Operator Trial
 
 1. Confirm active provider is `xtts-v2`.
 2. Confirm `tts.providers.omnivoice-remote-ssh-loopback` exists.
 3. Confirm `OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62`.
-4. Confirm `OMNIVOICE_REMOTE_LOOPBACK_URL=http://127.0.0.1:8880`.
-5. Confirm `OMNIVOICE_REMOTE_TOKEN_FILE` points to a mode `600` token file.
+4. Confirm `OMNIVOICE_REMOTE_SSH_IDENTITY_FILE` points to the mode `600`
+   Hermes-host key `/home/claude/.ssh/hermes_ops_macstudio_ed25519`.
+5. Confirm `OMNIVOICE_REMOTE_HELPER` is
+   `/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech`.
 6. Run `scripts/test-omnivoice-remote.sh`.
 7. Temporarily set `tts.provider` to `omnivoice-remote-ssh-loopback`.
 8. Run Hermes' real `tools.tts_tool.text_to_speech_tool` path.
@@ -270,6 +308,10 @@ Measured Mac Studio results:
   RTF 0.4694.
 - Hermes-initiated SSH smoke: 0.967 seconds latency, 2.950 seconds audio,
   RTF 0.3279.
+- Live Hermes remote tool path: 2.056-2.579 seconds latency for the tested
+  prompts, producing 2.956500-5.386500 seconds of Opus audio.
+- Post-rollback `xtts-v2` smoke remained much slower on `hermes-01` CPU:
+  54.308 seconds latency for 4.871167 seconds of Opus audio.
 
 The older local hermes-01 backend trial took roughly 49-85 seconds for similar
 short and medium prompts. Keep `timeout: 600` until repeated remote Hermes
@@ -298,7 +340,7 @@ network policy changes in this lane.
 
 ## Recommendation
 
-Use `ssh-loopback` for Mac Studio operator trials now. Keep direct `http` mode
-for future diagnostics or for hosts where authenticated HTTP over Tailscale is
-known to work. Do not make remote OmniVoice the global default until remote
-Hermes tool-path smoke, subjective QC, and rollback all pass.
+Use `ssh-loopback` helper mode for manual Mac Studio operator use now. Keep
+`xtts-v2` as the active default for unattended routine use until subjective QC
+and a longer soak pass. Keep direct `http` mode for future diagnostics or for
+hosts where authenticated HTTP over Tailscale is known to work.

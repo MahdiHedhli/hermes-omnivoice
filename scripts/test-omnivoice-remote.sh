@@ -13,6 +13,8 @@ BASE_URL="${OMNIVOICE_REMOTE_BASE_URL:-}"
 SSH_HOST="${OMNIVOICE_REMOTE_SSH_HOST:-}"
 SSH_PORT="${OMNIVOICE_REMOTE_SSH_PORT:-22}"
 SSH_IDENTITY_FILE="${OMNIVOICE_REMOTE_SSH_IDENTITY_FILE:-}"
+REMOTE_HELPER="${OMNIVOICE_REMOTE_HELPER:-}"
+REMOTE_ARTIFACT_PREFIX="${OMNIVOICE_REMOTE_ARTIFACT_PREFIX:-}"
 LOOPBACK_URL="${OMNIVOICE_REMOTE_LOOPBACK_URL:-http://127.0.0.1:8880}"
 TOKEN_FILE="${OMNIVOICE_REMOTE_TOKEN_FILE:-}"
 TOKEN="${OMNIVOICE_REMOTE_API_TOKEN:-}"
@@ -25,8 +27,12 @@ case "$TRANSPORT" in
     fi
     ;;
   ssh-loopback)
-    if [[ -z "$SSH_HOST" || ( -z "$TOKEN_FILE" && -z "$TOKEN" ) ]]; then
-      echo "SKIP: set OMNIVOICE_REMOTE_SSH_HOST and OMNIVOICE_REMOTE_TOKEN_FILE or OMNIVOICE_REMOTE_API_TOKEN for SSH loopback smoke" >&2
+    if [[ -z "$SSH_HOST" ]]; then
+      echo "SKIP: set OMNIVOICE_REMOTE_SSH_HOST for SSH loopback smoke" >&2
+      exit 77
+    fi
+    if [[ -z "$REMOTE_HELPER" && -z "$TOKEN_FILE" && -z "$TOKEN" ]]; then
+      echo "SKIP: set OMNIVOICE_REMOTE_HELPER, OMNIVOICE_REMOTE_TOKEN_FILE, or OMNIVOICE_REMOTE_API_TOKEN for SSH loopback smoke" >&2
       exit 77
     fi
     ;;
@@ -68,6 +74,9 @@ spec.loader.exec_module(remote)
 env = dict(os.environ)
 try:
     transport = remote.parse_transport(env.get("OMNIVOICE_REMOTE_TRANSPORT", "http"))
+    if transport == "ssh-loopback" and env.get("OMNIVOICE_REMOTE_HELPER", ""):
+        print("remote health: SKIP (remote helper workflow)")
+        sys.exit(0)
     token = remote.resolve_api_token("", "", env)
     timeout = remote.parse_positive_float(env.get("OMNIVOICE_REMOTE_HEALTH_TIMEOUT", "10"), "health timeout")
     ssh_port = remote.parse_ssh_port(env.get("OMNIVOICE_REMOTE_SSH_PORT", "22"))
@@ -119,6 +128,12 @@ case "$TRANSPORT" in
     wrapper_args+=(--ssh-host "$SSH_HOST" --ssh-port "$SSH_PORT" --remote-url "$LOOPBACK_URL")
     if [[ -n "$SSH_IDENTITY_FILE" ]]; then
       wrapper_args+=(--ssh-identity-file "$SSH_IDENTITY_FILE")
+    fi
+    if [[ -n "$REMOTE_HELPER" ]]; then
+      wrapper_args+=(--remote-helper "$REMOTE_HELPER")
+    fi
+    if [[ -n "$REMOTE_ARTIFACT_PREFIX" ]]; then
+      wrapper_args+=(--remote-artifact-prefix "$REMOTE_ARTIFACT_PREFIX")
     fi
     ;;
 esac

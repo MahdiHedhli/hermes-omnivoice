@@ -1639,6 +1639,118 @@ class RemoteOmniVoiceTests(unittest.TestCase):
             self.assertEqual(envelope["payload"]["input"], "Hermes ssh loopback speech.")
             self.assertEqual(path_mode(out_file), 0o600)
 
+    def test_ssh_loopback_remote_helper_copies_returned_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes ssh helper speech.", encoding="utf-8")
+
+            def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+                if command[0] == "ssh":
+                    request = json.loads(kwargs["input"].decode("utf-8"))  # type: ignore[index, union-attr]
+                    self.assertEqual(request["text"], "Hermes ssh helper speech.")
+                    self.assertEqual(request["voice"], "homelab_narrator")
+                    self.assertNotIn("token", request)
+                    return subprocess.CompletedProcess(
+                        args=command,
+                        returncode=0,
+                        stdout=json.dumps(
+                            {
+                                "ok": True,
+                                "remote_path": "/Users/hermes-ops/Services/omnivoice/artifacts/out.wav",
+                                "bytes": len(wav_bytes()),
+                            }
+                        ).encode("utf-8"),
+                        stderr=b"",
+                    )
+                if command[0] == "scp":
+                    Path(command[-1]).write_bytes(wav_bytes())
+                    return subprocess.CompletedProcess(
+                        args=command,
+                        returncode=0,
+                        stdout=b"",
+                        stderr=b"",
+                    )
+                self.fail(f"unexpected command: {command}")
+
+            with unittest.mock.patch.object(
+                remote_omnivoice.subprocess,
+                "run",
+                side_effect=fake_run,
+            ) as run_mock:
+                result, error = self.run_remote(
+                    [
+                        "--transport",
+                        "ssh-loopback",
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "homelab_narrator",
+                        "--ssh-host",
+                        "hermes-ops@100.78.163.62",
+                        "--remote-helper",
+                        "/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech",
+                    ],
+                    {},
+                )
+
+            self.assertEqual(result, 0, error)
+            self.assertEqual(run_mock.call_count, 2)
+            self.assertEqual(path_mode(out_file), 0o600)
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertGreater(wav.getnframes(), 0)
+            ssh_command = run_mock.call_args_list[0].args[0]
+            self.assertIn("hermes-ops@100.78.163.62", ssh_command)
+            self.assertNotIn("file-token", " ".join(ssh_command))
+
+    def test_ssh_loopback_remote_helper_rejects_unsafe_artifact_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes ssh helper speech.", encoding="utf-8")
+            completed = subprocess.CompletedProcess(
+                args=["ssh"],
+                returncode=0,
+                stdout=json.dumps(
+                    {
+                        "ok": True,
+                        "remote_path": "/Users/hermes-ops/.ssh/id_ed25519",
+                    }
+                ).encode("utf-8"),
+                stderr=b"",
+            )
+            with unittest.mock.patch.object(
+                remote_omnivoice.subprocess,
+                "run",
+                return_value=completed,
+            ) as run_mock:
+                result, error = self.run_remote(
+                    [
+                        "--transport",
+                        "ssh-loopback",
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "homelab_narrator",
+                        "--ssh-host",
+                        "hermes-ops@100.78.163.62",
+                        "--remote-helper",
+                        "/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech",
+                    ],
+                    {},
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("outside the allowed prefix", error)
+            self.assertFalse(out_file.exists())
+            run_mock.assert_called_once()
+
     def test_token_file_is_preferred_over_api_token(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -2060,6 +2172,7 @@ class RemoteOmniVoiceIntegrationTests(unittest.TestCase):
         self.transport = self.env.get("OMNIVOICE_REMOTE_TRANSPORT", "http")
         self.base_url = os.environ.get("OMNIVOICE_REMOTE_BASE_URL", "")
         self.ssh_host = os.environ.get("OMNIVOICE_REMOTE_SSH_HOST", "")
+        self.remote_helper = os.environ.get("OMNIVOICE_REMOTE_HELPER", "")
         self.has_token = bool(
             os.environ.get("OMNIVOICE_REMOTE_API_TOKEN")
             or os.environ.get("OMNIVOICE_REMOTE_TOKEN_FILE")
@@ -2069,15 +2182,19 @@ class RemoteOmniVoiceIntegrationTests(unittest.TestCase):
                 "set OMNIVOICE_REMOTE_BASE_URL and OMNIVOICE_REMOTE_TOKEN_FILE "
                 "or OMNIVOICE_REMOTE_API_TOKEN"
             )
-        if self.transport == "ssh-loopback" and (not self.ssh_host or not self.has_token):
+        if self.transport == "ssh-loopback" and (
+            not self.ssh_host or (not self.remote_helper and not self.has_token)
+        ):
             self.skipTest(
-                "set OMNIVOICE_REMOTE_SSH_HOST and OMNIVOICE_REMOTE_TOKEN_FILE "
-                "or OMNIVOICE_REMOTE_API_TOKEN"
+                "set OMNIVOICE_REMOTE_SSH_HOST and OMNIVOICE_REMOTE_HELPER, "
+                "OMNIVOICE_REMOTE_TOKEN_FILE, or OMNIVOICE_REMOTE_API_TOKEN"
             )
         if self.transport not in {"http", "ssh-loopback"}:
             self.skipTest("set OMNIVOICE_REMOTE_TRANSPORT to http or ssh-loopback")
 
     def test_remote_health_check(self) -> None:
+        if self.transport == "ssh-loopback" and self.remote_helper:
+            self.skipTest("remote helper workflow has no token-based health check")
         token = remote_omnivoice.resolve_api_token("", "", self.env)
         ssh_identity = remote_omnivoice.normalize_optional_identity_file(
             self.env.get("OMNIVOICE_REMOTE_SSH_IDENTITY_FILE", "")

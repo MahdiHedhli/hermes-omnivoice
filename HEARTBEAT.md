@@ -19,6 +19,59 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-02 18:08 America/New_York
+- Completed:
+  - Added SSH-loopback remote-helper support to
+    `scripts/hermes-omnivoice-remote.py` so Hermes can call the Mac Studio
+    helper without copying a bearer token to Hermes.
+  - Deployed the updated remote wrapper and smoke script to
+    `/opt/hermes-local-tts/omnivoice-bridge/scripts/` on `hermes-01`, outside
+    the Hermes source checkout.
+  - Confirmed preflight active provider was `xtts-v2`, staged
+    `tts.providers.omnivoice-remote-ssh-loopback`, and backed up
+    `/home/claude/.hermes/config.yaml` before edits.
+  - Ran `scripts/test-omnivoice-remote.sh` from `hermes-01` through
+    `hermes-ops@100.78.163.62` using the restricted host key and remote helper:
+    PASS, generated a 115,724-byte WAV, 2.410s duration, 1.94s wrapper latency.
+  - Temporarily switched Hermes to `omnivoice-remote-ssh-loopback`, ran three
+    live `tools.tts_tool.text_to_speech_tool` prompts, and rolled back to
+    `xtts-v2`.
+  - Corrected the remote provider command from `python` to `python3` after the
+    first activation attempt failed before synthesis with `/bin/sh: 1: python:
+    not found`; rollback passed before retry.
+- Live Hermes results:
+  - Short: PASS, 2.056s latency, 2.956500s Opus, 24,046 bytes.
+  - Medium: PASS, 2.254s latency, 4.196500s Opus, 34,082 bytes.
+  - Edge: PASS, 2.579s latency, 5.386500s Opus, 43,769 bytes.
+  - Rollback smoke on `xtts-v2`: PASS, 54.308s latency, 4.871167s Opus,
+    39,556 bytes.
+  - Final active provider: `xtts-v2`.
+- Artifacts:
+  - Remote host samples:
+    `/home/claude/.cache/hermes/omnivoice-remote-live-trial/20260602T220621Z/`.
+  - Local review copies:
+    `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-20260602T220621Z/`.
+  - Generated audio stayed out of git.
+- Tests:
+  - `python3 -m unittest discover -s tests -v`: PASS, 226 tests, 3 skipped.
+  - `python3 scripts/omnivoice-acceptance.py --require-package-files`: PASS
+    for package/static checks; local real-backend and Hermes-source checks are
+    blocked as expected in this bridge checkout.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - `python3 scripts/check-omnivoice-artifacts.py`: PASS.
+  - Remote `scripts/test-omnivoice-remote.sh` from `hermes-01`: PASS.
+  - `git diff --check`: PASS.
+  - `shellcheck`: not installed on this workstation.
+- Blockers:
+  - Direct HTTP to `100.78.163.62:8880` remains a separate diagnostic backlog.
+  - Subjective listening QC is still pending.
+- Next action:
+  - Use remote OmniVoice SSH-loopback helper mode for manual operator requests
+    when the Mac Studio voice is desired; keep `xtts-v2` as the unattended
+    default until QC and a longer soak pass.
+
+## Previous Heartbeat
+
 - Time: 2026-06-02 17:09 America/New_York
 - Completed:
   - Retried Mac Studio OmniVoice validation through the approved admin SSH

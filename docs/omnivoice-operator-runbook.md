@@ -201,25 +201,29 @@ Current proven Mac Studio route:
 export OMNIVOICE_REMOTE_TRANSPORT=ssh-loopback
 export OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62
 export OMNIVOICE_REMOTE_LOOPBACK_URL=http://127.0.0.1:8880
-export OMNIVOICE_REMOTE_TOKEN_FILE=/path/to/private/omnivoice-token
+export OMNIVOICE_REMOTE_SSH_IDENTITY_FILE=/home/claude/.ssh/hermes_ops_macstudio_ed25519
+export OMNIVOICE_REMOTE_HELPER=/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech
+export OMNIVOICE_REMOTE_ARTIFACT_PREFIX=/Users/hermes-ops/Services/omnivoice/
 export OMNIVOICE_REMOTE_VOICE=homelab_narrator
 scripts/test-omnivoice-remote.sh
 ```
 
 The Mac Studio service remains loopback-only, bearer auth is required, and the
-token should come from a protected mode `600` file. Direct HTTP mode remains
+proven helper reads the token from a protected Mac Studio-local file. Do not
+copy that token to Hermes for the helper workflow. Direct HTTP mode remains
 supported but is not the proven path while direct Tailscale HTTP to
 `100.78.163.62:8880` times out. The same operator rules apply: keep `xtts-v2`
 as the default, run smoke tests first, do not rely on automatic fallback, and
 roll back explicitly on failure.
 
-Latest access note from 2026-06-02: direct SSH to
+Historical access note from 2026-06-02: direct SSH to
 `hermes-ops@100.78.163.62` failed from this workstation, while
 `mhedhli@100.78.163.62` succeeded with the Mac Studio admin key.
 Loopback TCP accepted connections and unauthenticated `/health` returned HTTP
 401, but noninteractive `sudo -u hermes-ops` required a password and no local
-protected token file was available. The SSH loopback synthesis smoke remains
-blocked on `hermes-ops` SSH auth or a local mode `600` token file.
+protected token file was available. This was superseded by the later
+Hermes-host helper workflow, which uses the restricted
+`/home/claude/.ssh/hermes_ops_macstudio_ed25519` key from `hermes-01`.
 
 Follow-up admin helper smoke from 2026-06-02: the Mac Studio now has
 `/Users/mhedhli/.local/bin/omnivoice-client-smoke`, which reads its bearer
@@ -228,6 +232,28 @@ the admin SSH route to `mhedhli@100.78.163.62`; do not SSH as `hermes-ops`, do
 not use `sudo`, and do not read or copy the helper env file. The helper passed
 health, voice-list, and speech smoke with `homelab_narrator`; the generated
 WAV was 153,644 bytes, 3.200 seconds audio, with 2.166 seconds reported
-latency. This validates the Mac Studio service and helper path, but live
-Hermes command-provider testing still needs a Hermes-compatible helper
-transport or a local protected token file for the existing wrapper.
+latency. That validated the Mac Studio service and helper path before the live
+Hermes command-provider trial below.
+
+Live Hermes SSH-loopback helper trial from 2026-06-02: Hermes was backed up,
+temporarily switched from `xtts-v2` to
+`omnivoice-remote-ssh-loopback`, ran three
+`tools.tts_tool.text_to_speech_tool` prompts, and was rolled back to
+`xtts-v2`. The final active provider was confirmed as `xtts-v2`.
+
+| Case | Result | Latency | Duration | Size |
+| --- | --- | ---: | ---: | ---: |
+| Short | PASS | 2.056s | 2.956500s | 24,046 bytes |
+| Medium | PASS | 2.254s | 4.196500s | 34,082 bytes |
+| Edge | PASS | 2.579s | 5.386500s | 43,769 bytes |
+| Rollback `xtts-v2` | PASS | 54.308s | 4.871167s | 39,556 bytes |
+
+An initial activation attempt failed before synthesis because the provider
+command used `python` and Hermes' command-provider PATH did not include that
+binary. The provider command was corrected to `python3`; rollback succeeded
+before the successful second attempt. Use `python3` in the provider command.
+
+Remote OmniVoice SSH-loopback helper mode is ready for manual operator use
+when an operator wants the Mac Studio voice. Keep `xtts-v2` as the default for
+routine unattended use until subjective listening QC and a longer soak pass are
+complete.

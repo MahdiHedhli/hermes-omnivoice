@@ -223,7 +223,9 @@ to loopback on the Mac Studio and reach it through SSH:
 export OMNIVOICE_REMOTE_TRANSPORT=ssh-loopback
 export OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62
 export OMNIVOICE_REMOTE_LOOPBACK_URL=http://127.0.0.1:8880
-export OMNIVOICE_REMOTE_TOKEN_FILE=/path/to/private/omnivoice-token
+export OMNIVOICE_REMOTE_SSH_IDENTITY_FILE=/home/claude/.ssh/hermes_ops_macstudio_ed25519
+export OMNIVOICE_REMOTE_HELPER=/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech
+export OMNIVOICE_REMOTE_ARTIFACT_PREFIX=/Users/hermes-ops/Services/omnivoice/
 export OMNIVOICE_REMOTE_VOICE=homelab_narrator
 scripts/test-omnivoice-remote.sh
 ```
@@ -233,15 +235,17 @@ Tailscale IP is not the proven route while that path times out.
 
 The remote path is documented in
 [`docs/omnivoice-remote-mvp.md`](docs/omnivoice-remote-mvp.md). Keep
-`xtts-v2` as the active default until a bounded remote operator trial passes.
+`xtts-v2` as the active default for unattended routine use; the remote
+SSH-loopback helper path is validated for manual operator use.
 
 ## Current Limits
 
 - Real model-backed synthesis works through the prepared local Python adapter
   when its shell exports are applied and a consented local voice profile exists.
-- The command-provider MVP is validated for manual operator use, but
-  `xtts-v2` remains the recommended default provider for routine low-latency
-  operation.
+- The command-provider MVP is validated for manual operator use, including the
+  Mac Studio SSH-loopback helper path, but `xtts-v2` remains the recommended
+  default provider for routine unattended operation until subjective QC and a
+  longer soak pass.
 - No automatic provider fallback was observed for a failing OmniVoice command
   provider, so rollback is an explicit operator action.
 - Native Hermes provider wiring is deferred; the command-provider path is the
