@@ -15,6 +15,18 @@ Hermes Agent
   -> Hermes final media conversion when configured
 ```
 
+For the proven Mac Studio remote path:
+
+```text
+Hermes Agent on hermes-01
+  -> tts.providers.omnivoice-remote-ssh-loopback command provider
+  -> scripts/hermes-omnivoice-remote.py --transport ssh-loopback
+  -> ssh hermes-ops@100.78.163.62
+  -> /Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech
+  -> Mac Studio loopback service at http://127.0.0.1:8880
+  -> generated WAV copied back and returned to Hermes
+```
+
 The active default should remain `xtts-v2` unless an operator intentionally
 starts a bounded OmniVoice trial. Keep OmniVoice-Studio and any backend service
 bound to loopback unless a separate authentication and network review has been
@@ -253,7 +265,21 @@ command used `python` and Hermes' command-provider PATH did not include that
 binary. The provider command was corrected to `python3`; rollback succeeded
 before the successful second attempt. Use `python3` in the provider command.
 
-Remote OmniVoice SSH-loopback helper mode is ready for manual operator use
-when an operator wants the Mac Studio voice. Keep `xtts-v2` as the default for
-routine unattended use until subjective listening QC and a longer soak pass are
-complete.
+Remote OmniVoice SSH-loopback helper mode has passed reliability soak for
+bounded manual operator evaluation. Keep `xtts-v2` as the default for routine
+unattended use. Do not mark final voice-quality approval complete until a
+human subjective listening pass records acceptable scores.
+
+Reliability soak from 2026-06-02:
+
+| Path | Prompts | Result | Latency min / median / max | Duration range |
+| --- | ---: | --- | ---: | ---: |
+| Direct SSH-helper wrapper | 20 | 20 PASS, 0 fail, 0 retry | 1.714s / 2.122s / 2.597s | 2.160s-6.760s |
+| Live Hermes provider | 5 | 5 PASS, 0 fail, 0 retry | 1.949s / 2.059s / 2.346s | 1.7565s-4.0665s |
+
+Rollback after the live provider soak passed with final provider `xtts-v2`.
+The rollback smoke took 53.172s. Samples are available for local operator
+review under
+`/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-soak-20260602T224637Z/`
+and
+`/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-soak-20260602T224827Z/`.

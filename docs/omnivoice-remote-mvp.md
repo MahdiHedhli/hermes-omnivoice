@@ -208,6 +208,51 @@ Codex work, post them in chat as local artifacts and keep them out of git.
 
 ## Latest SSH Loopback Attempt
 
+2026-06-02 SSH-loopback QC and soak lane:
+
+- Preflight active provider: `xtts-v2`.
+- Remote smoke from `hermes-01`: PASS through helper mode, 2.00s wrapper
+  latency.
+- Mac Studio helper path: confirmed executable at
+  `/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech`.
+- Mac Studio service listen address: confirmed `127.0.0.1:8880`; no network
+  exposure changes were made.
+- Subjective listening: not possible from the Codex execution environment.
+  Scores for intelligibility, pacing, pronunciation, voice consistency,
+  artifacts/noise, naturalness, and operator acceptability remain pending for a
+  human reviewer.
+
+Direct SSH-helper soak:
+
+| Metric | Result |
+| --- | ---: |
+| Prompt count | 20 |
+| Success / failure / retry | 20 / 0 / 0 |
+| Latency min / median / max | 1.714s / 2.122s / 2.597s |
+| Output duration min / max | 2.160s / 6.760s |
+| Artifact directory | `/home/claude/.cache/hermes/omnivoice-remote-soak/20260602T224637Z/` |
+
+Live Hermes provider soak:
+
+| Metric | Result |
+| --- | ---: |
+| Prompt count | 5 |
+| Success / failure / retry | 5 / 0 / 0 |
+| Latency min / median / max | 1.949s / 2.059s / 2.346s |
+| Output duration min / max | 1.7565s / 4.0665s |
+| Rollback smoke | PASS, 53.172s latency |
+| Final provider | `xtts-v2` |
+| Artifact directory | `/home/claude/.cache/hermes/omnivoice-remote-live-soak/20260602T224827Z/` |
+
+Local review copies are under:
+
+- `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-soak-20260602T224637Z/`
+- `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-soak-20260602T224827Z/`
+
+Security review found no observed token values in command output, process args,
+accessible Mac Studio logs, or git state. Local token-pattern hits were limited
+to placeholder strings in docs/tests/code and ignored Python bytecode.
+
 2026-06-02 live Hermes tool-path trial:
 
 - Preflight active provider: `xtts-v2`.
@@ -340,7 +385,9 @@ network policy changes in this lane.
 
 ## Recommendation
 
-Use `ssh-loopback` helper mode for manual Mac Studio operator use now. Keep
-`xtts-v2` as the active default for unattended routine use until subjective QC
-and a longer soak pass. Keep direct `http` mode for future diagnostics or for
-hosts where authenticated HTTP over Tailscale is known to work.
+Use `ssh-loopback` helper mode for bounded manual Mac Studio operator
+evaluation now. The reliability soak passed, but do not mark the voice-quality
+gate complete until a human listening QC pass records acceptable scores. Keep
+`xtts-v2` as the active default for unattended routine use. Keep direct `http`
+mode for future diagnostics or for hosts where authenticated HTTP over
+Tailscale is known to work.

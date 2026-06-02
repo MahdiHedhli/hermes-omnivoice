@@ -19,6 +19,71 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-02 18:54 America/New_York
+- Completed:
+  - Confirmed Hermes active provider was `xtts-v2` before testing and after
+    rollback.
+  - Confirmed the Hermes config backup/rollback path was available and created
+    a fresh live-soak backup at
+    `/home/claude/.hermes/config.yaml.pre-omnivoice-live-soak-20260602T224827Z.bak`.
+  - Confirmed the Mac Studio helper path remained executable from `hermes-01`:
+    `/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech`.
+  - Ran `scripts/test-omnivoice-remote.sh` from `hermes-01` through SSH helper
+    mode: PASS, 2.00s wrapper latency, generated output under
+    `/home/claude/.cache/hermes/omnivoice-remote-smoke/`.
+  - Ran a 20-prompt direct SSH-helper soak through
+    `scripts/hermes-omnivoice-remote.py`: 20 PASS, 0 failures, 0 retries.
+  - Ran a 5-prompt live Hermes provider soak after temporarily switching
+    `tts.provider` to `omnivoice-remote-ssh-loopback`: 5 PASS, 0 failures, 0
+    retries.
+  - Rolled Hermes back to `xtts-v2` and ran an `xtts-v2` rollback smoke: PASS.
+  - Confirmed the Mac Studio service is listening on `127.0.0.1:8880`; no
+    firewall, Tailscale ACL, UniFi, VLAN, or network-policy changes were made.
+- Soak results:
+  - Direct wrapper soak: latency min/median/max 1.714s / 2.122s / 2.597s;
+    output duration range 2.160s-6.760s; artifacts at
+    `/home/claude/.cache/hermes/omnivoice-remote-soak/20260602T224637Z/`.
+  - Live Hermes provider soak: latency min/median/max 1.949s / 2.059s /
+    2.346s; output duration range 1.7565s-4.0665s; artifacts at
+    `/home/claude/.cache/hermes/omnivoice-remote-live-soak/20260602T224827Z/`.
+  - Rollback smoke: PASS, 53.172s latency, final active provider `xtts-v2`.
+- Local review artifact copies:
+  - `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-soak-20260602T224637Z/`
+  - `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-soak-20260602T224827Z/`
+- Subjective QC:
+  - Previous and new samples are available locally for review.
+  - Human listening was not possible from this Codex execution environment, so
+    intelligibility, pacing, pronunciation, consistency, artifacts,
+    naturalness, and operator-acceptability scores remain pending.
+- Security review:
+  - No token value was read, printed, copied, or passed in argv.
+  - Mac Studio accessible logs and process args showed no bearer-token pattern
+    hits.
+  - Hermes history and process args showed no bearer-token pattern hits.
+  - Local repo pattern hits were documentation/test/code placeholders and
+    ignored bytecode, not observed token values.
+  - `git status --short` was clean before doc edits; no generated audio, local
+    env files, private keys, model files, caches, or voice samples were staged.
+- Tests:
+  - `python3 -m unittest discover -s tests -v`: PASS, 226 tests, 3 skipped.
+  - `python3 scripts/omnivoice-acceptance.py --require-package-files`: PASS
+    for package/static checks; local real-backend and Hermes-source checks are
+    blocked as expected in this bridge checkout.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS.
+  - `python3 scripts/check-omnivoice-artifacts.py`: PASS.
+  - Remote `scripts/test-omnivoice-remote.sh` from `hermes-01`: PASS, 2.23s
+    wrapper latency.
+  - `git diff --check`: PASS.
+  - `shellcheck`: not installed on this workstation.
+- Recommendation:
+  - Reliability gate passed for SSH-loopback helper mode.
+  - Do not approve OmniVoice as the unattended default.
+  - Do not mark final manual-operator voice quality approved until a human
+    listening QC pass records scores. Use only for bounded/manual evaluation
+    with explicit rollback available.
+
+## Previous Heartbeat
+
 - Time: 2026-06-02 18:08 America/New_York
 - Completed:
   - Added SSH-loopback remote-helper support to

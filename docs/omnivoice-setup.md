@@ -99,7 +99,9 @@ For a remote Mac Studio FastAPI backend over Tailscale, see
 `OMNIVOICE_REMOTE_SSH_HOST`, `OMNIVOICE_REMOTE_SSH_IDENTITY_FILE`, and
 `OMNIVOICE_REMOTE_HELPER`. In helper mode, the bearer token stays in a
 protected Mac Studio-local env file and is not copied to Hermes. It is
-separate from the local wrapper backend options below.
+separate from the local wrapper backend options below. The SSH-loopback helper
+path passed reliability soak for bounded manual evaluation, but final
+voice-quality approval still requires a human listening QC pass.
 
 Option A: point the wrapper at a local OmniVoice-Studio backend:
 
@@ -436,7 +438,9 @@ scripts/omnivoice-qc-sample.sh --voice <voice_id>
 ```
 
 Generated QC audio is written outside the repo by default. Score it with
-`docs/omnivoice-qc.md`.
+`docs/omnivoice-qc.md`. Until a human reviewer records acceptable scores, keep
+`xtts-v2` as the unattended default and treat OmniVoice remote output as
+bounded/manual evaluation material.
 
 Run the smoke test only after configuring a real backend command, Studio URL,
 or opt-in CLI backend:

@@ -3,10 +3,12 @@
 Local command-provider bridge for using OmniVoice or OmniVoice-Studio voices
 from Hermes Agent TTS.
 
-Status: the OmniVoice command-provider MVP has been validated through a real
-Hermes TTS tool-path trial. The active default remains `xtts-v2`; OmniVoice is
-documented for manual operator use with explicit rollback. Native provider work
-and `/voice` UX are deferred.
+Status: the OmniVoice command-provider MVP has been validated through real
+Hermes TTS tool-path trials and a 20-prompt SSH-loopback helper reliability
+soak. The active default remains `xtts-v2`; OmniVoice is documented for bounded
+manual operator evaluation with explicit rollback. Human subjective listening
+QC is still required before final operator voice-quality approval. Native
+provider work and `/voice` UX are deferred.
 
 This repo is intentionally conservative:
 
@@ -236,16 +238,18 @@ Tailscale IP is not the proven route while that path times out.
 The remote path is documented in
 [`docs/omnivoice-remote-mvp.md`](docs/omnivoice-remote-mvp.md). Keep
 `xtts-v2` as the active default for unattended routine use; the remote
-SSH-loopback helper path is validated for manual operator use.
+SSH-loopback helper path passed reliability soak, but final voice-quality
+approval still needs a human listening pass.
 
 ## Current Limits
 
 - Real model-backed synthesis works through the prepared local Python adapter
   when its shell exports are applied and a consented local voice profile exists.
-- The command-provider MVP is validated for manual operator use, including the
-  Mac Studio SSH-loopback helper path, but `xtts-v2` remains the recommended
-  default provider for routine unattended operation until subjective QC and a
-  longer soak pass.
+- The command-provider MVP is validated for bounded/manual operator evaluation,
+  including the Mac Studio SSH-loopback helper path. The reliability soak
+  passed, but human subjective QC is still pending.
+- `xtts-v2` remains the recommended default provider for routine unattended
+  operation.
 - No automatic provider fallback was observed for a failing OmniVoice command
   provider, so rollback is an explicit operator action.
 - Native Hermes provider wiring is deferred; the command-provider path is the

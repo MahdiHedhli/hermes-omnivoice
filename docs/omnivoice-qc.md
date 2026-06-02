@@ -71,6 +71,22 @@ Treat OmniVoice as operator-ready for a voice only when:
 If pronunciation or artifacts score below 4, keep `xtts-v2` as the default and
 use OmniVoice only for manual trials or debugging.
 
+## Current QC Status
+
+The 2026-06-02 SSH-loopback reliability soak passed, but Codex could not
+perform subjective listening from the execution environment. The sample sets
+for human review are:
+
+- `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-20260602T220621Z/`
+- `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-soak-20260602T224637Z/`
+- `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-soak-20260602T224827Z/`
+
+Until a human reviewer records scores for intelligibility, pacing,
+pronunciation, voice consistency, artifacts/noise, naturalness, latency
+acceptability, and operator readiness, treat OmniVoice SSH-loopback as
+technically reliable for bounded/manual evaluation but not final voice-quality
+approved.
+
 ## Notes To Record
 
 For each QC run, record locally:
