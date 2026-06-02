@@ -13,6 +13,7 @@ cd "$ROOT_DIR"
   scripts/omnivoice-acceptance.py \
   scripts/omnivoice-studio-local.py \
   scripts/hermes-omnivoice-tts.py \
+  scripts/hermes-omnivoice-remote.py \
   scripts/hermes-omnivoice-python-adapter.py \
   scripts/setup-omnivoice-python-env.py \
   scripts/find-hermes-source.py \
@@ -26,6 +27,7 @@ cd "$ROOT_DIR"
 bash -n \
   scripts/validate-omnivoice-bridge.sh \
   scripts/test-omnivoice-tts.sh \
+  scripts/test-omnivoice-remote.sh \
   scripts/omnivoice-status.sh \
   scripts/omnivoice-enable.sh \
   scripts/omnivoice-disable.sh \
@@ -68,12 +70,24 @@ if [[ "$skip_status" -ne 77 ]]; then
   exit 1
 fi
 
+set +e
+env -u OMNIVOICE_REMOTE_BASE_URL \
+  -u OMNIVOICE_REMOTE_API_TOKEN \
+  scripts/test-omnivoice-remote.sh
+remote_skip_status=$?
+set -e
+if [[ "$remote_skip_status" -ne 77 ]]; then
+  echo "expected unconfigured remote smoke test to skip with 77, got $remote_skip_status" >&2
+  exit 1
+fi
+
 if command -v rg >/dev/null 2>&1; then
   set +e
   rg -n \
-    "(API_KEY|TOKEN|SECRET|PASSWORD|BEGIN [A-Z ]*PRIVATE|sk-[A-Za-z0-9]|ghp_[A-Za-z0-9]|glpat-[A-Za-z0-9]|hf_[A-Za-z0-9]{20,}|ELEVENLABS|OPENAI_API_KEY)" \
+    "(BEGIN [A-Z ]*PRIVATE|sk-[A-Za-z0-9]|ghp_[A-Za-z0-9]|glpat-[A-Za-z0-9]|hf_[A-Za-z0-9]{20,}|[A-Z0-9_]*(API_KEY|TOKEN|SECRET|PASSWORD)[A-Z0-9_]*=[A-Za-z0-9_./+=-]{12,})" \
     . \
     --glob '!HEARTBEAT.md' \
+    --glob '!.env.example' \
     --glob '!scripts/validate-omnivoice-bridge.sh'
   rg_status=$?
   set -e

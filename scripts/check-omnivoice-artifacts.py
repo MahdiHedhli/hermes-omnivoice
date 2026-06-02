@@ -26,6 +26,9 @@ FORBIDDEN_NAMES = {
     ".env",
     "omnivoice-selection.json",
 }
+ALLOWED_ENV_EXAMPLES = {
+    ".env.example",
+}
 FORBIDDEN_ROOT_DIRS = {
     ".cache",
     ".hermes",
@@ -46,6 +49,8 @@ SKIP_DIRS = {
 
 def is_forbidden_artifact(path: Path) -> bool:
     name = path.name
+    if name in ALLOWED_ENV_EXAMPLES:
+        return False
     return (
         name in FORBIDDEN_NAMES
         or name.startswith(".env.")

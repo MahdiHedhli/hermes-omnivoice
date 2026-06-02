@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shlex
 import shutil
+import socket
 import stat
 import subprocess
 import sys
@@ -22,6 +23,9 @@ import wave
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-tts.py"
+REMOTE_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-remote.py"
+)
 PYTHON_ADAPTER_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "hermes-omnivoice-python-adapter.py"
 )
@@ -65,6 +69,12 @@ assert SPEC is not None and SPEC.loader is not None
 omnivoice = importlib.util.module_from_spec(SPEC)
 sys.modules["hermes_omnivoice_tts"] = omnivoice
 SPEC.loader.exec_module(omnivoice)
+
+REMOTE_SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_remote", REMOTE_SCRIPT_PATH)
+assert REMOTE_SPEC is not None and REMOTE_SPEC.loader is not None
+remote_omnivoice = importlib.util.module_from_spec(REMOTE_SPEC)
+sys.modules["hermes_omnivoice_remote"] = remote_omnivoice
+REMOTE_SPEC.loader.exec_module(remote_omnivoice)
 
 PYTHON_ADAPTER_SPEC = importlib.util.spec_from_file_location(
     "hermes_omnivoice_python_adapter", PYTHON_ADAPTER_SCRIPT_PATH
@@ -323,6 +333,60 @@ class ErrorStudioHandler(http.server.BaseHTTPRequestHandler):
         return None
 
 
+class MockRemoteOmniVoiceHandler(http.server.BaseHTTPRequestHandler):
+    requests: list[dict] = []
+    speech_status = 200
+    speech_content_type = "audio/wav"
+    speech_body = b""
+    health_status = 200
+    health_body = b'{"status":"ok"}'
+
+    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+        type(self).requests.append(
+            {
+                "method": "GET",
+                "path": self.path,
+                "authorization": self.headers.get("Authorization", ""),
+            }
+        )
+        if self.path != "/health":
+            self.send_response(404)
+            self.end_headers()
+            return
+        self.send_response(type(self).health_status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(type(self).health_body)))
+        self.end_headers()
+        self.wfile.write(type(self).health_body)
+
+    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+        content_length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(content_length)
+        type(self).requests.append(
+            {
+                "method": "POST",
+                "path": self.path,
+                "authorization": self.headers.get("Authorization", ""),
+                "content_type": self.headers.get("Content-Type", ""),
+                "accept": self.headers.get("Accept", ""),
+                "body": body,
+            }
+        )
+        if self.path != "/v1/audio/speech":
+            self.send_response(404)
+            self.end_headers()
+            return
+        payload = type(self).speech_body or wav_bytes()
+        self.send_response(type(self).speech_status)
+        self.send_header("Content-Type", type(self).speech_content_type)
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def log_message(self, format: str, *args) -> None:  # noqa: A002
+        return None
+
+
 @contextlib.contextmanager
 def mock_studio_server(profiles_payload: object | None = None):
     previous_payload = MockStudioHandler.profiles_payload
@@ -350,6 +414,38 @@ def error_studio_server(response_body: bytes):
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}"
     finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+
+@contextlib.contextmanager
+def mock_remote_server(
+    *,
+    status: int = 200,
+    content_type: str = "audio/wav",
+    body: bytes | None = None,
+):
+    previous = (
+        MockRemoteOmniVoiceHandler.speech_status,
+        MockRemoteOmniVoiceHandler.speech_content_type,
+        MockRemoteOmniVoiceHandler.speech_body,
+    )
+    MockRemoteOmniVoiceHandler.requests = []
+    MockRemoteOmniVoiceHandler.speech_status = status
+    MockRemoteOmniVoiceHandler.speech_content_type = content_type
+    MockRemoteOmniVoiceHandler.speech_body = body or b""
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), MockRemoteOmniVoiceHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}", MockRemoteOmniVoiceHandler.requests
+    finally:
+        (
+            MockRemoteOmniVoiceHandler.speech_status,
+            MockRemoteOmniVoiceHandler.speech_content_type,
+            MockRemoteOmniVoiceHandler.speech_body,
+        ) = previous
         server.shutdown()
         thread.join(timeout=5)
         server.server_close()
@@ -1426,6 +1522,327 @@ consent:
             self.assertFalse(out_file.is_symlink())
             self.assertEqual(target.read_text(encoding="utf-8"), "sentinel")
             self.assertEqual(path_mode(out_file), 0o600)
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertGreater(wav.getnframes(), 0)
+
+
+class RemoteOmniVoiceTests(unittest.TestCase):
+    def run_remote(
+        self,
+        args: list[str],
+        env: dict[str, str] | None = None,
+    ) -> tuple[int, str]:
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            result = remote_omnivoice.run(args, env=env or {})
+        return result, stderr.getvalue()
+
+    def test_successful_audio_response_writes_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes remote speech.", encoding="utf-8")
+            with mock_remote_server() as (base_url, requests):
+                result, error = self.run_remote(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "homelab_narrator",
+                        "--speed",
+                        "1.25",
+                    ],
+                    {
+                        "OMNIVOICE_REMOTE_BASE_URL": base_url,
+                        "OMNIVOICE_REMOTE_API_TOKEN": "secret-token",
+                    },
+                )
+
+            self.assertEqual(result, 0, error)
+            self.assertEqual(len(requests), 1)
+            self.assertEqual(requests[0]["authorization"], "Bearer secret-token")
+            self.assertEqual(requests[0]["path"], "/v1/audio/speech")
+            payload = json.loads(requests[0]["body"].decode("utf-8"))
+            self.assertEqual(payload["model"], "omnivoice")
+            self.assertEqual(payload["input"], "Hermes remote speech.")
+            self.assertEqual(payload["voice"], "homelab_narrator")
+            self.assertEqual(payload["response_format"], "wav")
+            self.assertEqual(payload["speed"], 1.25)
+            self.assertEqual(path_mode(out_file), 0o600)
+            with wave.open(str(out_file), "rb") as wav:
+                self.assertGreater(wav.getnframes(), 0)
+
+    def test_missing_text_file_fails_before_network(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            out_file = root / "out.wav"
+            with mock_remote_server() as (base_url, requests):
+                result, error = self.run_remote(
+                    [
+                        "--text-file",
+                        str(root / "missing.txt"),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "narrator",
+                    ],
+                    {
+                        "OMNIVOICE_REMOTE_BASE_URL": base_url,
+                        "OMNIVOICE_REMOTE_API_TOKEN": "secret-token",
+                    },
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("text file does not exist", error)
+            self.assertEqual(requests, [])
+
+    def test_empty_text_fails_before_network(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("   \n", encoding="utf-8")
+            with mock_remote_server() as (base_url, requests):
+                result, error = self.run_remote(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "narrator",
+                    ],
+                    {
+                        "OMNIVOICE_REMOTE_BASE_URL": base_url,
+                        "OMNIVOICE_REMOTE_API_TOKEN": "secret-token",
+                    },
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("text must not be empty", error)
+            self.assertEqual(requests, [])
+
+    def test_missing_base_url_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes remote speech.", encoding="utf-8")
+            result, error = self.run_remote(
+                [
+                    "--text-file",
+                    str(text_file),
+                    "--out",
+                    str(root / "out.wav"),
+                    "--voice",
+                    "narrator",
+                ],
+                {"OMNIVOICE_REMOTE_API_TOKEN": "secret-token"},
+            )
+
+            self.assertEqual(result, 1)
+            self.assertIn("base URL is required", error)
+
+    def test_missing_token_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes remote speech.", encoding="utf-8")
+            with mock_remote_server() as (base_url, requests):
+                result, error = self.run_remote(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--voice",
+                        "narrator",
+                    ],
+                    {"OMNIVOICE_REMOTE_BASE_URL": base_url},
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("API token is required", error)
+            self.assertEqual(requests, [])
+
+    def test_http_timeout_fails_cleanly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes remote speech.", encoding="utf-8")
+            with unittest.mock.patch.object(
+                remote_omnivoice.request,
+                "urlopen",
+                side_effect=socket.timeout("timed out"),
+            ):
+                result, error = self.run_remote(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(root / "out.wav"),
+                        "--voice",
+                        "narrator",
+                    ],
+                    {
+                        "OMNIVOICE_REMOTE_BASE_URL": "http://127.0.0.1:9999",
+                        "OMNIVOICE_REMOTE_API_TOKEN": "secret-token",
+                    },
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("remote service request failed", error)
+            self.assertIn("timed out", error)
+            self.assertNotIn("secret-token", error)
+
+    def test_http_auth_failure_fails_cleanly(self) -> None:
+        for status in (401, 403):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                text_file = root / "input.txt"
+                text_file.write_text("Hermes remote speech.", encoding="utf-8")
+                with mock_remote_server(status=status, body=b"nope") as (base_url, _requests):
+                    result, error = self.run_remote(
+                        [
+                            "--text-file",
+                            str(text_file),
+                            "--out",
+                            str(root / "out.wav"),
+                            "--voice",
+                            "narrator",
+                        ],
+                        {
+                            "OMNIVOICE_REMOTE_BASE_URL": base_url,
+                            "OMNIVOICE_REMOTE_API_TOKEN": "secret-token",
+                        },
+                    )
+
+                self.assertEqual(result, 1)
+                self.assertIn(f"HTTP {status}", error)
+                self.assertIn("rejected authentication", error)
+
+    def test_http_500_redacts_token_from_error_body(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes remote speech.", encoding="utf-8")
+            body = b"backend failed Authorization: Bearer secret-token and secret-token"
+            with mock_remote_server(status=500, content_type="text/plain", body=body) as (
+                base_url,
+                _requests,
+            ):
+                result, error = self.run_remote(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "narrator",
+                    ],
+                    {
+                        "OMNIVOICE_REMOTE_BASE_URL": base_url,
+                        "OMNIVOICE_REMOTE_API_TOKEN": "secret-token",
+                    },
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("HTTP 500", error)
+            self.assertIn("<redacted>", error)
+            self.assertNotIn("secret-token", error)
+            self.assertFalse(out_file.exists())
+
+    def test_non_audio_response_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes remote speech.", encoding="utf-8")
+            with mock_remote_server(
+                content_type="application/json",
+                body=b'{"error":"not audio"}',
+            ) as (base_url, _requests):
+                result, error = self.run_remote(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "narrator",
+                    ],
+                    {
+                        "OMNIVOICE_REMOTE_BASE_URL": base_url,
+                        "OMNIVOICE_REMOTE_API_TOKEN": "secret-token",
+                    },
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("did not return valid wav audio", error)
+            self.assertFalse(out_file.exists())
+
+    def test_public_base_url_requires_explicit_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            text_file.write_text("Hermes remote speech.", encoding="utf-8")
+            result, error = self.run_remote(
+                [
+                    "--text-file",
+                    str(text_file),
+                    "--out",
+                    str(root / "out.wav"),
+                    "--voice",
+                    "narrator",
+                    "--base-url",
+                    "https://example.com",
+                ],
+                {"OMNIVOICE_REMOTE_API_TOKEN": "secret-token"},
+            )
+
+            self.assertEqual(result, 1)
+            self.assertIn("refusing public remote base URL", error)
+
+
+class RemoteOmniVoiceIntegrationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.base_url = os.environ.get("OMNIVOICE_REMOTE_BASE_URL", "")
+        self.token = os.environ.get("OMNIVOICE_REMOTE_API_TOKEN", "")
+        if not self.base_url or not self.token:
+            self.skipTest("set OMNIVOICE_REMOTE_BASE_URL and OMNIVOICE_REMOTE_API_TOKEN")
+
+    def test_remote_health_check(self) -> None:
+        req = remote_omnivoice.request.Request(
+            remote_omnivoice.join_url(self.base_url.rstrip("/"), "/health"),
+            headers={"Authorization": f"Bearer {self.token}", "Accept": "application/json"},
+        )
+        with remote_omnivoice.request.urlopen(req, timeout=10) as response:
+            self.assertEqual(response.status, 200)
+
+    def test_remote_speech_generation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("Hermes OmniVoice remote integration test.", encoding="utf-8")
+            result = remote_omnivoice.run(
+                [
+                    "--text-file",
+                    str(text_file),
+                    "--out",
+                    str(out_file),
+                    "--voice",
+                    os.environ.get("OMNIVOICE_REMOTE_TEST_VOICE", "homelab_narrator"),
+                    "--timeout",
+                    os.environ.get("OMNIVOICE_REMOTE_TEST_TIMEOUT", "600"),
+                ],
+                env=dict(os.environ),
+            )
+
+            self.assertEqual(result, 0)
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
 

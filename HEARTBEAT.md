@@ -19,6 +19,45 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-02 10:30 America/New_York
+- Completed:
+  - Started the remote FastAPI MVP lane on
+    `feature/omnivoice-remote-fastapi-mvp`.
+  - Added a remote Hermes command-provider client for an authenticated
+    OmniVoice FastAPI service over Tailscale.
+  - Added a remote smoke script, sample Hermes remote provider config,
+    `.env.example`, and remote MVP docs.
+  - Reviewed `diogod2r/OmniVoice-FastAPI` at
+    `930cb452437f4c4987d9b184e9a0074fbfd3bb37` and documented why it needs
+    auth hardening before use.
+- Tests:
+  - `python3 -m unittest discover -s tests -v`: PASS, 218 tests with 3
+    expected skips.
+  - `python3 scripts/omnivoice-acceptance.py --require-package-files`: PASS.
+  - `scripts/validate-omnivoice-bridge.sh`: PASS, including remote smoke skip
+    behavior when remote env is unconfigured.
+  - `python3 scripts/check-omnivoice-artifacts.py`: PASS.
+  - `scripts/test-omnivoice-remote.sh`: SKIP with status 77 because
+    `OMNIVOICE_REMOTE_BASE_URL` and `OMNIVOICE_REMOTE_API_TOKEN` are not
+    configured in this repo environment.
+  - `git diff --check`: PASS.
+  - `shellcheck`: not installed on this workstation.
+- Blockers:
+  - Mac Studio FastAPI availability and bearer token are not yet confirmed in
+    this repo environment.
+  - The candidate FastAPI service lacks auth in the reviewed revision; do not
+    expose it without a fork/proxy auth layer and Tailscale ACLs.
+- Assumptions:
+  - Remote samples must be posted in chat as artifacts when generated and kept
+    outside the repo.
+- Next action:
+  - Deploy or proxy the authenticated FastAPI service on the stronger
+    Tailscale host, configure `OMNIVOICE_REMOTE_BASE_URL` and
+    `OMNIVOICE_REMOTE_API_TOKEN`, then run the remote smoke and post generated
+    samples in chat as artifacts.
+
+## Previous Heartbeat
+
 - Time: 2026-06-02 10:04 America/New_York
 - Completed:
   - Added an operator-ready runbook for the validated command-provider MVP.

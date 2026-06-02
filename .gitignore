@@ -34,6 +34,7 @@ cache/
 # Local configuration and secrets.
 .env
 .env.*
+!.env.example
 *.local
 
 # Private operator/environment notes from live deployments.

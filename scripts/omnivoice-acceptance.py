@@ -16,6 +16,7 @@ RUNTIME_CHECK_PATH = PROJECT_ROOT / "scripts" / "check-omnivoice-runtime.py"
 SOURCE_FINDER_PATH = PROJECT_ROOT / "scripts" / "find-hermes-source.py"
 BRIDGE_REQUIRED_FILES = [
     "scripts/hermes-omnivoice-tts.py",
+    "scripts/hermes-omnivoice-remote.py",
     "scripts/hermes-omnivoice-python-adapter.py",
     "scripts/setup-omnivoice-python-env.py",
     "scripts/create-omnivoice-voice.py",
@@ -29,6 +30,7 @@ BRIDGE_REQUIRED_FILES = [
     "scripts/omnivoice-disable.sh",
     "scripts/omnivoice-qc-sample.sh",
     "scripts/test-omnivoice-tts.sh",
+    "scripts/test-omnivoice-remote.sh",
     "scripts/omnivoice-acceptance.py",
     "docs/omnivoice-integration-notes.md",
     "docs/omnivoice-mvp-handoff.md",
@@ -38,6 +40,8 @@ BRIDGE_REQUIRED_FILES = [
     "docs/omnivoice-acceptance.md",
     "docs/omnivoice-operator-runbook.md",
     "docs/omnivoice-qc.md",
+    "docs/omnivoice-remote-mvp.md",
+    "docs/omnivoice-fastapi-fork-review.md",
     "docs/tts-custom-voices.md",
 ]
 PACKAGE_REQUIRED_FILES = [
@@ -45,8 +49,10 @@ PACKAGE_REQUIRED_FILES = [
     "scripts/validate-omnivoice-bridge.sh",
     "scripts/check-omnivoice-artifacts.py",
     "examples/hermes-tts-omnivoice.yaml",
+    "examples/hermes-tts-omnivoice-remote.yaml",
     "examples/voices/marvin/voice.yaml",
     "examples/voices/narrator/voice.yaml",
+    ".env.example",
     "HEARTBEAT.md",
 ]
 REQUIRED_FILES = BRIDGE_REQUIRED_FILES

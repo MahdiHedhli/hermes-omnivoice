@@ -13,6 +13,7 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BASE_MANIFEST = [
     "scripts/hermes-omnivoice-tts.py",
+    "scripts/hermes-omnivoice-remote.py",
     "scripts/hermes-omnivoice-python-adapter.py",
     "scripts/setup-omnivoice-python-env.py",
     "scripts/create-omnivoice-voice.py",
@@ -27,6 +28,7 @@ BASE_MANIFEST = [
     "scripts/omnivoice-qc-sample.sh",
     "scripts/omnivoice-acceptance.py",
     "scripts/test-omnivoice-tts.sh",
+    "scripts/test-omnivoice-remote.sh",
     "docs/omnivoice-integration-notes.md",
     "docs/omnivoice-mvp-handoff.md",
     "docs/omnivoice-setup.md",
@@ -35,10 +37,13 @@ BASE_MANIFEST = [
     "docs/omnivoice-acceptance.md",
     "docs/omnivoice-operator-runbook.md",
     "docs/omnivoice-qc.md",
+    "docs/omnivoice-remote-mvp.md",
+    "docs/omnivoice-fastapi-fork-review.md",
     "docs/tts-custom-voices.md",
 ]
 EXAMPLE_MANIFEST = [
     "examples/hermes-tts-omnivoice.yaml",
+    "examples/hermes-tts-omnivoice-remote.yaml",
     "examples/voices/marvin/voice.yaml",
     "examples/voices/narrator/voice.yaml",
 ]
@@ -68,6 +73,7 @@ GITIGNORE_PATTERNS = [
     "*.safetensors",
     ".env",
     ".env.*",
+    "!.env.example",
     ".env.local",
     "*.local",
 ]

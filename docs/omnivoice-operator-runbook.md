@@ -187,3 +187,12 @@ and cases where automatic fallback is required.
 
 Native provider work is justified after the command-provider MVP remains useful
 in manual operation and a clean Hermes source branch is available.
+
+## Remote Mac Studio Variant
+
+For a faster remote backend over Tailscale, use
+`scripts/hermes-omnivoice-remote.py` and the `omnivoice-remote` command-provider
+example in `docs/omnivoice-remote-mvp.md`. The same operator rules apply:
+keep `xtts-v2` as the default, require bearer auth, keep the service reachable
+only through Tailscale, run smoke tests first, and roll back explicitly on
+failure.

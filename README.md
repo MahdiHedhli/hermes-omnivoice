@@ -41,6 +41,8 @@ This repo is intentionally conservative:
 ## What Is Included
 
 - `scripts/hermes-omnivoice-tts.py`: Hermes TTS command-provider wrapper.
+- `scripts/hermes-omnivoice-remote.py`: Hermes command-provider wrapper for an
+  authenticated OmniVoice FastAPI service over Tailscale.
 - `scripts/hermes-omnivoice-python-adapter.py`: optional command adapter for
   calling the OmniVoice Python API directly.
 - `scripts/setup-omnivoice-python-env.py`: dry-run/check-first helper for an
@@ -66,6 +68,8 @@ This repo is intentionally conservative:
   enabling, and rolling back the Hermes active TTS provider.
 - `scripts/omnivoice-qc-sample.sh`: repeatable subjective QC sample generator
   that writes local audio outside the repo by default.
+- `scripts/test-omnivoice-remote.sh`: opt-in remote FastAPI smoke test that
+  writes samples outside the repo.
 - `scripts/omnivoice-acceptance.py`: summarizes static MVP readiness and live
   backend readiness.
 - `scripts/validate-omnivoice-bridge.sh`: deterministic local validation,
@@ -212,6 +216,19 @@ invoked; escape literal braces in command templates as `{{` and `}}`.
 The wrapper currently supports WAV output only and rejects non-`.wav` output
 paths before backend or Studio startup.
 
+For a remote Mac Studio backend over Tailscale, use the separate authenticated
+FastAPI client wrapper:
+
+```bash
+export OMNIVOICE_REMOTE_BASE_URL=http://mac-studio.tailnet.ts.net:8880
+export OMNIVOICE_REMOTE_API_TOKEN=<local-only-token>
+scripts/test-omnivoice-remote.sh
+```
+
+The remote path is documented in
+[`docs/omnivoice-remote-mvp.md`](docs/omnivoice-remote-mvp.md). Keep
+`xtts-v2` as the active default until a bounded remote operator trial passes.
+
 ## Current Limits
 
 - Real model-backed synthesis works through the prepared local Python adapter
@@ -231,6 +248,8 @@ paths before backend or Studio startup.
 
 - [Setup](docs/omnivoice-setup.md)
 - [Operator runbook](docs/omnivoice-operator-runbook.md)
+- [Remote MVP](docs/omnivoice-remote-mvp.md)
+- [FastAPI fork review](docs/omnivoice-fastapi-fork-review.md)
 - [Operator trial](docs/omnivoice-operator-trial.md)
 - [Subjective QC](docs/omnivoice-qc.md)
 - [MVP handoff](docs/omnivoice-mvp-handoff.md)
