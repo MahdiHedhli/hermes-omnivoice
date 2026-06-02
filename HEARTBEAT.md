@@ -19,6 +19,48 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-02 15:05 America/New_York
+- Completed:
+  - Started SSH loopback live validation preflight for
+    `hermes-ops@100.78.163.62`.
+  - Confirmed repo branch, clean tracked state, and required remote wrapper,
+    smoke script, and SSH loopback example files.
+  - Confirmed default SSH to `hermes-ops@100.78.163.62` fails with public key
+    authentication denied.
+  - Confirmed the local Mac Studio admin key can SSH to
+    `mhedhli@100.78.163.62`.
+  - Confirmed noninteractive `sudo -u hermes-ops` from the admin session
+    requires a password and is not usable for unattended smoke.
+  - Confirmed Mac Studio loopback TCP on `127.0.0.1:8880` accepts connections
+    and unauthenticated `/health` returns HTTP 401.
+  - Added `OMNIVOICE_REMOTE_VOICE` as a smoke-script alias for the existing
+    test voice variable.
+  - Documented the blocked smoke attempt in the remote MVP doc and operator
+    runbook.
+- Tests:
+  - Live SSH loopback smoke: BLOCKED before synthesis because direct
+    `hermes-ops` SSH auth is unavailable and no local protected token file is
+    present in this process.
+  - Direct wrapper sample tests: SKIPPED for the same token/SSH auth blocker.
+  - Live Hermes tool-path smoke: SKIPPED because Phase 2 and Phase 3 did not
+    pass.
+  - Rollback: NOT NEEDED; Hermes config was not changed.
+- Blockers:
+  - Need `hermes-ops@100.78.163.62` SSH key access or a local mode `600`
+    `OMNIVOICE_REMOTE_TOKEN_FILE` usable with an approved SSH route.
+  - Direct HTTP to `100.78.163.62:8880` remains a separate network diagnostic
+    follow-up and was not changed in this lane.
+- Assumptions:
+  - Do not print or copy token values into logs; no token value was read or
+    printed during this attempt.
+  - Generated samples should be posted in chat once a live smoke actually
+    generates them; no samples were produced in this attempt.
+- Next action:
+  - Install or provide safe `hermes-ops` SSH/token access, then rerun
+    `scripts/test-omnivoice-remote.sh` with `ssh-loopback` env configured.
+
+## Previous Heartbeat
+
 - Time: 2026-06-02 12:43 America/New_York
 - Completed:
   - Added SSH loopback transport support to

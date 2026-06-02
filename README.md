@@ -224,6 +224,7 @@ export OMNIVOICE_REMOTE_TRANSPORT=ssh-loopback
 export OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62
 export OMNIVOICE_REMOTE_LOOPBACK_URL=http://127.0.0.1:8880
 export OMNIVOICE_REMOTE_TOKEN_FILE=/path/to/private/omnivoice-token
+export OMNIVOICE_REMOTE_VOICE=homelab_narrator
 scripts/test-omnivoice-remote.sh
 ```
 

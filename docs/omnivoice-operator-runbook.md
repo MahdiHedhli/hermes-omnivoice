@@ -202,6 +202,7 @@ export OMNIVOICE_REMOTE_TRANSPORT=ssh-loopback
 export OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62
 export OMNIVOICE_REMOTE_LOOPBACK_URL=http://127.0.0.1:8880
 export OMNIVOICE_REMOTE_TOKEN_FILE=/path/to/private/omnivoice-token
+export OMNIVOICE_REMOTE_VOICE=homelab_narrator
 scripts/test-omnivoice-remote.sh
 ```
 
@@ -211,3 +212,11 @@ supported but is not the proven path while direct Tailscale HTTP to
 `100.78.163.62:8880` times out. The same operator rules apply: keep `xtts-v2`
 as the default, run smoke tests first, do not rely on automatic fallback, and
 roll back explicitly on failure.
+
+Latest access note from 2026-06-02: direct SSH to
+`hermes-ops@100.78.163.62` failed from this workstation, while
+`mhedhli@100.78.163.62` succeeded with the Mac Studio admin key.
+Loopback TCP accepted connections and unauthenticated `/health` returned HTTP
+401, but noninteractive `sudo -u hermes-ops` required a password and no local
+protected token file was available. The SSH loopback synthesis smoke remains
+blocked on `hermes-ops` SSH auth or a local mode `600` token file.

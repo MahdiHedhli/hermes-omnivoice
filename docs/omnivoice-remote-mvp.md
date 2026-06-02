@@ -90,6 +90,7 @@ export OMNIVOICE_REMOTE_TRANSPORT=ssh-loopback
 export OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62
 export OMNIVOICE_REMOTE_LOOPBACK_URL=http://127.0.0.1:8880
 export OMNIVOICE_REMOTE_TOKEN_FILE=/path/to/private/omnivoice-token
+export OMNIVOICE_REMOTE_VOICE=homelab_narrator
 ```
 
 Direct HTTP mode remains available for a future network diagnostic lane:
@@ -191,6 +192,30 @@ The smoke script checks `/health` when available, synthesizes a short sentence,
 validates non-empty audio, prints latency, and writes samples under
 `~/.cache/hermes/omnivoice-remote-smoke/`. When samples are generated during
 Codex work, post them in chat as local artifacts and keep them out of git.
+
+## Latest SSH Loopback Attempt
+
+2026-06-02 local workstation preflight:
+
+- Repo branch and required wrapper/smoke/example files were present.
+- Default SSH to `hermes-ops@100.78.163.62` failed with
+  `Permission denied (publickey,password,keyboard-interactive)`.
+- The local Mac Studio admin identity can SSH to `mhedhli@100.78.163.62`.
+- Noninteractive `sudo -u hermes-ops` from that admin session requires a
+  password, so it cannot be used for unattended smoke.
+- Mac Studio loopback TCP on `127.0.0.1:8880` accepted connections from the
+  admin SSH session.
+- Unauthenticated `/health` over Mac Studio loopback returned HTTP 401,
+  consistent with bearer auth enforcement.
+- No local protected token file was available in the repo environment, and the
+  `hermes-ops` service directory is not accessible from the admin account.
+- Result: SSH loopback synthesis smoke, direct wrapper samples, and live Hermes
+  tool-path trial were skipped. No sample artifacts were generated.
+
+Required next step: install the operator public key for
+`hermes-ops@100.78.163.62` or provide a local mode `600`
+`OMNIVOICE_REMOTE_TOKEN_FILE` that can be used with the existing admin SSH
+route, without printing or committing the token.
 
 ## Operator Trial
 
