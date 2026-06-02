@@ -11,22 +11,22 @@ Findings:
 - The current directory had no `.git` directory, source tree, docs, tests, or
   Hermes TTS implementation to inspect.
 - No local Hermes Agent source was present under the scheduled workspace.
-- Follow-up local checks also found no `/opt/hermes-agent/source` and no readable
-  `~/.hermes` config files in this environment.
+- Follow-up local checks also found no readable Hermes runtime config files in
+  this environment.
 - `scripts/find-hermes-source.py` now captures that search as a repeatable
   read-only helper. It scores candidate source trees by Hermes/TTS indicators,
   skips secret-named files, and marks this bridge repo separately so it is not
   mistaken for Hermes Agent.
-- A later homelab check found real Hermes source at `/opt/hermes-agent/source`
-  on `hermes-01`. Hermes already supports command TTS providers under
+- A later private deployment check found a real Hermes source checkout and
+  verified that Hermes supports command TTS providers under
   `tts.providers.<name>` with placeholders including `{input_path}`,
   `{output_path}`, `{voice}`, and `{speed}`.
 - The least invasive path is a command-provider MVP: Hermes writes input text to
   a file, calls `scripts/hermes-omnivoice-tts.py`, and consumes the generated
   audio file.
-- The real homelab source checkout was already dirty with unrelated changes, so
-  the bridge was installed outside that checkout and native-provider work
-  remains deferred.
+- The private deployment source checkout was already dirty with unrelated
+  changes, so the bridge was installed outside that checkout and
+  native-provider work remains deferred.
 
 ## MVP Decision
 

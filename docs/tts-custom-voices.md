@@ -2,8 +2,8 @@
 
 ## Command Provider Example
 
-The command-provider schema has been verified against the homelab Hermes source
-and live config. Hermes command providers support the placeholders used below,
+The command-provider schema has been verified against a real Hermes TTS command
+provider. Hermes command providers support the placeholders used below,
 including `{input_path}`, `{output_path}`, `{voice}`, and `{speed}`.
 
 ```yaml
@@ -22,9 +22,8 @@ tts:
 ```
 
 For a staged rollout, keep the current active provider and add only
-`tts.providers.omnivoice`. The homelab validation left `tts.provider: xtts-v2`
-active while proving the `omnivoice` provider with an in-memory provider
-override.
+`tts.providers.omnivoice`. Validate the `omnivoice` provider with a short
+smoke test before making it the active `tts.provider`.
 
 The command string must preserve:
 

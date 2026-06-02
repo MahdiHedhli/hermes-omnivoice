@@ -334,7 +334,7 @@ def build_parser() -> argparse.ArgumentParser:
     config_parser = subparsers.add_parser("config", help="Print sample Hermes TTS config")
     config_parser.add_argument("voice")
     config_parser.add_argument("--script-path", default=None)
-    config_parser.add_argument("--timeout", default=180, type=int)
+    config_parser.add_argument("--timeout", default=600, type=int)
     config_parser.add_argument("--max-text-length", default=2000, type=int)
     config_parser.set_defaults(func=command_config)
 

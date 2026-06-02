@@ -1,4 +1,4 @@
-# Hermes OmniVoice Studio Bridge
+# Hermes OmniVoice-Studio Bridge
 
 Local command-provider bridge for using OmniVoice or OmniVoice-Studio voices
 from Hermes Agent TTS.
@@ -28,10 +28,10 @@ This repo is intentionally conservative:
   preview output symlinks are replaced instead of followed.
 - The voice helper rejects symlinked selection files before reading current
   voice state.
-- OmniVoice-Studio is treated as loopback-only by default because it has no
-  built-in authentication.
-- The first integration path is a command provider, not a native Hermes patch,
-  because the real Hermes Agent source is not present in this checkout.
+- OmniVoice-Studio is treated as loopback-only by default because it should not
+  be exposed without explicit authentication and network review.
+- The first integration path is a Hermes command provider, not a native Hermes
+  patch, so it can be deployed and tested without changing Hermes internals.
 
 ## What Is Included
 
@@ -123,12 +123,32 @@ Install the bridge into a real Hermes checkout or staging directory:
 python scripts/install-hermes-omnivoice-bridge.py \
   --target-root /path/to/hermes-agent \
   --dry-run
+
+python scripts/install-hermes-omnivoice-bridge.py \
+  --target-root /path/to/hermes-agent \
+  --with-examples \
+  --update-gitignore
 ```
 
 Add `--update-gitignore` after reviewing the dry-run output when you want the
 installer to append the OmniVoice local-artifact ignore block to the target
 checkout. If that managed block already exists, the same flag refreshes it to
 the current pattern list.
+
+For a staged Hermes rollout, add an `omnivoice` provider under
+`tts.providers` first and keep the existing active `tts.provider` unchanged.
+After a smoke test, switch the active provider to `omnivoice` only when latency,
+quality, and local disk use are acceptable.
+
+For local model-backed synthesis without Studio, prepare an isolated OmniVoice
+runtime outside the repo and use the exported command-provider environment:
+
+```bash
+python scripts/setup-omnivoice-python-env.py --dry-run
+python scripts/setup-omnivoice-python-env.py
+eval "$(python scripts/setup-omnivoice-python-env.py --check-only --shell)"
+scripts/test-omnivoice-tts.sh
+```
 
 Generate a preview:
 
@@ -147,6 +167,10 @@ python scripts/hermes-omnivoice-voices.py config narrator
 Pass `--voices-dir` before `config` when generating config for a non-default
 registry; the emitted command includes that registry path. The voice must be a
 valid profile with confirmed consent.
+
+The generated config uses Hermes command-provider placeholders that have been
+validated against a real Hermes TTS command provider: `{input_path}`,
+`{output_path}`, `{voice}`, and `{speed}`.
 
 ## Backend Options
 
@@ -171,8 +195,8 @@ paths before backend or Studio startup.
 
 - Real model-backed synthesis works through the prepared local Python adapter
   when its shell exports are applied and a consented local voice profile exists.
-- Native Hermes provider wiring is deferred until the real Hermes Agent source
-  and TTS schema are available.
+- Native Hermes provider wiring is deferred; the command-provider path is the
+  supported MVP.
 - The fake backend in `tests/fixtures` verifies wrapper I/O only. It is not a
   TTS engine.
 
