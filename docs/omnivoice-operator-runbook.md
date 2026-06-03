@@ -282,6 +282,23 @@ listening pass scores the generated samples. A global tuning recommendation is
 not approved because only one real remote voice was tested and no tuned
 listening scores have been recorded.
 
+Tuned listening gate `OMNIVOICE-HOMELAB-NARRATOR-TUNED-LISTENING-QC-001`
+remains pending. Review at minimum:
+
+- `homelab_narrator__baseline__longer_paragraph.wav`
+- `homelab_narrator__speed_095_sentence_breaks__longer_paragraph.wav`
+- `homelab_narrator__speed_105__longer_paragraph.wav`
+- baseline and `speed_095_sentence_breaks` variants for short confirmation,
+  numbers/abbreviations, file path, and medium assistant response prompts.
+
+Current recommendation:
+
+| Voice | Approved Manual Setting | Status | Notes |
+| --- | --- | --- | --- |
+| `homelab_narrator` | pending; objective candidate `speed_095_sentence_breaks` | manual voice approved from prior QC, tuned setting pending | Human listening scores have not been recorded. Baseline preference by prompt type is pending. |
+
+Do not approve a global setting from this one-voice lane.
+
 The Mac Studio service remains loopback-only, bearer auth is required, and the
 proven helper reads the token from a protected Mac Studio-local file. Do not
 copy that token to Hermes for the helper workflow. Direct HTTP mode remains

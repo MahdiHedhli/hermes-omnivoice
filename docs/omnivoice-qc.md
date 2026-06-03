@@ -328,6 +328,76 @@ Default provider status: unchanged. Keep Hermes on `xtts-v2`; unattended
 OmniVoice default remains blocked until per-voice tuned listening passes and
 fallback behavior is designed and tested.
 
+## OMNIVOICE-HOMELAB-NARRATOR-TUNED-LISTENING-QC-001
+
+Status: pending human listening.
+
+Scope:
+
+- Voice: `homelab_narrator`.
+- Voice label: Homelab Narrator.
+- Mode: design.
+- Consent: confirmed.
+- Artifact directory:
+  `~/.cache/hermes/omnivoice-qc/qc-20260603T181620Z/`.
+- Objective candidate: `speed_095_sentence_breaks`.
+- Current decision: not approved as a tuned manual setting yet.
+
+This lane requires actual human listening. Do not assign subjective scores from
+metadata, WPM, waveform checks, transcripts, or model output alone.
+
+Required samples:
+
+| Comparison | File |
+| --- | --- |
+| Core baseline | `homelab_narrator__baseline__longer_paragraph.wav` |
+| Core candidate | `homelab_narrator__speed_095_sentence_breaks__longer_paragraph.wav` |
+| Core faster check | `homelab_narrator__speed_105__longer_paragraph.wav` |
+| Short baseline | `homelab_narrator__baseline__short_confirmation.wav` |
+| Short candidate | `homelab_narrator__speed_095_sentence_breaks__short_confirmation.wav` |
+| Numbers baseline | `homelab_narrator__baseline__numbers_abbreviations.wav` |
+| Numbers candidate | `homelab_narrator__speed_095_sentence_breaks__numbers_abbreviations.wav` |
+| Path baseline | `homelab_narrator__baseline__file_path_sentence.wav` |
+| Path candidate | `homelab_narrator__speed_095_sentence_breaks__file_path_sentence.wav` |
+| Medium baseline | `homelab_narrator__baseline__medium_assistant_response.wav` |
+| Medium candidate | `homelab_narrator__speed_095_sentence_breaks__medium_assistant_response.wav` |
+
+Optional comparisons:
+
+- `homelab_narrator__speed_095__*.wav`
+- `homelab_narrator__speed_095_normalized__*.wav`
+- `homelab_narrator__speed_100_sentence_breaks__*.wav`
+
+Score each reviewed tuning profile from 1 to 5:
+
+| Voice | Tuning Profile | Intelligibility | Pacing | Pronunciation | Naturalness | Operator Acceptability | Voice Consistency | Artifacts/Noise | Notes |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `homelab_narrator` | `baseline` | pending | pending | pending | pending | pending | optional | optional | Compare longer response and short confirmation against candidate. |
+| `homelab_narrator` | `speed_095_sentence_breaks` | pending | pending | pending | pending | pending | optional | optional | Candidate must improve longer assistant responses and keep short confirmations natural. |
+| `homelab_narrator` | `speed_105` | pending | pending | pending | pending | pending | optional | optional | Faster contrast sample. |
+| `homelab_narrator` | `speed_095` | optional | optional | optional | optional | optional | optional | optional | Optional comparison. |
+| `homelab_narrator` | `speed_095_normalized` | optional | optional | optional | optional | optional | optional | optional | Optional comparison. |
+| `homelab_narrator` | `speed_100_sentence_breaks` | optional | optional | optional | optional | optional | optional | optional | Optional comparison. |
+
+Approval rule for `speed_095_sentence_breaks`:
+
+- pacing score is at least 4,
+- intelligibility score is at least 4,
+- operator acceptability score is at least 4,
+- no recurring pronunciation issue appears across multiple candidate samples,
+- candidate sounds better than baseline for longer assistant responses,
+- candidate does not make short confirmations feel awkwardly slow.
+
+Current per-voice recommendation:
+
+| Voice | Approved Manual Setting | Status | Notes |
+| --- | --- | --- | --- |
+| `homelab_narrator` | pending; objective candidate `speed_095_sentence_breaks` | manual voice approved from prior QC, tuned setting pending | Human listening has not been recorded for the tuned samples. Baseline preference by prompt type is also pending. |
+
+Global setting remains not approved. This lane covers one voice only.
+Unattended default remains blocked by missing fallback behavior and by the lack
+of completed tuned listening scores.
+
 ## Notes To Record
 
 For each QC run, record locally:

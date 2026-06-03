@@ -341,6 +341,15 @@ not approved; only one deployed remote voice was tested. The final active
 Hermes provider remains `xtts-v2`, and unattended default use remains blocked
 until per-voice listening and fallback behavior are addressed.
 
+`OMNIVOICE-HOMELAB-NARRATOR-TUNED-LISTENING-QC-001` remains pending. The
+required human review compares baseline, `speed_095_sentence_breaks`, and
+`speed_105` on the longer paragraph, plus baseline versus
+`speed_095_sentence_breaks` on short confirmation, numbers/abbreviations, file
+path, and medium assistant response prompts. Do not promote
+`speed_095_sentence_breaks` to the approved manual setting until pacing,
+intelligibility, and operator acceptability each score at least 4 and no
+recurring pronunciation issue appears.
+
 Security review found no observed token values in command output, process args,
 accessible Mac Studio logs, or git state. Local token-pattern hits were limited
 to placeholder strings in docs/tests/code and ignored Python bytecode.

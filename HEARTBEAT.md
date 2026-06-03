@@ -19,6 +19,37 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-03 14:45 America/New_York
+- Lane: `OMNIVOICE-HOMELAB-NARRATOR-TUNED-LISTENING-QC-001`
+- Completed:
+  - Verified the voice-labeled artifact directory exists:
+    `~/.cache/hermes/omnivoice-qc/qc-20260603T181620Z/`.
+  - Verified the required core and baseline/candidate comparison files are
+    present for `homelab_narrator`.
+  - Added a human listening score sheet and approval rule to
+    `docs/omnivoice-qc.md`.
+  - Updated the operator runbook and remote MVP notes to keep
+    `speed_095_sentence_breaks` pending until actual human listening scores
+    are recorded.
+- Decision:
+  - `speed_095_sentence_breaks` is not approved as the manual setting in this
+    lane because Codex cannot perform human listening or assign subjective
+    audio scores.
+  - Existing `homelab_narrator` manual use remains approved from prior QC.
+  - Baseline preference by prompt type remains pending.
+  - Global tuning remains not approved.
+  - Hermes default provider remains `xtts-v2`; unattended OmniVoice default
+    remains blocked.
+- Next action:
+  - Operator listens to the required files and records scores for
+    intelligibility, pacing, pronunciation, naturalness, and operator
+    acceptability. If `speed_095_sentence_breaks` scores at least 4 for
+    pacing, intelligibility, and operator acceptability with no recurring
+    pronunciation issue, document it as the approved manual setting for
+    `homelab_narrator`.
+
+## Previous Heartbeat
+
 - Time: 2026-06-03 14:22 America/New_York
 - Lane: `OMNIVOICE-VOICE-LABELED-TUNING-MATRIX-001`
 - Completed:
