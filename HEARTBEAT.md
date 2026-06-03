@@ -19,6 +19,50 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-03 14:22 America/New_York
+- Lane: `OMNIVOICE-VOICE-LABELED-TUNING-MATRIX-001`
+- Completed:
+  - Confirmed repo branch `feature/omnivoice-remote-fastapi-mvp` and required
+    commit `15b3d77 feat: add per-voice OmniVoice QC artifacts`.
+  - Confirmed `scripts/omnivoice-qc-sample.sh` supports voice-labeled output
+    and `results.json`.
+  - Confirmed the Mac Studio operator helper route
+    `mhedhli@100.78.163.62` is reachable and reports OmniVoice health OK.
+  - Confirmed the helper lists one deployed voice: `homelab_narrator`
+    (`Homelab Narrator`), design mode, consent confirmed.
+  - Generated a fresh voice-labeled matrix for `homelab_narrator` with 6
+    tuning profiles x 5 prompts.
+- Artifact directory:
+  - `~/.cache/hermes/omnivoice-qc/qc-20260603T181620Z/`.
+  - Contains 30 voice-labeled WAV samples plus local `results.json` and
+    `summary.json`; these are ignored local artifacts and must not be
+    committed.
+- Objective results:
+  - 30 PASS, 0 failures, 0 retries, no warnings.
+  - `baseline` median WPM: 165.0.
+  - `speed_095` median WPM: 153.8.
+  - `speed_095_normalized` median WPM: 152.5.
+  - `speed_095_sentence_breaks` median WPM: 149.5.
+  - `speed_100_sentence_breaks` median WPM: 160.1.
+  - `speed_105` median WPM: 176.8.
+- Decision:
+  - `speed_095_sentence_breaks` is the objective candidate for
+    `homelab_narrator`, but subjective listening remains pending.
+  - No global tuning setting is approved because only one deployed remote voice
+    was tested and no human tuned-listening scores were recorded.
+  - Manual OmniVoice use remains approved from prior QC; unattended default
+    remains blocked.
+- Blockers / notes:
+  - Default `hermes-ops@100.78.163.62` SSH from this workstation is still
+    denied; the operator helper route was used without reading or printing
+    token files.
+  - A fresh live read of Hermes' active provider from this workstation was
+    blocked by `codex@100.114.4.26` SSH public-key denial. This lane did not
+    change Hermes config or switch providers; previous validated state remains
+    final provider `xtts-v2`.
+
+## Previous Heartbeat
+
 - Time: 2026-06-03 11:45 America/New_York
 - Lane: `OMNIVOICE-PER-VOICE-TUNING-QC-001`
 - Completed:

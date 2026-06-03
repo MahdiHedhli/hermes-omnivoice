@@ -41,7 +41,7 @@ These paths are safe defaults or templates for new installs.
 | `~/.hermes/omnivoice-selection.json` | Current local OmniVoice selection | No |
 | `~/.hermes/omnivoice-remote.env` | Optional remote env file | No |
 | `~/.cache/hermes/omnivoice-python` | Optional isolated OmniVoice Python runtime | No |
-| `~/.cache/hermes/omnivoice-qc/qc-<timestamp>/` | Subjective QC generated samples | No |
+| `~/.cache/hermes/omnivoice-qc/qc-<timestamp>/` | Voice-labeled QC/tuning samples and local result JSON | No |
 | `~/.cache/hermes/omnivoice-remote-smoke/` | Remote smoke generated samples | No |
 | `omnivoice-output/` | Local generated output scratch dir | No |
 | `omnivoice-cache/` | Local cache scratch dir | No |

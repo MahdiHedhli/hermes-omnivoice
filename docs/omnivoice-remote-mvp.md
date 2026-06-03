@@ -323,6 +323,24 @@ Current per-voice tuning table:
 | --- | --- | --- | --- |
 | legacy_unlabeled | `--speed 0.95 --normalize-punctuation --sentence-breaks --max-sentence-chars 90` | pending | Objective WPM favored `speed 0.95`; rerun with voice-labeled artifacts before approving as a per-voice manual default. |
 
+Voice-labeled tuning matrix from 2026-06-03:
+
+| Voice | Tuning Profile | Samples | Success / Fail / Retry | Latency min/med/max | Duration min/med/max | Median WPM |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `homelab_narrator` | `baseline` | 5 | 5 / 0 / 0 | 0.957/1.538/1.974s | 2.880/6.180/9.410s | 165.0 |
+| `homelab_narrator` | `speed_095` | 5 | 5 / 0 / 0 | 0.968/1.493/2.037s | 3.380/6.520/9.150s | 153.8 |
+| `homelab_narrator` | `speed_095_normalized` | 5 | 5 / 0 / 0 | 0.984/1.496/1.888s | 3.540/5.980/9.290s | 152.5 |
+| `homelab_narrator` | `speed_095_sentence_breaks` | 5 | 5 / 0 / 0 | 0.962/1.501/2.041s | 2.810/6.270/9.720s | 149.5 |
+| `homelab_narrator` | `speed_100_sentence_breaks` | 5 | 5 / 0 / 0 | 0.923/1.506/1.970s | 2.720/6.090/9.550s | 160.1 |
+| `homelab_narrator` | `speed_105` | 5 | 5 / 0 / 0 | 0.943/1.434/1.980s | 2.470/5.700/9.510s | 176.8 |
+
+Artifacts are under `~/.cache/hermes/omnivoice-qc/qc-20260603T181620Z/`.
+`speed_095_sentence_breaks` is the objective candidate for
+`homelab_narrator`, but subjective listening is still pending. Global tuning is
+not approved; only one deployed remote voice was tested. The final active
+Hermes provider remains `xtts-v2`, and unattended default use remains blocked
+until per-voice listening and fallback behavior are addressed.
+
 Security review found no observed token values in command output, process args,
 accessible Mac Studio logs, or git state. Local token-pattern hits were limited
 to placeholder strings in docs/tests/code and ignored Python bytecode.

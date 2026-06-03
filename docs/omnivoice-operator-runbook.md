@@ -261,6 +261,27 @@ Current tuning recommendation table:
 | --- | --- | --- | --- |
 | legacy_unlabeled | `--speed 0.95 --normalize-punctuation --sentence-breaks --max-sentence-chars 90` | pending | Objective matrix favors `speed 0.95`; per-voice listening must be rerun with voice-labeled artifacts before this becomes a documented manual default. |
 
+Voice-labeled matrix from `OMNIVOICE-VOICE-LABELED-TUNING-MATRIX-001`:
+
+| Voice | Best Setting | Manual Status | Notes |
+| --- | --- | --- | --- |
+| `homelab_narrator` | pending listening; objective candidate `speed_095_sentence_breaks` | approved from prior QC, tuning pending | 30/30 voice-labeled samples passed with no retries or warnings. Lowest median WPM was `speed_095_sentence_breaks` at 149.5. |
+| `heartbeat_narrator` | pending | pending | Local registry voice only; not exposed by the Mac Studio helper. |
+| `narrator` | pending | example only | Example designed voice; not a deployed remote voice. |
+| `marvin` | not approved for this lane | example clone only | Reference audio is intentionally absent from the repo and was not tested. |
+| `legacy_unlabeled` | none | do not use | Existing mixed samples lack voice labels. |
+
+Artifact directory for operator listening:
+
+```text
+~/.cache/hermes/omnivoice-qc/qc-20260603T181620Z/
+```
+
+Do not promote the objective candidate to a per-voice default until a human
+listening pass scores the generated samples. A global tuning recommendation is
+not approved because only one real remote voice was tested and no tuned
+listening scores have been recorded.
+
 The Mac Studio service remains loopback-only, bearer auth is required, and the
 proven helper reads the token from a protected Mac Studio-local file. Do not
 copy that token to Hermes for the helper workflow. Direct HTTP mode remains

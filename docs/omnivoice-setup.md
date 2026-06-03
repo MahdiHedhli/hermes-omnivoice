@@ -474,6 +474,18 @@ The first 2026-06-03 tuning matrix is legacy unlabeled evidence. Do not use it
 for per-voice approval; rerun `OMNIVOICE-PER-VOICE-TUNING-QC-001` with
 voice-labeled artifacts before documenting a per-voice tuning default.
 
+`OMNIVOICE-VOICE-LABELED-TUNING-MATRIX-001` generated a fresh matrix for the
+deployed `homelab_narrator` voice under:
+
+```text
+~/.cache/hermes/omnivoice-qc/qc-20260603T181620Z/
+```
+
+The run produced 30/30 successful voice-labeled samples with no retries or
+warnings. `speed_095_sentence_breaks` had the lowest median WPM for
+`homelab_narrator`, but human listening is still pending, so it is an objective
+candidate rather than an approved per-voice default.
+
 Run the smoke test only after configuring a real backend command, Studio URL,
 or opt-in CLI backend:
 

@@ -252,6 +252,82 @@ not been recorded. Existing manual OmniVoice use remains approved from the
 prior soak QC; unattended default remains blocked by per-voice pacing evidence
 and missing automatic fallback behavior.
 
+## OMNIVOICE-VOICE-LABELED-TUNING-MATRIX-001
+
+Status: objective matrix complete, human listening pending.
+
+Artifact directory:
+
+```text
+~/.cache/hermes/omnivoice-qc/qc-20260603T181620Z/
+```
+
+The lane generated voice-labeled WAV files and local `results.json` /
+`summary.json` files. These files are local artifacts and must not be
+committed.
+
+Preflight summary:
+
+- Branch: `feature/omnivoice-remote-fastapi-mvp`.
+- Required commit present: `15b3d77 feat: add per-voice OmniVoice QC artifacts`.
+- `scripts/omnivoice-qc-sample.sh` supports voice-labeled output and
+  `results.json`.
+- `scripts/hermes-omnivoice-remote.py` exists.
+- Default `hermes-ops@100.78.163.62` SSH from this workstation was denied;
+  the Mac Studio operator helper route `mhedhli@100.78.163.62` was reachable.
+- Helper health returned `ok: true`, MPS device, loaded OmniVoice model, and
+  one available voice.
+- No token files were read, copied, printed, or committed.
+- Hermes active provider was not changed in this lane. Prior homelab docs and
+  previous live trials record final provider `xtts-v2`; a fresh tailnet SSH
+  provider read from this workstation was blocked by SSH public-key denial.
+
+Voices identified:
+
+| Voice | Label | Source | Mode | Consent | Testing Status |
+| --- | --- | --- | --- | --- | --- |
+| `homelab_narrator` | Homelab Narrator | Mac Studio helper voice list | design | confirmed | tested |
+| `heartbeat_narrator` | Heartbeat Narrator | `~/.hermes/voices/omnivoice/heartbeat_narrator/voice.yaml` | design | confirmed | pending; not exposed by the remote helper |
+| `narrator` | Narrator | `examples/voices/narrator/voice.yaml` | design | confirmed | example only; not a deployed remote voice |
+| `marvin` | Marvin | `examples/voices/marvin/voice.yaml` | clone | confirmed metadata, missing repo reference audio | not tested; example clone material is intentionally absent |
+| `legacy_unlabeled` | Unknown mixed samples | 2026-06-02/2026-06-03 legacy artifacts | unknown | unknown | do not use for per-voice conclusions |
+
+Objective results for `homelab_narrator`:
+
+| Voice | Tuning Profile | Samples | Success | Fail | Retry | Latency min/med/max | Duration min/med/max | Median WPM | Warnings |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `homelab_narrator` | `baseline` | 5 | 5 | 0 | 0 | 0.957/1.538/1.974s | 2.880/6.180/9.410s | 165.0 | none |
+| `homelab_narrator` | `speed_095` | 5 | 5 | 0 | 0 | 0.968/1.493/2.037s | 3.380/6.520/9.150s | 153.8 | none |
+| `homelab_narrator` | `speed_095_normalized` | 5 | 5 | 0 | 0 | 0.984/1.496/1.888s | 3.540/5.980/9.290s | 152.5 | none |
+| `homelab_narrator` | `speed_095_sentence_breaks` | 5 | 5 | 0 | 0 | 0.962/1.501/2.041s | 2.810/6.270/9.720s | 149.5 | none |
+| `homelab_narrator` | `speed_100_sentence_breaks` | 5 | 5 | 0 | 0 | 0.923/1.506/1.970s | 2.720/6.090/9.550s | 160.1 | none |
+| `homelab_narrator` | `speed_105` | 5 | 5 | 0 | 0 | 0.943/1.434/1.980s | 2.470/5.700/9.510s | 176.8 | none |
+
+Per-voice recommendation table:
+
+| Voice | Best Setting | Manual Status | Notes |
+| --- | --- | --- | --- |
+| `homelab_narrator` | pending listening; objective candidate `speed_095_sentence_breaks` | approved from prior QC, tuning pending | Voice-labeled matrix generated. `speed_095_sentence_breaks` had the lowest median WPM with no failures or retries. Human listening must score pacing, intelligibility, pronunciation, naturalness, and operator acceptability before promotion. |
+| `heartbeat_narrator` | pending | pending | Local registry voice only in this lane; not available from the Mac Studio helper. |
+| `narrator` | pending | example only | Example designed voice; not a deployed remote voice. |
+| `marvin` | not approved for this lane | example clone only | Clone metadata is consent-confirmed, but reference audio is intentionally absent from the repo and was not tested. |
+| `legacy_unlabeled` | none | do not use | Existing mixed sample set lacks voice labels. |
+
+Subjective listening status: pending. Do not assign scores from objective
+metrics. The operator should listen to the generated
+`homelab_narrator__<profile>__<prompt>.wav` files and score each tuning
+profile for intelligibility, pacing, pronunciation, naturalness, and operator
+acceptability.
+
+Global recommendation status: not approved. Only one real remote voice was
+tested, and no human tuned-listening scores have been recorded. A global
+setting requires at least two reviewed voices, the same winning profile across
+those voices, and no voice degraded by that setting.
+
+Default provider status: unchanged. Keep Hermes on `xtts-v2`; unattended
+OmniVoice default remains blocked until per-voice tuned listening passes and
+fallback behavior is designed and tested.
+
 ## Notes To Record
 
 For each QC run, record locally:

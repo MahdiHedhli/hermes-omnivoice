@@ -18,7 +18,7 @@ metadata, and make rollback to the existing TTS provider explicit.
 | Hermes active default | ✅ Remains `xtts-v2` |
 | Human listening QC | ✅ Manual operator use approved |
 | Pacing controls | ✅ Opt-in speed, sentence breaks, and punctuation normalization |
-| Per-voice tuned QC | ⏳ Pending voice-labeled listening pass |
+| Per-voice tuned QC | ⏳ Voice-labeled matrix generated; listening pending |
 | Native Hermes provider | ⏸️ Deferred |
 | `/voice` runtime UX | ⏸️ Deferred |
 | Unattended OmniVoice default | ❌ Not approved until pacing/fallback are addressed |
@@ -230,6 +230,8 @@ Use OmniVoice SSH-loopback for bounded manual evaluation when an operator wants
 the Mac Studio voice. The current provisional manual tuning setting is
 `speed: 0.95` with `--normalize-punctuation --sentence-breaks
 --max-sentence-chars 90`. That setting is still pending
-`OMNIVOICE-PER-VOICE-TUNING-QC-001` because the first tuning matrix was legacy
-unlabeled. Keep `xtts-v2` as the unattended default until voice-labeled tuned
+human listening. The voice-labeled matrix for `homelab_narrator` generated
+30/30 successful samples and objectively favored `speed_095_sentence_breaks`,
+but no per-voice or global tuned default is approved until listening scores are
+recorded. Keep `xtts-v2` as the unattended default until voice-labeled tuned
 listening, fallback behavior, and operational UX are fully addressed.
