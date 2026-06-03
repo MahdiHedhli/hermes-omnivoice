@@ -119,6 +119,43 @@ Approval:
 - Next lane: voice tuning and pace normalization before considering unattended
   default use.
 
+## Pacing Tuning Matrix
+
+The 2026-06-03 tuning run used the Mac Studio operator SSH helper against the
+loopback-only OmniVoice service. It generated 30 WAV samples across 5 prompts
+and 6 variants. All generated audio stayed outside the repo under:
+
+`/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-tuning-20260603T145445Z/`
+
+Subjective listening for these tuning variants is pending. Objective results:
+
+| Variant | Result | Median Latency | Median Duration | Median WPM |
+| --- | --- | ---: | ---: | ---: |
+| Baseline | 5 PASS / 0 fail | 2.128s | 5.750s | 156.5 |
+| Speed 0.95 | 5 PASS / 0 fail | 1.864s | 6.000s | 148.1 |
+| Speed 1.0 explicit | 5 PASS / 0 fail | 1.793s | 5.930s | 151.8 |
+| Speed 1.05 | 5 PASS / 0 fail | 1.705s | 5.510s | 158.8 |
+| Sentence breaks + max 90 chars | 5 PASS / 0 fail | 1.853s | 5.780s | 155.7 |
+| Punctuation normalized | 5 PASS / 0 fail | 1.722s | 5.770s | 156.0 |
+
+Objective conclusion: `speed 0.95` is the only tested control that clearly
+slowed delivery. Sentence breaks and max sentence length are still useful as
+pause hints for listening review, but they did not materially reduce median
+words per minute by themselves.
+
+Provisional manual operator setting:
+
+```text
+speed: 0.95
+--sentence-breaks
+--max-sentence-chars 90
+--normalize-punctuation
+```
+
+Keep this setting manual and listening-gated. Unattended default use remains
+blocked until a human reviewer confirms the tuned variants and Hermes fallback
+behavior is addressed.
+
 ## Notes To Record
 
 For each QC run, record locally:

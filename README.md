@@ -17,6 +17,7 @@ metadata, and make rollback to the existing TTS provider explicit.
 | Mac Studio SSH-loopback backend | ✅ Reliability soak passed |
 | Hermes active default | ✅ Remains `xtts-v2` |
 | Human listening QC | ✅ Manual operator use approved |
+| Pacing controls | ✅ Opt-in speed, sentence breaks, and punctuation normalization |
 | Native Hermes provider | ⏸️ Deferred |
 | `/voice` runtime UX | ⏸️ Deferred |
 | Unattended OmniVoice default | ❌ Not approved until pacing/fallback are addressed |
@@ -35,6 +36,7 @@ listening pass approved OmniVoice SSH-loopback for bounded manual operator use.
 | 🎨 Designed voices | Prompt/instruction-based voice profiles |
 | 🧬 Cloned voices | Reference-audio profiles with `ref_audio` and `ref_text` |
 | 🧪 QC samples | Repeatable local sample generation for listening review |
+| ⏱️ Pacing controls | Optional `speed`, sentence breaks, max sentence length, and punctuation normalization |
 | 🧰 Operator scripts | Status, enable, disable, smoke, acceptance, and validation helpers |
 | 🔌 Studio bridge | Import/export guidance for OmniVoice-Studio-managed voices |
 | 🐍 Python adapter | Optional direct OmniVoice Python API adapter |
@@ -223,5 +225,7 @@ that token to Hermes, place it in argv, or commit it.
 ## 🧭 Recommendation
 
 Use OmniVoice SSH-loopback for bounded manual evaluation when an operator wants
-the Mac Studio voice. Keep `xtts-v2` as the unattended default until pacing
-consistency, fallback behavior, and operational UX are fully addressed.
+the Mac Studio voice. The current provisional manual tuning setting is
+`speed: 0.95` with `--normalize-punctuation --sentence-breaks
+--max-sentence-chars 90`. Keep `xtts-v2` as the unattended default until tuned
+listening, fallback behavior, and operational UX are fully addressed.

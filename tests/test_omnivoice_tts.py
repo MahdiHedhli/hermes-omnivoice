@@ -1592,6 +1592,73 @@ class RemoteOmniVoiceTests(unittest.TestCase):
             with wave.open(str(out_file), "rb") as wav:
                 self.assertGreater(wav.getnframes(), 0)
 
+    def test_http_pacing_controls_transform_payload_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text(
+                "“Hermes” — ready. This sentence has enough words to wrap near a safe boundary.",
+                encoding="utf-8",
+            )
+            with mock_remote_server() as (base_url, requests):
+                result, error = self.run_remote(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "homelab_narrator",
+                        "--transport",
+                        "http",
+                        "--normalize-punctuation",
+                        "--sentence-breaks",
+                        "--max-sentence-chars",
+                        "36",
+                    ],
+                    {
+                        "OMNIVOICE_REMOTE_BASE_URL": base_url,
+                        "OMNIVOICE_REMOTE_API_TOKEN": "secret-token",
+                    },
+                )
+
+            self.assertEqual(result, 0, error)
+            payload = json.loads(requests[0]["body"].decode("utf-8"))
+            self.assertIn('"Hermes" - ready.', payload["input"])
+            self.assertIn("\nThis sentence has enough words", payload["input"])
+            self.assertNotIn("\u201c", payload["input"])
+            self.assertLessEqual(max(len(line) for line in payload["input"].splitlines()), 45)
+
+    def test_pacing_controls_can_be_enabled_from_env(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text("One sentence. Another sentence.", encoding="utf-8")
+            with mock_remote_server() as (base_url, requests):
+                result, error = self.run_remote(
+                    [
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "homelab_narrator",
+                        "--transport",
+                        "http",
+                    ],
+                    {
+                        "OMNIVOICE_REMOTE_BASE_URL": base_url,
+                        "OMNIVOICE_REMOTE_API_TOKEN": "secret-token",
+                        "OMNIVOICE_REMOTE_SENTENCE_BREAKS": "1",
+                    },
+                )
+
+            self.assertEqual(result, 0, error)
+            payload = json.loads(requests[0]["body"].decode("utf-8"))
+            self.assertEqual(payload["input"], "One sentence.\nAnother sentence.")
+
     def test_transport_selection_from_env_uses_ssh_loopback(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1705,6 +1772,72 @@ class RemoteOmniVoiceTests(unittest.TestCase):
             ssh_command = run_mock.call_args_list[0].args[0]
             self.assertIn("hermes-ops@100.78.163.62", ssh_command)
             self.assertNotIn("file-token", " ".join(ssh_command))
+
+    def test_ssh_helper_receives_pacing_controls_without_token(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text_file = root / "input.txt"
+            out_file = root / "out.wav"
+            text_file.write_text(
+                "Hermes is ready. This helper sentence should be split for calmer delivery.",
+                encoding="utf-8",
+            )
+
+            def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+                if command[0] == "ssh":
+                    request = json.loads(kwargs["input"].decode("utf-8"))  # type: ignore[index, union-attr]
+                    self.assertEqual(request["speed"], 0.95)
+                    self.assertIn("Hermes is ready.\nThis helper", request["text"])
+                    self.assertNotIn("token", request)
+                    return subprocess.CompletedProcess(
+                        args=command,
+                        returncode=0,
+                        stdout=json.dumps(
+                            {
+                                "ok": True,
+                                "remote_path": "/Users/hermes-ops/Services/omnivoice/artifacts/out.wav",
+                            }
+                        ).encode("utf-8"),
+                        stderr=b"",
+                    )
+                if command[0] == "scp":
+                    Path(command[-1]).write_bytes(wav_bytes())
+                    return subprocess.CompletedProcess(
+                        args=command,
+                        returncode=0,
+                        stdout=b"",
+                        stderr=b"",
+                    )
+                self.fail(f"unexpected command: {command}")
+
+            with unittest.mock.patch.object(
+                remote_omnivoice.subprocess,
+                "run",
+                side_effect=fake_run,
+            ):
+                result, error = self.run_remote(
+                    [
+                        "--transport",
+                        "ssh-loopback",
+                        "--text-file",
+                        str(text_file),
+                        "--out",
+                        str(out_file),
+                        "--voice",
+                        "homelab_narrator",
+                        "--speed",
+                        "0.95",
+                        "--sentence-breaks",
+                        "--ssh-host",
+                        "hermes-ops@100.78.163.62",
+                        "--remote-helper",
+                        "/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech",
+                    ],
+                    {},
+                )
+
+            self.assertEqual(result, 0, error)
+            self.assertEqual(path_mode(out_file), 0o600)
 
     def test_ssh_loopback_remote_helper_rejects_unsafe_artifact_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

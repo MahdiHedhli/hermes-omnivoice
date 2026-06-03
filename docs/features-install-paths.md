@@ -10,6 +10,7 @@ paths are local-only operational state.
 | --- | --- | --- |
 | Hermes command provider | Local TTS wrapper for OmniVoice-compatible voices | `scripts/hermes-omnivoice-tts.py` |
 | Remote TTS | Authenticated direct HTTP and SSH-loopback FastAPI wrapper | `scripts/hermes-omnivoice-remote.py` |
+| Remote pacing | Opt-in speed, punctuation normalization, sentence breaks, and max sentence length | `scripts/hermes-omnivoice-remote.py`, `scripts/test-omnivoice-remote.sh` |
 | Python API mode | Direct OmniVoice Python API adapter | `scripts/hermes-omnivoice-python-adapter.py` |
 | Runtime setup | Isolated local Python runtime planning/install/checks | `scripts/setup-omnivoice-python-env.py` |
 | Voice registry | Designed and cloned voice profile creation | `scripts/create-omnivoice-voice.py` |

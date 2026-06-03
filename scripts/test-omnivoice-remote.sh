@@ -7,6 +7,9 @@ VOICE="${OMNIVOICE_REMOTE_TEST_VOICE:-${OMNIVOICE_REMOTE_VOICE:-homelab_narrator
 SPEED="${OMNIVOICE_REMOTE_TEST_SPEED:-1.0}"
 FORMAT="${OMNIVOICE_REMOTE_TEST_FORMAT:-wav}"
 TIMEOUT="${OMNIVOICE_REMOTE_TEST_TIMEOUT:-600}"
+MAX_SENTENCE_CHARS="${OMNIVOICE_REMOTE_TEST_MAX_SENTENCE_CHARS:-${OMNIVOICE_REMOTE_MAX_SENTENCE_CHARS:-}}"
+NORMALIZE_PUNCTUATION="${OMNIVOICE_REMOTE_TEST_NORMALIZE_PUNCTUATION:-${OMNIVOICE_REMOTE_NORMALIZE_PUNCTUATION:-}}"
+SENTENCE_BREAKS="${OMNIVOICE_REMOTE_TEST_SENTENCE_BREAKS:-${OMNIVOICE_REMOTE_SENTENCE_BREAKS:-}}"
 OUT_DIR="${OMNIVOICE_REMOTE_TEST_OUT_DIR:-$HOME/.cache/hermes/omnivoice-remote-smoke}"
 TRANSPORT="${OMNIVOICE_REMOTE_TRANSPORT:-http}"
 BASE_URL="${OMNIVOICE_REMOTE_BASE_URL:-}"
@@ -18,6 +21,17 @@ REMOTE_ARTIFACT_PREFIX="${OMNIVOICE_REMOTE_ARTIFACT_PREFIX:-}"
 LOOPBACK_URL="${OMNIVOICE_REMOTE_LOOPBACK_URL:-http://127.0.0.1:8880}"
 TOKEN_FILE="${OMNIVOICE_REMOTE_TOKEN_FILE:-}"
 TOKEN="${OMNIVOICE_REMOTE_API_TOKEN:-}"
+
+is_truthy() {
+  case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|on)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
 
 case "$TRANSPORT" in
   http)
@@ -119,6 +133,18 @@ wrapper_args=(
   --format "$FORMAT"
   --timeout "$TIMEOUT"
 )
+
+if is_truthy "$NORMALIZE_PUNCTUATION"; then
+  wrapper_args+=(--normalize-punctuation)
+fi
+
+if is_truthy "$SENTENCE_BREAKS"; then
+  wrapper_args+=(--sentence-breaks)
+fi
+
+if [[ -n "$MAX_SENTENCE_CHARS" ]]; then
+  wrapper_args+=(--max-sentence-chars "$MAX_SENTENCE_CHARS")
+fi
 
 case "$TRANSPORT" in
   http)

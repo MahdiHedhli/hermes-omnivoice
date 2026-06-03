@@ -220,6 +220,27 @@ export OMNIVOICE_REMOTE_VOICE=homelab_narrator
 scripts/test-omnivoice-remote.sh
 ```
 
+Optional manual pacing controls:
+
+```bash
+export OMNIVOICE_REMOTE_TEST_SPEED=0.95
+export OMNIVOICE_REMOTE_TEST_NORMALIZE_PUNCTUATION=1
+export OMNIVOICE_REMOTE_TEST_SENTENCE_BREAKS=1
+export OMNIVOICE_REMOTE_TEST_MAX_SENTENCE_CHARS=90
+scripts/test-omnivoice-remote.sh
+```
+
+For Hermes command-provider config, use the same controls as explicit wrapper
+arguments:
+
+```text
+--speed {speed} --normalize-punctuation --sentence-breaks --max-sentence-chars 90
+```
+
+Keep these controls opt-in for manual operator runs. Do not promote them to an
+unattended default until tuned samples pass listening review and fallback
+behavior is addressed.
+
 The Mac Studio service remains loopback-only, bearer auth is required, and the
 proven helper reads the token from a protected Mac Studio-local file. Do not
 copy that token to Hermes for the helper workflow. Direct HTTP mode remains
@@ -299,3 +320,19 @@ Human QC summary from 2026-06-03:
 | Operator acceptability | 4/5 |
 | Preference vs rollback `xtts-v2` | OmniVoice preferred; rollback sample described as terrible quality, robotic, and much less clear |
 | Approval | Manual operator use approved; unattended default not approved |
+
+Pacing tuning matrix from 2026-06-03:
+
+| Variant | Result | Median Latency | Median Duration | Median WPM |
+| --- | --- | ---: | ---: | ---: |
+| Baseline | 5 PASS / 0 fail | 2.128s | 5.750s | 156.5 |
+| Speed 0.95 | 5 PASS / 0 fail | 1.864s | 6.000s | 148.1 |
+| Speed 1.0 explicit | 5 PASS / 0 fail | 1.793s | 5.930s | 151.8 |
+| Speed 1.05 | 5 PASS / 0 fail | 1.705s | 5.510s | 158.8 |
+| Sentence breaks + max 90 chars | 5 PASS / 0 fail | 1.853s | 5.780s | 155.7 |
+| Punctuation normalized | 5 PASS / 0 fail | 1.722s | 5.770s | 156.0 |
+
+Recommended manual setting after the objective matrix: `speed: 0.95` plus
+`--normalize-punctuation --sentence-breaks --max-sentence-chars 90` for longer
+operator responses. Subjective listening for the tuned variants remains
+pending, so this recommendation is not an unattended-default approval.

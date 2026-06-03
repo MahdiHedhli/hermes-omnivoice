@@ -19,6 +19,48 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-03 10:59 America/New_York
+- Completed:
+  - Added opt-in remote pacing controls to
+    `scripts/hermes-omnivoice-remote.py`: `--normalize-punctuation`,
+    `--sentence-breaks`, and `--max-sentence-chars`.
+  - Kept existing `--speed` behavior and added smoke-script environment
+    passthroughs for remote pacing checks.
+  - Generated a 30-sample tuning matrix through the reachable Mac Studio
+    operator SSH helper without reading or printing token files.
+  - Updated README, setup docs, remote MVP docs, operator runbook, QC doc,
+    example config comments, and feature/install-path inventory.
+- Tuning matrix:
+  - Artifact directory:
+    `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-tuning-20260603T145445Z/`.
+  - 5 prompts x 6 variants: 30 PASS, 0 failures, 0 retries.
+  - Overall latency min/median/max: 1.186s / 1.886s / 3.591s.
+  - Overall duration min/median/max: 1.960s / 5.775s / 15.520s.
+  - Baseline median: 2.128s latency, 5.750s duration, 156.5 WPM.
+  - Speed 0.95 median: 1.864s latency, 6.000s duration, 148.1 WPM.
+  - Speed 1.05 median: 1.705s latency, 5.510s duration, 158.8 WPM.
+  - Sentence breaks + max 90 chars median: 1.853s latency, 5.780s duration,
+    155.7 WPM.
+  - Punctuation normalized median: 1.722s latency, 5.770s duration, 156.0 WPM.
+- Decision:
+  - Objective matrix supports `speed: 0.95` as the clearest pace-normalization
+    control for manual operator use.
+  - Sentence breaks and max sentence length are useful pause hints but require
+    subjective listening before treating them as an improvement.
+  - Recommended manual tuning trial: `speed: 0.95`,
+    `--normalize-punctuation`, `--sentence-breaks`, and
+    `--max-sentence-chars 90`.
+  - Unattended default remains not approved until tuned listening passes and
+    fallback behavior is addressed.
+- Notes:
+  - This workstation could use the `mhedhli` Mac Studio operator helper. The
+    `hermes-ops` helper remains a Hermes-host path, not executable from this
+    local user.
+  - Direct HTTP remains a separate diagnostic backlog. No network exposure
+    changes were made.
+
+## Previous Heartbeat
+
 - Time: 2026-06-03 10:19 America/New_York
 - Completed:
   - Recorded human listening QC for the OmniVoice SSH-loopback soak artifacts.

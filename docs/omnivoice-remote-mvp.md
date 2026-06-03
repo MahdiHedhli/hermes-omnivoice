@@ -136,6 +136,38 @@ The same example lives in
 `examples/hermes-tts-omnivoice-remote-ssh-loopback.yaml`. Direct HTTP mode
 remains in `examples/hermes-tts-omnivoice-remote.yaml`.
 
+## Pacing Controls
+
+The remote wrapper supports these opt-in controls:
+
+| Control | Supported Now | Notes |
+| --- | --- | --- |
+| `--speed` | Yes | Passed through as OpenAI-compatible `speed`. Validated as finite and greater than zero. |
+| `--normalize-punctuation` | Yes | Local text preprocessing; normalizes Unicode quotes, dashes, ellipsis, and whitespace before synthesis. |
+| `--sentence-breaks` | Yes | Inserts newline sentence breaks as a portable pause hint before one synthesis request. |
+| `--max-sentence-chars` | Yes | Inserts newline breaks into long sentence spans before one synthesis request. |
+| Explicit pause durations | No | Requires upstream/model support such as SSML or service-specific pause controls. |
+| Multi-request audio stitching | Not in this lane | Would require careful WAV/Opus concatenation and live Hermes behavior review. |
+| Designed voice instruction updates | Registry-backed only | Local profiles support `instruct`; remote OpenAI-compatible speech currently uses voice id and speed. |
+
+Environment aliases are available for smoke tests and deployed wrappers:
+
+```bash
+export OMNIVOICE_REMOTE_NORMALIZE_PUNCTUATION=1
+export OMNIVOICE_REMOTE_SENTENCE_BREAKS=1
+export OMNIVOICE_REMOTE_MAX_SENTENCE_CHARS=90
+```
+
+Recommended manual operator setting after objective tuning:
+
+```text
+speed: 0.95
+--normalize-punctuation --sentence-breaks --max-sentence-chars 90
+```
+
+Keep this setting manual and listening-gated. It is not an unattended-default
+approval.
+
 ## Wrapper Usage
 
 SSH loopback smoke:
@@ -152,8 +184,11 @@ python scripts/hermes-omnivoice-remote.py \
   --text-file /tmp/hermes-input.txt \
   --out /tmp/hermes-remote-output.wav \
   --voice homelab_narrator \
-  --speed 1.0 \
-  --max-chars 2000
+  --speed 0.95 \
+  --max-chars 2000 \
+  --normalize-punctuation \
+  --sentence-breaks \
+  --max-sentence-chars 90
 ```
 
 Direct HTTP smoke:
@@ -249,6 +284,21 @@ Local review copies are under:
 
 - `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-soak-20260602T224637Z/`
 - `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-soak-20260602T224827Z/`
+
+Pacing tuning matrix from 2026-06-03:
+
+| Variant | Result | Median Latency | Median Duration | Median WPM |
+| --- | --- | ---: | ---: | ---: |
+| Baseline | 5 PASS / 0 fail | 2.128s | 5.750s | 156.5 |
+| Speed 0.95 | 5 PASS / 0 fail | 1.864s | 6.000s | 148.1 |
+| Speed 1.0 explicit | 5 PASS / 0 fail | 1.793s | 5.930s | 151.8 |
+| Speed 1.05 | 5 PASS / 0 fail | 1.705s | 5.510s | 158.8 |
+| Sentence breaks + max 90 chars | 5 PASS / 0 fail | 1.853s | 5.780s | 155.7 |
+| Punctuation normalized | 5 PASS / 0 fail | 1.722s | 5.770s | 156.0 |
+
+Tuning artifacts are under
+`/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-tuning-20260603T145445Z/`.
+Subjective listening for tuned variants remains pending.
 
 Security review found no observed token values in command output, process args,
 accessible Mac Studio logs, or git state. Local token-pattern hits were limited

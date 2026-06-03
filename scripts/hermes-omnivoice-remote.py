@@ -48,6 +48,16 @@ TOKEN_PATTERNS = [
     re.compile(r"(Authorization:\s*)[^\r\n]+", re.IGNORECASE),
     re.compile(r'("token"\s*:\s*")[^"]+(?=")', re.IGNORECASE),
 ]
+PUNCTUATION_REPLACEMENTS = {
+    "\u00a0": " ",
+    "\u2018": "'",
+    "\u2019": "'",
+    "\u201c": '"',
+    "\u201d": '"',
+    "\u2013": " - ",
+    "\u2014": " - ",
+    "\u2026": "...",
+}
 REMOTE_HTTP_SCRIPT = r"""
 from __future__ import annotations
 
@@ -148,6 +158,20 @@ def parse_positive_int(value: int | None, name: str) -> int | None:
     if value <= 0:
         raise RemoteOmniVoiceError(f"{name} must be greater than 0")
     return value
+
+
+def parse_optional_positive_int(value: object, name: str) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise RemoteOmniVoiceError(f"{name} must be an integer") from exc
+    return parse_positive_int(parsed, name)
+
+
+def env_flag(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def parse_ssh_port(value: str | int, name: str = "SSH port") -> int:
@@ -253,6 +277,62 @@ def read_text_file(path: Path, max_chars: int | None) -> str:
     if max_chars is not None and len(text) > max_chars:
         raise RemoteOmniVoiceError(f"text file exceeds max text length: {len(text)} > {max_chars}")
     return text
+
+
+def normalize_punctuation_text(text: str) -> str:
+    normalized = text
+    for source, replacement in PUNCTUATION_REPLACEMENTS.items():
+        normalized = normalized.replace(source, replacement)
+    normalized = re.sub(r"[ \t\r\f\v]+", " ", normalized)
+    normalized = re.sub(r" *\n+ *", "\n", normalized)
+    normalized = re.sub(r" {2,}", " ", normalized)
+    return normalized.strip()
+
+
+def insert_sentence_breaks(text: str) -> str:
+    # Newlines are the only portable pause hint for the OpenAI-compatible speech shape.
+    return re.sub(r"([.!?])\s+(?=[\"'(\[]?[A-Z0-9])", r"\1\n", text).strip()
+
+
+def wrap_long_text_segments(text: str, max_sentence_chars: int) -> str:
+    lines: list[str] = []
+    for raw_line in text.splitlines() or [text]:
+        segment = raw_line.strip()
+        while len(segment) > max_sentence_chars:
+            window = segment[: max_sentence_chars + 1]
+            break_at = -1
+            min_break = max(24, max_sentence_chars // 2)
+            for separator in (", ", "; ", ": ", " - ", " "):
+                candidate = window.rfind(separator)
+                if candidate >= min_break:
+                    break_at = candidate + len(separator.rstrip())
+                    break
+            if break_at <= 0:
+                break_at = max_sentence_chars
+            lines.append(segment[:break_at].strip())
+            segment = segment[break_at:].strip()
+        if segment:
+            lines.append(segment)
+    return "\n".join(lines).strip()
+
+
+def prepare_text_for_pacing(
+    text: str,
+    *,
+    normalize_punctuation: bool,
+    sentence_breaks: bool,
+    max_sentence_chars: int | None,
+) -> str:
+    prepared = text
+    if normalize_punctuation:
+        prepared = normalize_punctuation_text(prepared)
+    if sentence_breaks:
+        prepared = insert_sentence_breaks(prepared)
+    if max_sentence_chars is not None:
+        prepared = wrap_long_text_segments(prepared, max_sentence_chars)
+    if not prepared:
+        raise RemoteOmniVoiceError("text must not be empty after pacing normalization")
+    return prepared
 
 
 def read_token_file(path: Path) -> str:
@@ -894,6 +974,22 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
     parser.add_argument("--format", default="wav", choices=sorted(AUDIO_EXTENSIONS))
     parser.add_argument("--timeout", default=600, type=float)
     parser.add_argument("--max-chars", default=None, type=int)
+    parser.add_argument(
+        "--normalize-punctuation",
+        action="store_true",
+        help="Normalize Unicode punctuation before synthesis; off by default",
+    )
+    parser.add_argument(
+        "--sentence-breaks",
+        action="store_true",
+        help="Insert newline sentence breaks as a portable pause hint; off by default",
+    )
+    parser.add_argument(
+        "--max-sentence-chars",
+        default=None,
+        type=int,
+        help="Insert newline breaks into long sentence spans before synthesis",
+    )
     parser.add_argument("--model", default="omnivoice")
     parser.add_argument("--language", default="")
     parser.add_argument("--speech-path", default="/v1/audio/speech")
@@ -908,6 +1004,12 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
         timeout = parse_positive_float(str(args.timeout), "timeout")
         speed = parse_positive_float(args.speed, "speed")
         max_chars = parse_positive_int(args.max_chars, "max chars")
+        max_sentence_chars = parse_optional_positive_int(
+            args.max_sentence_chars
+            if args.max_sentence_chars is not None
+            else runtime_env.get("OMNIVOICE_REMOTE_MAX_SENTENCE_CHARS", ""),
+            "max sentence chars",
+        )
         ssh_port = parse_ssh_port(
             args.ssh_port or runtime_env.get("OMNIVOICE_REMOTE_SSH_PORT", "22")
         )
@@ -931,6 +1033,18 @@ def run(argv: list[str] | None = None, env: dict[str, str] | None = None) -> int
             or runtime_env.get("OMNIVOICE_REMOTE_ALLOW_PUBLIC") == "1"
         )
         text = read_text_file(args.text_file, max_chars)
+        text = prepare_text_for_pacing(
+            text,
+            normalize_punctuation=(
+                args.normalize_punctuation
+                or env_flag(runtime_env.get("OMNIVOICE_REMOTE_NORMALIZE_PUNCTUATION", ""))
+            ),
+            sentence_breaks=(
+                args.sentence_breaks
+                or env_flag(runtime_env.get("OMNIVOICE_REMOTE_SENTENCE_BREAKS", ""))
+            ),
+            max_sentence_chars=max_sentence_chars,
+        )
         data, content_type = synthesize(
             transport=transport,
             http_base_url=args.base_url or runtime_env.get("OMNIVOICE_REMOTE_BASE_URL", ""),

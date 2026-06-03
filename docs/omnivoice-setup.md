@@ -107,6 +107,18 @@ path passed reliability soak and human listening QC for bounded manual operator
 use. Keep `xtts-v2` as the unattended default until pacing consistency and
 fallback behavior are addressed.
 
+Optional manual pacing controls for the remote wrapper:
+
+```bash
+export OMNIVOICE_REMOTE_NORMALIZE_PUNCTUATION=1
+export OMNIVOICE_REMOTE_SENTENCE_BREAKS=1
+export OMNIVOICE_REMOTE_MAX_SENTENCE_CHARS=90
+```
+
+Use `speed: 0.95` plus `--normalize-punctuation --sentence-breaks
+--max-sentence-chars 90` for manual operator tuning trials. These controls are
+off by default and do not approve OmniVoice for unattended default use.
+
 Option A: point the wrapper at a local OmniVoice-Studio backend:
 
 ```bash
@@ -445,6 +457,11 @@ Generated QC audio is written outside the repo by default. Score it with
 `docs/omnivoice-qc.md`. The 2026-06-03 listening pass approved SSH-loopback
 OmniVoice for bounded manual operator use. Keep `xtts-v2` as the unattended
 default until pacing consistency and fallback behavior are addressed.
+
+The 2026-06-03 objective tuning matrix found `speed: 0.95` was the only tested
+setting that clearly reduced median words per minute. Sentence breaks and max
+sentence length should be treated as pause hints that still need subjective
+listening.
 
 Run the smoke test only after configuring a real backend command, Studio URL,
 or opt-in CLI backend:

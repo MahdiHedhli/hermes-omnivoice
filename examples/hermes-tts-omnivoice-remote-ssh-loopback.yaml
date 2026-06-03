@@ -6,6 +6,10 @@
 #   OMNIVOICE_REMOTE_SSH_HOST=hermes-ops@100.78.163.62
 #   OMNIVOICE_REMOTE_SSH_IDENTITY_FILE=/home/claude/.ssh/hermes_ops_macstudio_ed25519
 #   OMNIVOICE_REMOTE_HELPER=/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech
+#
+# Optional manual pacing trial:
+#   Set speed: 0.95 and add these command flags after --timeout 600:
+#   --normalize-punctuation --sentence-breaks --max-sentence-chars 90
 tts:
   provider: xtts-v2
   providers:
