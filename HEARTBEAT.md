@@ -19,6 +19,36 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-03 10:19 America/New_York
+- Completed:
+  - Recorded human listening QC for the OmniVoice SSH-loopback soak artifacts.
+  - Updated README, setup docs, remote MVP docs, operator runbook, QC doc, and
+    feature/install-path inventory to reflect the approval boundary.
+- Samples listened:
+  - `live_01`, `live_02`, `live_03`, `live_04`, `live_05`,
+    `rollback_xtts_v2`, `soak_01`, `soak_04`, `soak_09`, `soak_13`,
+    `soak_18`, and `soak_20`.
+- Human QC scores:
+  - Intelligibility: 4/5.
+  - Pacing: 4/5; one voice was great, one was too fast.
+  - Pronunciation: 4/5; "Hermes" sounded like "herms".
+  - Voice consistency: not scored; different voices had different pace issues.
+  - Artifacts/noise: N/A; no recurring artifact/noise issue reported.
+  - Naturalness: 4/5.
+  - Operator acceptability: 4/5.
+- Comparison:
+  - OmniVoice was preferred over the rollback `xtts-v2` sample.
+  - The rollback `xtts-v2` sample was described as terrible quality, robotic,
+    and much less clear; OmniVoice speed was closer to natural.
+- Decision:
+  - Manual operator use: approved.
+  - Unattended default: not approved until pacing consistency and fallback
+    behavior are addressed.
+  - Recommended next lane: voice tuning and pace normalization before
+    unattended default consideration.
+
+## Previous Heartbeat
+
 - Time: 2026-06-02 18:54 America/New_York
 - Completed:
   - Confirmed Hermes active provider was `xtts-v2` before testing and after

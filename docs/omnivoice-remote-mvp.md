@@ -217,10 +217,11 @@ Codex work, post them in chat as local artifacts and keep them out of git.
   `/Users/hermes-ops/Services/omnivoice/bin/omnivoice-remote-speech`.
 - Mac Studio service listen address: confirmed `127.0.0.1:8880`; no network
   exposure changes were made.
-- Subjective listening: not possible from the Codex execution environment.
-  Scores for intelligibility, pacing, pronunciation, voice consistency,
-  artifacts/noise, naturalness, and operator acceptability remain pending for a
-  human reviewer.
+- Subjective listening: completed by the operator on 2026-06-03. Manual
+  operator use was approved with 4/5 intelligibility, pacing, pronunciation,
+  naturalness, and operator acceptability. Voice consistency was not scored;
+  different voices had different pace issues. No recurring artifact/noise issue
+  was reported.
 
 Direct SSH-helper soak:
 
@@ -385,9 +386,9 @@ network policy changes in this lane.
 
 ## Recommendation
 
-Use `ssh-loopback` helper mode for bounded manual Mac Studio operator
-evaluation now. The reliability soak passed, but do not mark the voice-quality
-gate complete until a human listening QC pass records acceptable scores. Keep
-`xtts-v2` as the active default for unattended routine use. Keep direct `http`
-mode for future diagnostics or for hosts where authenticated HTTP over
-Tailscale is known to work.
+Use `ssh-loopback` helper mode for bounded manual Mac Studio operator requests
+now. Reliability and human listening QC passed for manual use, and the reviewer
+preferred OmniVoice over the rollback `xtts-v2` sample. Keep `xtts-v2` as the
+active default for unattended routine use until pacing consistency and fallback
+behavior are addressed. Keep direct `http` mode for future diagnostics or for
+hosts where authenticated HTTP over Tailscale is known to work.

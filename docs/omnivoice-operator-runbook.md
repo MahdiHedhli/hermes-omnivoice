@@ -266,9 +266,10 @@ binary. The provider command was corrected to `python3`; rollback succeeded
 before the successful second attempt. Use `python3` in the provider command.
 
 Remote OmniVoice SSH-loopback helper mode has passed reliability soak for
-bounded manual operator evaluation. Keep `xtts-v2` as the default for routine
-unattended use. Do not mark final voice-quality approval complete until a
-human subjective listening pass records acceptable scores.
+bounded manual operator evaluation. Human listening QC on 2026-06-03 approved
+SSH-loopback OmniVoice for bounded manual operator use. Keep `xtts-v2` as the
+default for routine unattended use until pacing consistency and fallback
+behavior are addressed.
 
 Reliability soak from 2026-06-02:
 
@@ -283,3 +284,18 @@ review under
 `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-soak-20260602T224637Z/`
 and
 `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-soak-20260602T224827Z/`.
+
+Human QC summary from 2026-06-03:
+
+| Category | Result |
+| --- | --- |
+| Samples reviewed | `live_01`-`live_05`, `rollback_xtts_v2`, `soak_01`, `soak_04`, `soak_09`, `soak_13`, `soak_18`, `soak_20` |
+| Intelligibility | 4/5 |
+| Pacing | 4/5; one voice was great, one was too fast |
+| Pronunciation | 4/5; "Hermes" sounded like "herms" |
+| Voice consistency | Not scored; different voices had different pace issues |
+| Artifacts/noise | N/A; no recurring artifact/noise issue reported |
+| Naturalness | 4/5 |
+| Operator acceptability | 4/5 |
+| Preference vs rollback `xtts-v2` | OmniVoice preferred; rollback sample described as terrible quality, robotic, and much less clear |
+| Approval | Manual operator use approved; unattended default not approved |

@@ -73,19 +73,51 @@ use OmniVoice only for manual trials or debugging.
 
 ## Current QC Status
 
-The 2026-06-02 SSH-loopback reliability soak passed, but Codex could not
-perform subjective listening from the execution environment. The sample sets
-for human review are:
+Human listening QC was completed on 2026-06-03 for the 2026-06-02
+SSH-loopback soak artifacts. The reviewer listened to:
+
+- `remote-live-soak-20260602T224827Z/live_01.ogg`
+- `remote-live-soak-20260602T224827Z/live_02.ogg`
+- `remote-live-soak-20260602T224827Z/live_03.ogg`
+- `remote-live-soak-20260602T224827Z/live_04.ogg`
+- `remote-live-soak-20260602T224827Z/live_05.ogg`
+- `remote-live-soak-20260602T224827Z/rollback_xtts_v2.ogg`
+- `remote-soak-20260602T224637Z/soak_01.wav`
+- `remote-soak-20260602T224637Z/soak_04.wav`
+- `remote-soak-20260602T224637Z/soak_09.wav`
+- `remote-soak-20260602T224637Z/soak_13.wav`
+- `remote-soak-20260602T224637Z/soak_18.wav`
+- `remote-soak-20260602T224637Z/soak_20.wav`
+
+Artifact roots:
 
 - `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-20260602T220621Z/`
 - `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-soak-20260602T224637Z/`
 - `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-live-soak-20260602T224827Z/`
 
-Until a human reviewer records scores for intelligibility, pacing,
-pronunciation, voice consistency, artifacts/noise, naturalness, latency
-acceptability, and operator readiness, treat OmniVoice SSH-loopback as
-technically reliable for bounded/manual evaluation but not final voice-quality
-approved.
+Recorded OmniVoice scores:
+
+| Category | Score | Notes |
+| --- | ---: | --- |
+| Intelligibility | 4/5 | Understandable for operator use. |
+| Pacing | 4/5 | One voice was great; one was too fast. |
+| Pronunciation | 4/5 | Recurring issue: "Hermes" sounded like "herms". |
+| Voice consistency | Not scored | Different voices had different pace issues. |
+| Artifacts/noise | N/A | No recurring artifact or noise issue was reported. |
+| Naturalness | 4/5 | Good enough for manual operator use. |
+| Operator acceptability | 4/5 | Approved for bounded manual operator use. |
+
+Compared with `rollback_xtts_v2.ogg`, the reviewer preferred OmniVoice.
+The rollback `xtts-v2` sample was described as terrible quality, robotic, and
+much less clear, while OmniVoice was closer to natural speed.
+
+Approval:
+
+- Manual operator use: approved.
+- Unattended default: not approved until pacing and consistency issues are
+  resolved and fallback behavior is addressed.
+- Next lane: voice tuning and pace normalization before considering unattended
+  default use.
 
 ## Notes To Record
 

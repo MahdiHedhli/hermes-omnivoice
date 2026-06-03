@@ -38,6 +38,7 @@ BRIDGE_REQUIRED_FILES = [
     "docs/omnivoice-studio-bridge.md",
     "docs/omnivoice-weekend-summary.md",
     "docs/omnivoice-acceptance.md",
+    "docs/features-install-paths.md",
     "docs/omnivoice-operator-runbook.md",
     "docs/omnivoice-qc.md",
     "docs/omnivoice-remote-mvp.md",
