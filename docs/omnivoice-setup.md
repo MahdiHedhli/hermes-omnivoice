@@ -463,6 +463,17 @@ setting that clearly reduced median words per minute. Sentence breaks and max
 sentence length should be treated as pause hints that still need subjective
 listening.
 
+Future QC and tuning artifacts must include the voice id in every output
+filename and result record:
+
+```text
+<voice_id>__<tuning_profile>__<prompt_label>.<ext>
+```
+
+The first 2026-06-03 tuning matrix is legacy unlabeled evidence. Do not use it
+for per-voice approval; rerun `OMNIVOICE-PER-VOICE-TUNING-QC-001` with
+voice-labeled artifacts before documenting a per-voice tuning default.
+
 Run the smoke test only after configuring a real backend command, Studio URL,
 or opt-in CLI backend:
 

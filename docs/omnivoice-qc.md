@@ -4,6 +4,8 @@ Use this workflow after backend acceptance passes and before an operator uses
 OmniVoice for routine Hermes responses. It is a listening check, not a
 replacement for consent gates or automated bridge tests.
 
+Current tuned QC lane: `OMNIVOICE-PER-VOICE-TUNING-QC-001`.
+
 ## Generate Samples
 
 Run the QC generator with the same voice and backend environment that Hermes
@@ -14,10 +16,44 @@ eval "$(python scripts/setup-omnivoice-python-env.py --check-only --shell)"
 scripts/omnivoice-qc-sample.sh --voice narrator
 ```
 
-The script writes WAV samples and a `manifest.md` under
+The script writes WAV samples, a `manifest.md`, and a `results.json` under
 `~/.cache/hermes/omnivoice-qc/qc-<timestamp>/` by default. That keeps generated
 audio outside the repo. Do not move QC output into tracked docs, examples,
 fixtures, or commits.
+
+New QC samples use voice-labeled filenames:
+
+```text
+<voice_id>__<tuning_profile>__<prompt_label>.<ext>
+```
+
+Examples:
+
+```text
+homelab_narrator__speed_095_sentence_breaks__short_conversation.wav
+homelab_narrator__baseline__long_paragraph.wav
+calm_operator__speed_095__numbers_abbreviations.wav
+fast_assistant__baseline__file_path_sentence.wav
+```
+
+Unsafe filename characters in `voice_id` and `tuning_profile` are normalized to
+lowercase snake case. Every future tuning, soak, or QC result file must record
+`voice_id`. Do not rename old artifacts unless copying them safely into an
+ignored local artifact directory. If old artifacts lack voice labels, treat
+them as legacy unlabeled samples and avoid per-voice conclusions.
+
+Recommended tuned QC command shape:
+
+```bash
+scripts/omnivoice-qc-sample.sh \
+  --voice homelab_narrator \
+  --voice-label "Homelab Narrator" \
+  --speed 0.95 \
+  --tuning-profile speed_095_sentence_breaks \
+  --normalize-punctuation \
+  --sentence-breaks \
+  --max-sentence-chars 90
+```
 
 For a dry run:
 
@@ -57,6 +93,14 @@ Score each sample:
 | Latency acceptability | The wait time is acceptable for the intended operator workflow. |
 | Operator readiness | The sample is good enough for real manual use with rollback available. |
 
+Group tuning scores by voice:
+
+- scores per voice,
+- pacing notes per voice,
+- pronunciation notes per voice,
+- artifacts/noise notes per voice,
+- recommended setting per voice.
+
 ## Pass Criteria
 
 Treat OmniVoice as operator-ready for a voice only when:
@@ -70,6 +114,15 @@ Treat OmniVoice as operator-ready for a voice only when:
 
 If pronunciation or artifacts score below 4, keep `xtts-v2` as the default and
 use OmniVoice only for manual trials or debugging.
+
+For tuning recommendations, do not create one blanket recommendation unless the
+same setting wins across all reviewed voices. Document one of:
+
+1. A global recommended setting, only if it works well across all reviewed
+   voices.
+2. Per-voice recommended settings, if voices behave differently.
+3. A voice exclusion list, if a voice is too fast, unclear, unstable, or
+   otherwise not operator-ready.
 
 ## Current QC Status
 
@@ -127,6 +180,11 @@ and 6 variants. All generated audio stayed outside the repo under:
 
 `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-tuning-20260603T145445Z/`
 
+This artifact set predates the per-voice naming requirement. Its filenames and
+`results.json` records do not include `voice_id` or `voice_label`, so it is
+legacy unlabeled evidence. Use it for objective pacing comparison only; do not
+draw per-voice conclusions from it.
+
 Subjective listening for these tuning variants is pending. Objective results:
 
 | Variant | Result | Median Latency | Median Duration | Median WPM |
@@ -156,14 +214,55 @@ Keep this setting manual and listening-gated. Unattended default use remains
 blocked until a human reviewer confirms the tuned variants and Hermes fallback
 behavior is addressed.
 
+## OMNIVOICE-PER-VOICE-TUNING-QC-001
+
+Status: pending.
+
+Required listening targets from the legacy matrix:
+
+- `speed_095__short_confirmation.wav`
+- `speed_095__longer_paragraph.wav`
+- `shorter_chunking__file_path.wav`
+- `baseline__short_confirmation.wav`
+- `baseline__longer_paragraph.wav`
+- `speed_105__short_confirmation.wav`
+- `speed_105__longer_paragraph.wav`
+- `punctuation_normalized__numbers_abbreviations.wav`
+- `shorter_chunking__longer_paragraph.wav`
+
+These samples are acceptable for an initial listening comparison, but they are
+not acceptable for per-voice approval because the artifact names and
+`results.json` lack voice labels.
+
+Current recommendation table:
+
+| Voice | Recommended setting | Status | Notes |
+| --- | --- | --- | --- |
+| legacy_unlabeled | `--speed 0.95 --normalize-punctuation --sentence-breaks --max-sentence-chars 90` | pending | Objective matrix favors `speed 0.95`, but old artifacts lack `voice_id`; do not promote as a per-voice default until voice-labeled listening passes. |
+
+Selected tuned manual setting: pending. The candidate remains:
+
+```text
+--speed 0.95 --normalize-punctuation --sentence-breaks --max-sentence-chars 90
+```
+
+Pacing consistency is not yet approved by this lane because the available
+matrix is legacy unlabeled and human listening scores for tuned variants have
+not been recorded. Existing manual OmniVoice use remains approved from the
+prior soak QC; unattended default remains blocked by per-voice pacing evidence
+and missing automatic fallback behavior.
+
 ## Notes To Record
 
 For each QC run, record locally:
 
 - voice id,
+- voice label when available,
+- tuning profile,
 - backend mode,
 - sample directory,
 - per-sample scores,
+- per-voice recommendation,
 - observed latency range,
 - reviewer initials or operator name,
 - final recommendation.

@@ -241,6 +241,26 @@ Keep these controls opt-in for manual operator runs. Do not promote them to an
 unattended default until tuned samples pass listening review and fallback
 behavior is addressed.
 
+Per-voice tuning gate: `OMNIVOICE-PER-VOICE-TUNING-QC-001`.
+
+All future tuning, soak, and QC artifacts must include the voice id in the
+filename and `results.json` record:
+
+```text
+<voice_id>__<tuning_profile>__<prompt_label>.<ext>
+```
+
+The old 2026-06-03 tuning matrix is legacy unlabeled. It can support objective
+speed comparison, but it must not be used for per-voice approval. Do not create
+one global tuning recommendation unless the same setting wins across every
+reviewed voice.
+
+Current tuning recommendation table:
+
+| Voice | Recommended setting | Status | Notes |
+| --- | --- | --- | --- |
+| legacy_unlabeled | `--speed 0.95 --normalize-punctuation --sentence-breaks --max-sentence-chars 90` | pending | Objective matrix favors `speed 0.95`; per-voice listening must be rerun with voice-labeled artifacts before this becomes a documented manual default. |
+
 The Mac Studio service remains loopback-only, bearer auth is required, and the
 proven helper reads the token from a protected Mac Studio-local file. Do not
 copy that token to Hermes for the helper workflow. Direct HTTP mode remains
@@ -335,4 +355,5 @@ Pacing tuning matrix from 2026-06-03:
 Recommended manual setting after the objective matrix: `speed: 0.95` plus
 `--normalize-punctuation --sentence-breaks --max-sentence-chars 90` for longer
 operator responses. Subjective listening for the tuned variants remains
-pending, so this recommendation is not an unattended-default approval.
+pending, and the existing matrix is legacy unlabeled. This recommendation is
+not a documented per-voice default and is not an unattended-default approval.

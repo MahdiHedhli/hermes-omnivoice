@@ -20,7 +20,7 @@ paths are local-only operational state.
 | Installer | Dry-run-first copy into a Hermes checkout or staging root | `scripts/install-hermes-omnivoice-bridge.py` |
 | Studio local helper | Loopback-only Docker Compose helper for OmniVoice-Studio | `scripts/omnivoice-studio-local.py` |
 | Operator controls | Status, enable, and rollback scripts | `scripts/omnivoice-status.sh`, `scripts/omnivoice-enable.sh`, `scripts/omnivoice-disable.sh` |
-| QC workflow | Repeatable sample generation and listening rubric | `scripts/omnivoice-qc-sample.sh`, `docs/omnivoice-qc.md` |
+| QC workflow | Repeatable voice-labeled sample generation and listening rubric | `scripts/omnivoice-qc-sample.sh`, `docs/omnivoice-qc.md` |
 | Smoke tests | Local and remote TTS smoke tests | `scripts/test-omnivoice-tts.sh`, `scripts/test-omnivoice-remote.sh` |
 | Acceptance | Static package readiness and live backend summary | `scripts/omnivoice-acceptance.py` |
 | Validation | Unit tests, smoke checks, artifact guard, secret hygiene, diff check | `scripts/validate-omnivoice-bridge.sh` |

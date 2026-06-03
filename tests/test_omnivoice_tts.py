@@ -63,6 +63,9 @@ ARTIFACTS_SCRIPT_PATH = (
 VALIDATE_SCRIPT_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "validate-omnivoice-bridge.sh"
 )
+QC_SAMPLE_SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "omnivoice-qc-sample.sh"
+)
 FAKE_BACKEND_PATH = Path(__file__).resolve().parent / "fixtures" / "fake_omnivoice_backend.py"
 EXAMPLES_DIR = Path(__file__).resolve().parents[1] / "examples"
 SPEC = importlib.util.spec_from_file_location("hermes_omnivoice_tts", SCRIPT_PATH)
@@ -4842,6 +4845,109 @@ class ValidationScriptTests(unittest.TestCase):
             '\'["python3","tests/fixtures/fake_omnivoice_backend.py"',
             script,
         )
+
+
+class QcSampleScriptTests(unittest.TestCase):
+    def test_qc_sample_outputs_voice_labeled_files_and_results_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            voices_root = root / "voices"
+            out_dir = root / "qc"
+            write_design_voice(voices_root, "homelab_narrator")
+            command = [
+                sys.executable,
+                str(FAKE_BACKEND_PATH),
+                "--text-file",
+                "{text_file}",
+                "--out",
+                "{out}",
+                "--voice",
+                "{voice}",
+                "--speed",
+                "{speed}",
+            ]
+            env = os.environ.copy()
+            env["HERMES_OMNIVOICE_COMMAND_JSON"] = json.dumps(command)
+
+            completed = subprocess.run(
+                [
+                    "bash",
+                    str(QC_SAMPLE_SCRIPT_PATH),
+                    "--voice",
+                    "homelab_narrator",
+                    "--voice-label",
+                    "Homelab Narrator",
+                    "--voices-dir",
+                    str(voices_root),
+                    "--out-dir",
+                    str(out_dir),
+                    "--speed",
+                    "0.95",
+                    "--tuning-profile",
+                    "speed_095_sentence_breaks",
+                    "--normalize-punctuation",
+                    "--sentence-breaks",
+                    "--max-sentence-chars",
+                    "90",
+                    "--python-bin",
+                    sys.executable,
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+            expected_wav = (
+                out_dir
+                / "homelab_narrator__speed_095_sentence_breaks__short_conversation.wav"
+            )
+            expected_text = (
+                out_dir
+                / "homelab_narrator__speed_095_sentence_breaks__short_conversation.txt"
+            )
+            self.assertTrue(expected_wav.exists())
+            self.assertTrue(expected_text.exists())
+
+            payload = json.loads((out_dir / "results.json").read_text(encoding="utf-8"))
+
+            self.assertEqual(payload["schema_version"], 1)
+            self.assertEqual(payload["voice_id"], "homelab_narrator")
+            self.assertEqual(payload["voice_label"], "Homelab Narrator")
+            self.assertEqual(payload["tuning_profile"], "speed_095_sentence_breaks")
+            self.assertEqual(len(payload["samples"]), 5)
+            first = payload["samples"][0]
+            for key in (
+                "voice_id",
+                "voice_label",
+                "tuning_profile",
+                "prompt_label",
+                "prompt_text",
+                "speed",
+                "normalize_punctuation",
+                "sentence_breaks",
+                "max_sentence_chars",
+                "output_path",
+                "latency",
+                "duration",
+                "file_size",
+                "success",
+                "retry_count",
+                "warnings",
+            ):
+                self.assertIn(key, first)
+            self.assertEqual(first["voice_id"], "homelab_narrator")
+            self.assertEqual(first["voice_label"], "Homelab Narrator")
+            self.assertEqual(first["tuning_profile"], "speed_095_sentence_breaks")
+            self.assertEqual(first["prompt_label"], "short_conversation")
+            self.assertEqual(first["speed"], 0.95)
+            self.assertTrue(first["normalize_punctuation"])
+            self.assertTrue(first["sentence_breaks"])
+            self.assertEqual(first["max_sentence_chars"], 90)
+            self.assertTrue(first["success"])
+            self.assertEqual(first["retry_count"], 0)
+            self.assertEqual(Path(first["output_path"]).name, expected_wav.name)
 
 
 class TerminologyTests(unittest.TestCase):

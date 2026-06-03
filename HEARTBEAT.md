@@ -19,6 +19,36 @@ restored the previous provider.
 
 ## Latest Heartbeat
 
+- Time: 2026-06-03 11:45 America/New_York
+- Lane: `OMNIVOICE-PER-VOICE-TUNING-QC-001`
+- Completed:
+  - Added voice-labeled output naming and machine-readable `results.json`
+    records to `scripts/omnivoice-qc-sample.sh`.
+  - Added regression coverage for QC filenames and required per-sample
+    metadata fields.
+  - Updated README, QC docs, remote MVP docs, and operator runbook to require
+    per-voice scoring and voice-labeled artifacts for future tuning/soak runs.
+- Findings:
+  - The existing tuning matrix at
+    `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-tuning-20260603T145445Z/`
+    predates the voice-label requirement.
+  - Its `results.json` records do not include `voice_id` or `voice_label`, so
+    the matrix is legacy unlabeled evidence and cannot support per-voice
+    approval.
+- Decision:
+  - Existing manual OmniVoice SSH-loopback use remains approved from the prior
+    human QC lane.
+  - The tuned setting `--speed 0.95 --normalize-punctuation
+    --sentence-breaks --max-sentence-chars 90` remains a candidate, not a
+    documented per-voice default.
+  - Unattended default remains blocked by missing per-voice tuned listening
+    approval and missing fallback behavior.
+- Next action:
+  - Generate a fresh voice-labeled tuning set for each reviewed voice and run
+    human listening QC grouped by voice.
+
+## Previous Heartbeat
+
 - Time: 2026-06-03 10:59 America/New_York
 - Completed:
   - Added opt-in remote pacing controls to

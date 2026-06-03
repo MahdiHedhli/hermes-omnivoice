@@ -166,7 +166,22 @@ speed: 0.95
 ```
 
 Keep this setting manual and listening-gated. It is not an unattended-default
-approval.
+approval, and it is not a per-voice default until
+`OMNIVOICE-PER-VOICE-TUNING-QC-001` passes with voice-labeled artifacts.
+
+Future tuning and soak artifacts must use this filename shape:
+
+```text
+<voice_id>__<tuning_profile>__<prompt_label>.<ext>
+```
+
+The corresponding `results.json` record for every sample must include
+`voice_id`, `voice_label` when available, `tuning_profile`, `prompt_label`,
+`prompt_text`, `speed`, `normalize_punctuation`, `sentence_breaks`,
+`max_sentence_chars`, `output_path`, `latency`, `duration`, `file_size`,
+`success`, `retry_count`, and redacted `warnings`. Normalize unsafe voice ids
+to lowercase snake case for filenames. Do not rename old artifacts in place;
+copy to an ignored local artifact directory if migration is needed.
 
 ## Wrapper Usage
 
@@ -298,7 +313,15 @@ Pacing tuning matrix from 2026-06-03:
 
 Tuning artifacts are under
 `/Users/mhedhli/.cache/hermes/omnivoice-chat-artifacts/remote-tuning-20260603T145445Z/`.
-Subjective listening for tuned variants remains pending.
+Subjective listening for tuned variants remains pending. This artifact set is
+legacy unlabeled because its filenames and `results.json` do not include
+`voice_id` or `voice_label`, so it cannot support per-voice recommendations.
+
+Current per-voice tuning table:
+
+| Voice | Recommended setting | Status | Notes |
+| --- | --- | --- | --- |
+| legacy_unlabeled | `--speed 0.95 --normalize-punctuation --sentence-breaks --max-sentence-chars 90` | pending | Objective WPM favored `speed 0.95`; rerun with voice-labeled artifacts before approving as a per-voice manual default. |
 
 Security review found no observed token values in command output, process args,
 accessible Mac Studio logs, or git state. Local token-pattern hits were limited
