@@ -1,0 +1,14 @@
+{
+  "name": "omnivoice",
+  "label": "Voices",
+  "description": "Clone, design, preview, and select OmniVoice voices",
+  "icon": "MessageSquare",
+  "version": "0.1.0",
+  "tab": {
+    "path": "/voices",
+    "position": "after:skills"
+  },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

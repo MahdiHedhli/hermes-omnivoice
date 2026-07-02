@@ -1,0 +1,22 @@
+# OmniVoice Hermes plugin — runtime dependencies
+#
+# The plugin itself needs only PyYAML (which Hermes already ships) plus, for the
+# dashboard routes, FastAPI (already present when `hermes dashboard` runs with
+# the `web` extra). Backend-specific deps are only needed for the backend you
+# choose.
+
+# --- always (bundled with Hermes) ---
+# PyYAML
+# fastapi        # only for the dashboard routes; present with the `web` extra
+
+# --- backend: local (in-process OmniVoice SDK) ---
+# omnivoice      # the OmniVoice Python SDK (imports as `omnivoice`) — VERIFY package/version
+# torch
+# soundfile
+
+# --- backend: studio | service (HTTP) ---
+# (stdlib urllib only — no extra deps)
+
+# ffmpeg (system binary) is optional; used to convert WAV to non-WAV output
+# formats. Without it, output is written as WAV and Hermes' own delivery
+# pipeline handles Opus conversion for voice bubbles.

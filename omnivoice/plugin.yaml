@@ -1,0 +1,7 @@
+name: omnivoice
+version: 0.1.0
+description: >-
+  OmniVoice / OmniVoice-Studio as a native Hermes TTS provider, with a voice
+  registry (clone + design), a local / Studio-HTTP / networked-service backend,
+  and a dashboard tab for cloning, previewing, and selecting voices.
+author: "42 Holdings"

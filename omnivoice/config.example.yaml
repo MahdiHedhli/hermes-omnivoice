@@ -1,0 +1,41 @@
+# OmniVoice provider config — paste the `omnivoice:` block under `tts:` in
+# ~/.hermes/config.yaml. Only `backend` and the matching backend section are
+# required; everything else has defaults.
+
+tts:
+  provider: omnivoice          # route TTS through OmniVoice
+  omnivoice:
+    backend: local             # local | studio | service
+    # voices_dir: ""           # default: <HERMES_HOME>/voices/omnivoice
+    speed: 1.0
+    fallback_provider: piper   # provider to fall back to on backend failure (phase 5)
+
+    # backend: local -> in-process OmniVoice Python SDK on this machine.
+    # Clone-by-reference-audio (ref.wav + ref_text) works ONLY on this backend.
+    local:
+      model: k2-fsa/OmniVoice  # verified against the current OmniVoice release
+      device: auto             # auto | cpu | cuda | mps
+      dtype: float16
+      sample_rate: 24000
+
+    # backend: studio -> OmniVoice-Studio over HTTP, loopback only.
+    # OpenAI-compatible: POST {url}{speech_path} with a JSON body. Selects a
+    # server-side `voice` by id; it cannot receive local clone reference audio.
+    studio:
+      url: http://127.0.0.1:8880
+      speech_path: /v1/audio/speech
+      model: omnivoice
+      auth_token_env: HERMES_OMNIVOICE_STUDIO_TOKEN  # optional for loopback studio
+      timeout: 180
+
+    # backend: service -> shared voice service on a capable node over the LAN.
+    # Same OpenAI-compatible wire shape as studio. A non-loopback URL REQUIRES an
+    # auth token; keep it on a VPN/tailnet.
+    service:
+      url: ""                  # e.g. http://mac-studio.local:8880 or a tailnet IP
+      speech_path: /v1/audio/speech
+      model: omnivoice
+      auth_token_env: HERMES_OMNIVOICE_SERVICE_TOKEN
+      timeout: 180
+      max_concurrency: 2       # client-side guard so the node isn't overrun
+      stream: false            # set true once the streaming endpoint is wired

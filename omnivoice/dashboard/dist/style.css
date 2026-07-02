@@ -1,0 +1,42 @@
+/* OmniVoice Voices tab — theme-aware via the dashboard's --color-* / --radius vars. */
+
+.ov-page { display: flex; flex-direction: column; gap: 1rem; }
+
+.ov-status .ov-status-row { display: flex; gap: 1.5rem; align-items: center; font-size: 0.9rem; }
+
+.ov-tabbar { display: flex; gap: 0.5rem; }
+.ov-tabbtn-on { font-weight: 600; }
+
+.ov-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+.ov-card { border: 1px solid var(--color-border); border-radius: var(--radius); }
+.ov-card-active { border-color: var(--color-ring); box-shadow: 0 0 0 1px var(--color-ring); }
+.ov-card-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ov-active-badge { background: var(--color-primary); color: var(--color-primary-foreground); }
+
+.ov-meta { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: var(--color-muted-foreground); margin-bottom: 0.5rem; }
+.ov-instruct { font-style: italic; }
+.ov-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.ov-form-card { max-width: 640px; }
+.ov-field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.75rem; }
+.ov-textarea, .ov-file {
+  width: 100%;
+  background: var(--color-input, transparent);
+  color: var(--color-card-foreground);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+  font: inherit;
+}
+.ov-consent { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.85rem; margin: 0.5rem 0 0.9rem; }
+
+.ov-empty { color: var(--color-muted-foreground); font-size: 0.9rem; }
+.ov-audio { width: 100%; margin-top: 0.5rem; }
+
+.ov-notice { padding: 0.5rem 0.75rem; border-radius: var(--radius); font-size: 0.85rem; }
+.ov-notice-error { background: color-mix(in srgb, var(--color-destructive) 15%, transparent); color: var(--color-destructive); border: 1px solid var(--color-destructive); }
+.ov-notice-ok { background: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary); border: 1px solid var(--color-primary); }
