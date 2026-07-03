@@ -23,9 +23,22 @@
 
   var BASE = "/api/plugins/omnivoice";
 
+  // Hardened Hermes builds (June 2026+) gate plugin API routes behind the
+  // dashboard session token, injected into the SPA as
+  // window.__HERMES_SESSION_TOKEN__. Older builds bypass plugin-route auth;
+  // sending the bearer when it's present works on both. Without this the Voices
+  // tab gets 401 on every call ("Unauthorized").
+  var TOKEN = window.__HERMES_SESSION_TOKEN__ || "";
+  function authHeaders(h) {
+    h = h || {};
+    if (TOKEN) h["Authorization"] = "Bearer " + TOKEN;
+    return h;
+  }
+
   function api(path, opts) {
     opts = opts || {};
     opts.credentials = "include";
+    opts.headers = authHeaders(opts.headers);
     return fetch(BASE + path, opts).then(function (res) {
       if (!res.ok) {
         return res.json().then(
@@ -226,7 +239,7 @@
       setBusyId(id); setErr(""); setNote("");
       fetch(BASE + "/voices/" + id + "/preview", {
         method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" }, body: "{}",
+        headers: authHeaders({ "Content-Type": "application/json" }), body: "{}",
       }).then(function (res) {
         if (!res.ok) { return res.json().then(function (j) { throw new Error(j.detail || ("HTTP " + res.status)); }); }
         return res.blob();

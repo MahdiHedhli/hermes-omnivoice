@@ -45,6 +45,10 @@ in [`omnivoice/README.md`](omnivoice/README.md).
   loader and appears in the `hermes tools` picker; the dashboard Voices tab and
   its backend routes are discovered; end-to-end synthesis verified against a
   loopback `/v1/audio/speech` mock.
+- **Dashboard browser-smoked**: the Voices tab renders in a real browser (voice
+  grid, mode badges, active indicator, Design/Clone forms, tab switcher) and
+  Preview loads audio. The UI sends the dashboard session token as a bearer, so
+  it works on hardened Hermes builds that gate plugin API routes.
 - **Real `local` synthesis verified** against `omnivoice 0.1.5` + torch on Apple
   Silicon (MPS): design voice → 24 kHz WAV in ~9s. (The SDK `generate()` kwarg is
   `language`, and `instruct` takes structured items like `male, american accent,

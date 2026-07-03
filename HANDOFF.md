@@ -92,3 +92,27 @@ introspecting `omnivoice.models.omnivoice.OmniVoice.generate`.
   `upstream/icon-map-pr.md` (not opened on NousResearch — awaiting your review).
 - Tests: **43 pass** (added SSH-loopback coverage + the corrected `language`
   regression test).
+
+---
+
+## Update — v0.1.2 (dashboard browser smoke)
+
+Ran the Voices tab in a real (headless) browser against a live `hermes dashboard`
+(isolated instance, temp voices dir, studio→loopback-mock backend). **The smoke
+caught a real bug:** the tab showed "Unauthorized" and `Backend: ?` — the UI's
+`fetch` used only `credentials:"include"` (cookies), but this hardened Hermes
+build (June 2026) gates plugin API routes behind the dashboard **session token**
+(injected as `window.__HERMES_SESSION_TOKEN__`). The plugin was written against
+an older "plugin routes bypass auth" contract, so it never sent the token → 401
+on every call.
+
+- **Fix** (`dashboard/dist/index.js`): send `Authorization: Bearer
+  window.__HERMES_SESSION_TOKEN__` on every plugin fetch (harmless no-op on older
+  bypass builds). Also a security upside worth noting: on this build the
+  auth-bypass concern behind review finding #3 is moot — plugin routes require
+  the session token regardless; the loopback gate is now defense-in-depth.
+- **After the fix**, the browser render is clean: VOICES nav item present;
+  `Backend: STUDIO`, `Active: NARRATOR`; both voice cards render with mode
+  badges + instruct; the Design form renders; the hand-rolled tab switcher works;
+  and clicking **Preview** loads real audio (`blob:` src) via the mock. Verified
+  with screenshots + console/network (no errors after the fix).
