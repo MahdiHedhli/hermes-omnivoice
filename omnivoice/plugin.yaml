@@ -1,5 +1,5 @@
 name: omnivoice
-version: 0.1.0
+version: 0.3.0
 description: >-
   OmniVoice / OmniVoice-Studio as a native Hermes TTS provider, with a voice
   registry (clone + design), a local / Studio-HTTP / networked-service backend,

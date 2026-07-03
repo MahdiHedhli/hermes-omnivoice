@@ -1,9 +1,9 @@
 # 🎙️ OmniVoice for Hermes
 
-Self-hosted, ElevenLabs-tier voice for your [Hermes](https://github.com/NousResearch/hermes-agent)
-agent. Clone a voice from a short sample, design one from a text prompt, preview
-it, and pick the active voice — all from the Hermes dashboard. No per-token cost,
-no rate limits, and your reference audio never leaves your machine.
+**Self-hosted, ElevenLabs-tier voice for your [Hermes](https://github.com/NousResearch/hermes-agent) agent.**
+Clone a voice from a short sample, design one from a text prompt, preview it, and
+pick the active voice — all from the Hermes dashboard. No per-token cost, no rate
+limits, and your reference audio never leaves your machine.
 
 ![The OmniVoice Voices tab in the Hermes dashboard](docs/images/voices-tab.png)
 
@@ -11,94 +11,163 @@ Selecting `tts.provider: omnivoice` routes **every** `text_to_speech` tool call,
 voice-mode reply, Discord VC utterance, and messaging voice delivery through
 OmniVoice automatically — no per-surface wiring.
 
-> **The plugin is [`omnivoice/`](omnivoice/).** [`legacy/`](legacy/) is the
-> archived first-attempt bridge, kept for provenance.
+> **The plugin is [`omnivoice/`](omnivoice/)** and installs via the normal Hermes
+> route. [`legacy/`](legacy/) is the archived first-attempt bridge, kept for
+> provenance.
 
 ---
 
-## ✨ What you get
+## ✨ Highlights
 
-| | Feature |
+| | |
 |---|---|
-| 🎚️ | **Native TTS provider** — one config line routes all of Hermes' voice output through OmniVoice. |
-| 🎨 | **Voice authoring UI** — the gap Hermes doesn't fill: a dashboard tab to clone, design, preview, and select voices. |
-| 🧬 | **Clone voices** from a reference `.wav` + transcript. |
-| 🗣️ | **Design voices** from a plain-text description (`male, american accent, moderate pitch`). |
-| ✅ | **Consent gate + path hardening** on every clone (confirmed consent, WAV validation, symlink rejection, `0600` writes). |
-| 🔌 | **Three backends** — `local` (in-process SDK), `studio` (loopback HTTP), `service` (a shared voice node over the LAN/tailnet, with bearer auth + an SSH-loopback option). |
-| 🔒 | **Loopback-clean, non-loopback-gated** security, and works on hardened Hermes builds (the UI sends the dashboard session token). |
+| 🎚️ **One provider** | `tts.provider: omnivoice` routes all of Hermes' voice output through OmniVoice. |
+| 🎨 **Voice authoring UI** | A dashboard **Voices** tab to clone, design, preview, edit, and select voices — the gap Hermes doesn't fill. |
+| 🧬 **Clone** | From a short reference `.wav` + transcript. |
+| 🗣️ **Design** | From attributes (`male, american accent, moderate pitch`), with a **clickable guide + validation**. |
+| ✂️ **Edit** | Change a voice's name, language, attributes, or transcript after the fact. |
+| ✅ **Consent + hardening** | Confirmed consent, WAV validation, symlink rejection, `0600` writes, reference-length cap. |
+| 🔌 **Three backends** | `local` (in-process), `studio` (loopback server), `service` (LAN/tailnet node, bearer auth, ssh-loopback). |
+| 🖥️ **Model server included** | A small OpenAI-compatible `/v1/audio/speech` server — the same artifact from one host to a shared fleet. |
 
 ---
 
-## 📋 Requirements
+## 📦 Install
 
-- **Hermes Agent v0.18+** (developed and tested on v0.18.0).
-- A backend of your choice:
-  - **`local`** (runs the model on this machine): Python 3.11, and
-    `pip install omnivoice torch soundfile`. Uses CUDA / Apple-Silicon **MPS** /
-    CPU automatically. First run downloads the `k2-fsa/OmniVoice` model.
-  - **`studio` / `service`** (talk to an OmniVoice-Studio server over HTTP/SSH):
-    nothing beyond the Python stdlib on the Hermes side.
-- **`ffmpeg`** (optional) — only for non-WAV output formats. Without it, audio is
-  delivered as WAV and Hermes converts for voice bubbles downstream.
+### 1. Install the plugin (normal Hermes route)
+
+```bash
+hermes plugins install MahdiHedhli/hermes-omnivoice/omnivoice
+hermes gateway restart
+```
+
+That's it — the plugin is installed to `~/.hermes/plugins/omnivoice/` and enabled.
+Confirm with `hermes plugins list` (look for `omnivoice … enabled`) and `hermes
+tools` (an **OmniVoice** row under Text-to-Speech).
+
+### 2. Give it a model backend
+
+OmniVoice's model runtime is a real dependency — it runs either **in-process**
+(`local`) or as a **speech server** you run (`studio`/`service`). Pick one and add
+the matching block under `tts:` in `~/.hermes/config.yaml`
+(see [`omnivoice/config.example.yaml`](omnivoice/config.example.yaml)):
+
+**A. Local server (recommended)** — keeps Hermes light; one artifact scales to a fleet:
+
+```bash
+git clone https://github.com/MahdiHedhli/hermes-omnivoice
+cd hermes-omnivoice
+pip install -r server/requirements.txt              # omnivoice torch soundfile fastapi uvicorn
+python server/serve.py --host 127.0.0.1 --port 8880 # warms the model at startup
+```
+```yaml
+tts:
+  provider: omnivoice
+  omnivoice:
+    backend: studio
+    studio: { url: http://127.0.0.1:8880 }
+```
+
+**B. In-process** — no separate server, but Hermes' own env needs the model deps:
+
+```bash
+pip install omnivoice torch soundfile   # into Hermes' Python environment
+```
+```yaml
+tts: { provider: omnivoice, omnivoice: { backend: local, local: { device: auto } } }
+```
+
+**C. Remote node (Mode B)** — one capable machine serves many thin agents:
+
+```yaml
+tts:
+  provider: omnivoice
+  omnivoice:
+    backend: service
+    service:
+      url: http://mac-studio.local:8880   # or a tailnet IP
+      auth_token_env: HERMES_OMNIVOICE_SERVICE_TOKEN
+      transport: http                     # or ssh-loopback
+```
+
+> **Shortcut:** from a repo clone, `python setup-omnivoice.py` detects your
+> environment and writes the right block for you (use-detected / install-local /
+> remote).
+
+Then set `tts.provider: omnivoice` and restart the gateway. Requires **Hermes
+Agent v0.18+** (developed on v0.18.0).
 
 ---
 
-## 🚀 Install
+## 🎨 Using it
 
-**1. Copy the plugin into your Hermes plugins directory.** The top-level location
-is required — it's how the dashboard discovers the Voices tab.
+Run `hermes dashboard` and open the **Voices** tab.
 
-```bash
-cp -r omnivoice ~/.hermes/plugins/omnivoice
-```
+### Design a voice from attributes
 
-**2. Enable it.**
+Pick *Design*, give it an id and name, and describe the voice. The form shows a
+**clickable guide** of the supported attributes and **validates** before saving —
+so a voice can't be created with a free word (like `energetic`) that would fail
+at synthesis.
 
-```bash
-hermes plugins enable omnivoice
-```
+![Design a voice, with the clickable attribute guide](docs/images/design-voice.png)
 
-**3. Wire a model backend (setup wizard).** OmniVoice's model runtime is a real
-dependency — it runs either **in-process** (`local`) or as a **speech server**
-you run (`studio`/`service`). The wizard detects your environment and writes only
-the `tts.omnivoice` block of your config:
+> **Attributes:** gender (`male`/`female`), age (`child`…`elderly`), pitch
+> (`very low`…`very high`), accent (`american`/`british`/`indian`/…), and
+> `whisper`. Comma-separated. Click a chip to add it.
 
-```bash
-python setup-omnivoice.py
-```
+### Clone a voice from a sample
 
-It offers three paths — **use** a detected local setup, **install** a local
-server, or point at a **remote** one. (You can also configure by hand from
-[`omnivoice/config.example.yaml`](omnivoice/config.example.yaml).) The
-recommended setup is a **speech server** — see
-[Run the model server](#️-run-the-model-server) below.
+Pick *Clone*, upload a **short, clean `.wav` (~10–30 s)**, paste the exact
+transcript, confirm consent, and create. Reference audio and transcripts never
+leave your machine.
 
-**4. Restart Hermes.** `omnivoice` now appears in the `hermes tools` picker.
-Set `tts.provider: omnivoice` when you want it to be the active voice.
+![Clone a voice from a reference sample](docs/images/clone-voice.png)
 
-> **Quick check:** run `hermes tools` and confirm **OmniVoice** shows under
-> Text-to-Speech. If the plugin failed to load, check `~/.hermes/logs/errors.log`.
+### Preview, edit, and select
+
+Every card has **Preview** (hear a sample), **Edit** (change name / attributes /
+transcript), and **Set active** (make it the voice your agent speaks with). The
+active voice is used by every voice surface in Hermes.
+
+![Editing a voice with the attribute guide](docs/images/edit-voice.png)
+
+### From the CLI / filesystem
+
+Voices live at `~/.hermes/voices/omnivoice/<id>/voice.yaml`; the active one is in
+`~/.hermes/voices/omnivoice/.active`. The `hermes tools` picker and the dashboard
+read and write the **same** registry, so they always agree.
 
 ---
 
-## 🖥️ Run the model server
+## 🔌 Backends & deployment
 
-OmniVoice's SDK ships a demo + inference CLIs but **no HTTP server**, so the
-plugin includes a small one — [`server/serve.py`](server/serve.py): an
-OpenAI-compatible `/v1/audio/speech` endpoint that resolves voice ids against
-your registry and synthesizes. It's the **same artifact** for a single host and a
-shared node, and it warms the model at startup so the first request is reliable:
+| Backend | Runs where | Use it for |
+|---|---|---|
+| `local` | In-process on the Hermes host | A single workstation with a GPU or Apple Silicon. |
+| `studio` | A loopback speech server (`/v1/audio/speech`) | A model server on the same host. |
+| `service` | A shared node over LAN/tailnet (bearer auth; `http` or `ssh-loopback`) | One capable node serving a fleet of thin agents. |
+
+### The model server
+
+OmniVoice's SDK ships a demo + inference CLIs but **no HTTP server**, so the repo
+includes one — [`server/serve.py`](server/serve.py). It resolves voice ids
+against your registry, **warms the model at startup**, defaults to `float16`, and
+**frees GPU/MPS memory after every synth** (so long sessions don't OOM). Serve a
+fleet by binding a LAN address + a token:
 
 ```bash
-pip install -r server/requirements.txt        # omnivoice torch soundfile fastapi uvicorn
-# single host (loopback → backend: studio):
-python server/serve.py --host 127.0.0.1 --port 8880
-# shared node for a fleet of thin agents (→ backend: service):
-python server/serve.py --host 0.0.0.0 --port 8880 --require-auth   # + HERMES_OMNIVOICE_SERVICE_TOKEN
+export HERMES_OMNIVOICE_SERVICE_TOKEN=$(openssl rand -hex 24)
+python server/serve.py --host 0.0.0.0 --port 8880 --require-auth
 ```
 
-Confirm a voice produces **intelligible speech** (a valid WAV isn't enough):
+See [`server/README.md`](server/README.md) for all options.
+
+---
+
+## 🧪 Verify it actually speaks
+
+A valid WAV is not the same as intelligible speech. Check any voice with ASR:
 
 ```bash
 python tools/qc.py --voice <id> --server http://127.0.0.1:8880   # synth → transcribe → match score
@@ -106,101 +175,47 @@ python tools/qc.py --voice <id> --server http://127.0.0.1:8880   # synth → tra
 
 ---
 
-## 🎨 Create and use voices
-
-### From the dashboard (recommended)
-
-Run `hermes dashboard` and open the **Voices** tab (in the sidebar).
-
-**Design a voice** from a text description — pick the *Design* tab, give it an id
-and name, and describe the voice using OmniVoice's attributes:
-
-<img src="docs/images/design-voice.png" width="70%" alt="Design a voice form">
-
-> **Instruction vocabulary** — OmniVoice `instruct` takes comma-separated
-> attributes, not free prose. Mix and match: **gender** (`male`, `female`),
-> **age** (`child`, `teenager`, `young adult`, `middle-aged`, `elderly`),
-> **pitch** (`very low` → `very high`), **accent** (`american`, `british`,
-> `indian`, `australian`, …), and **style** (`whisper`). Example:
-> `female, british accent, low pitch`.
-
-**Clone a voice** from a reference sample — pick the *Clone* tab, upload a
-**short, clean `.wav` (~10–30 s)**, paste the exact transcript of what's said in
-it, confirm consent, and create. (Very long references are rejected — they
-degrade quality and can exhaust GPU memory; override with
-`HERMES_OMNIVOICE_MAX_REF_SECONDS`.)
-
-<img src="docs/images/clone-voice.png" width="70%" alt="Clone a voice form">
-
-**Preview** any voice card to hear a sample, **Edit** to change its name,
-language, and attributes (design) or transcript (clone), and **Set active** to
-make it the voice your agent speaks with. The active voice is used by every
-voice surface in Hermes. Clone reference audio and transcripts never leave your
-machine.
-
-> The Design/Edit forms show a **clickable guide** of the supported attributes
-> and **validate** before saving, so a voice can't be created with an unsupported
-> word (like `energetic`) that would fail at synthesis.
-
-> Cloning from a local reference sample is a **`local`-backend** capability. The
-> `studio`/`service` backends select a voice the server already holds, by id.
-
-### From the CLI / filesystem
-
-Voices live at `~/.hermes/voices/omnivoice/<id>/voice.yaml`, and the active voice
-is recorded in `~/.hermes/voices/omnivoice/.active`. The `hermes tools` picker and
-the dashboard read and write the **same** registry, so they always agree.
-
----
-
-## 🔌 Backends & deployment modes
-
-| Backend | Runs where | Use it for |
-|---|---|---|
-| **`local`** | In-process on the Hermes host | A single workstation with a GPU or Apple Silicon. |
-| **`studio`** | OmniVoice-Studio over **loopback** HTTP (`/v1/audio/speech`) | A model server on the same host. |
-| **`service`** | A shared voice node over the **LAN/tailnet** (bearer auth) | One capable node (e.g. a Mac Studio) serving a fleet of thin agents. Supports `transport: http` or `transport: ssh-loopback`. |
-
-Full backend config, the wire contract, streaming/fallback notes, and the
-security model are in [`omnivoice/README.md`](omnivoice/README.md).
-
----
-
 ## 🔒 Security
 
-Loopback is clean; non-loopback requires deliberate gating.
+Loopback is clean; non-loopback needs deliberate gating.
 
-- The dashboard binds `127.0.0.1` by default. Every mutating/compute plugin route
-  (clone, design, preview, set-active, delete) refuses non-loopback callers
-  unless you set `HERMES_OMNIVOICE_ALLOW_REMOTE_CLONE=1` on a trusted network.
+- The dashboard binds `127.0.0.1`. Every mutating/compute plugin route (clone,
+  design, edit, preview, set-active, delete) refuses non-loopback callers unless
+  `HERMES_OMNIVOICE_ALLOW_REMOTE_CLONE=1`.
 - The `service` backend requires a bearer token on any non-loopback URL — prefer
   a VPN/tailnet.
 - Clone ingestion enforces consent (confirmed status, non-empty source, ≥1
-  allowed use), validates the reference is a real WAV, rejects symlinks, and
-  writes registry files `0600`.
+  allowed use), validates a real WAV, rejects symlinks, caps reference length,
+  and writes registry files `0600`.
+
+---
+
+## 🩺 Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| **"Unauthorized"** in the Voices tab | Old dashboard build; update Hermes (the UI sends the session token, which hardened builds require). |
+| Preview shows **"unsupported instruct attribute"** | Your design voice uses a word outside the vocabulary (e.g. `energetic`). **Edit** it and use only the listed attributes. |
+| Preview shows **"…out of memory"** | A too-long clone reference. Re-clone with a **~10–30 s** clip (long refs are rejected; override with `HERMES_OMNIVOICE_MAX_REF_SECONDS`). |
+| Preview shows **"SDK not installed"** / **server unreachable** | No model backend running. Start `server/serve.py` (studio/service) or `pip install omnivoice torch soundfile` (local). |
+| Static / garbage audio | Almost always an MPS OOM from a long reference — restart the server and use short refs. Confirm with `tools/qc.py`. |
+| Edited a voice / changed backend but the dashboard didn't notice | Backend route changes mount at startup — restart `hermes dashboard`. |
 
 ---
 
 ## ✅ Status
 
-- **43 offline tests pass** (`cd omnivoice && pytest -q`) — no SDK/torch/Hermes
-  needed for the suite.
-- **Live-tested on Hermes v0.18.0**: provider registers through the real loader
-  and shows in `hermes tools`; the dashboard Voices tab + backend routes are
-  discovered; the tab renders and Preview plays in a real browser (the
-  screenshots above are from that run).
-- **Real `local` synthesis verified** against `omnivoice 0.1.5` + torch on Apple
-  Silicon (MPS): a design voice → 24 kHz WAV in ~9 s.
-- `stream()` (time-to-first-audio) and cross-provider fallback are deferred by
-  design; the live networked `service` path is unit-tested but not yet run
-  against a production node.
+- **53 offline tests pass** (`cd omnivoice && pytest -q`).
+- **Live-tested on Hermes v0.18.0**: installs via `hermes plugins install`, shows
+  in `hermes tools`, the Voices tab renders and previews play; real synthesis
+  ASR-verified across cpu/mps; 10 back-to-back synths, 0 OOM after the memory fix.
+- Deferred by design: streaming `stream()` and cross-provider fallback.
 
 ---
 
 ## 📚 More
 
-- [`omnivoice/README.md`](omnivoice/README.md) — full plugin reference (backends,
-  wire contract, security, verified SDK contracts).
-- [`HANDOFF.md`](HANDOFF.md) — what changed, what was verified live, and why.
-- [`legacy/`](legacy/) — the archived first-attempt bridge and the components
-  worth harvesting later.
+- [`omnivoice/README.md`](omnivoice/README.md) — plugin reference (backends, wire contract, verified SDK contracts).
+- [`server/README.md`](server/README.md) — the model server.
+- [`setup-omnivoice.py`](setup-omnivoice.py) — the setup wizard · [`tools/qc.py`](tools/qc.py) — ASR quality check.
+- [`HANDOFF.md`](HANDOFF.md) — how this was built and verified · [`legacy/`](legacy/) — the archived first attempt.
