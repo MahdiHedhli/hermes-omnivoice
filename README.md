@@ -132,9 +132,15 @@ degrade quality and can exhaust GPU memory; override with
 
 <img src="docs/images/clone-voice.png" width="70%" alt="Clone a voice form">
 
-**Preview** any voice card to hear a sample, and **Set active** to make it the
-voice your agent speaks with. The active voice is used by every voice surface in
-Hermes. Clone reference audio and transcripts never leave your machine.
+**Preview** any voice card to hear a sample, **Edit** to change its name,
+language, and attributes (design) or transcript (clone), and **Set active** to
+make it the voice your agent speaks with. The active voice is used by every
+voice surface in Hermes. Clone reference audio and transcripts never leave your
+machine.
+
+> The Design/Edit forms show a **clickable guide** of the supported attributes
+> and **validate** before saving, so a voice can't be created with an unsupported
+> word (like `energetic`) that would fail at synthesis.
 
 > Cloning from a local reference sample is a **`local`-backend** capability. The
 > `studio`/`service` backends select a voice the server already holds, by id.
