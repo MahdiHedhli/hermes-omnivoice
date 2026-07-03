@@ -59,34 +59,50 @@ cp -r omnivoice ~/.hermes/plugins/omnivoice
 hermes plugins enable omnivoice
 ```
 
-**3. Configure the provider.** Copy the block from
-[`omnivoice/config.example.yaml`](omnivoice/config.example.yaml) into your
-`~/.hermes/config.yaml` under `tts:`. The minimal local setup:
-
-```yaml
-tts:
-  provider: omnivoice
-  omnivoice:
-    backend: local          # local | studio | service
-    local:
-      model: k2-fsa/OmniVoice
-      device: auto          # auto | cpu | cuda | mps
-```
-
-**4. Install your backend's dependencies.** For `local`:
+**3. Wire a model backend (setup wizard).** OmniVoice's model runtime is a real
+dependency — it runs either **in-process** (`local`) or as a **speech server**
+you run (`studio`/`service`). The wizard detects your environment and writes only
+the `tts.omnivoice` block of your config:
 
 ```bash
-pip install omnivoice torch soundfile
+python setup-omnivoice.py
 ```
 
-(For `studio`/`service`, skip this — just point the config at your server. See
-[`omnivoice/README.md`](omnivoice/README.md#networked-service-transports).)
+It offers three paths — **use** a detected local setup, **install** a local
+server, or point at a **remote** one. (You can also configure by hand from
+[`omnivoice/config.example.yaml`](omnivoice/config.example.yaml).) The
+recommended setup is a **speech server** — see
+[Run the model server](#️-run-the-model-server) below.
 
-**5. Restart Hermes.** `omnivoice` now appears in the `hermes tools` picker and
-is the active TTS provider.
+**4. Restart Hermes.** `omnivoice` now appears in the `hermes tools` picker.
+Set `tts.provider: omnivoice` when you want it to be the active voice.
 
 > **Quick check:** run `hermes tools` and confirm **OmniVoice** shows under
 > Text-to-Speech. If the plugin failed to load, check `~/.hermes/logs/errors.log`.
+
+---
+
+## 🖥️ Run the model server
+
+OmniVoice's SDK ships a demo + inference CLIs but **no HTTP server**, so the
+plugin includes a small one — [`server/serve.py`](server/serve.py): an
+OpenAI-compatible `/v1/audio/speech` endpoint that resolves voice ids against
+your registry and synthesizes. It's the **same artifact** for a single host and a
+shared node, and it warms the model at startup so the first request is reliable:
+
+```bash
+pip install -r server/requirements.txt        # omnivoice torch soundfile fastapi uvicorn
+# single host (loopback → backend: studio):
+python server/serve.py --host 127.0.0.1 --port 8880
+# shared node for a fleet of thin agents (→ backend: service):
+python server/serve.py --host 0.0.0.0 --port 8880 --require-auth   # + HERMES_OMNIVOICE_SERVICE_TOKEN
+```
+
+Confirm a voice produces **intelligible speech** (a valid WAV isn't enough):
+
+```bash
+python tools/qc.py --voice <id> --server http://127.0.0.1:8880   # synth → transcribe → match score
+```
 
 ---
 
@@ -108,8 +124,11 @@ and name, and describe the voice using OmniVoice's attributes:
 > `indian`, `australian`, …), and **style** (`whisper`). Example:
 > `female, british accent, low pitch`.
 
-**Clone a voice** from a reference sample — pick the *Clone* tab, upload a `.wav`,
-paste the exact transcript of what's said in it, confirm consent, and create:
+**Clone a voice** from a reference sample — pick the *Clone* tab, upload a
+**short, clean `.wav` (~10–30 s)**, paste the exact transcript of what's said in
+it, confirm consent, and create. (Very long references are rejected — they
+degrade quality and can exhaust GPU memory; override with
+`HERMES_OMNIVOICE_MAX_REF_SECONDS`.)
 
 <img src="docs/images/clone-voice.png" width="70%" alt="Clone a voice form">
 
