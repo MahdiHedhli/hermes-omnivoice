@@ -56,9 +56,39 @@ and voices were untouched, and the active provider stays `xtts-v2`.
 - A visual browser smoke of the Voices tab (`hermes dashboard`).
 - Deferred by design (not bugs): `stream()` stub, cross-provider `piper` fallback.
 
-## Publish — awaiting sign-off
+## Published
 
-Repo restructured in place (spike → `legacy/`, plugin at root). **No git remote
-is configured** and nothing is pushed. Outward-facing steps need your decision:
-remote/repo target, rename to `hermes-omnivoice`, merge-to-main vs PR, and the
-optional additive `ICON_MAP` PR / `hermes-example-plugins` contribution.
+Repo restructured (spike → `legacy/`, plugin at root) and shipped to
+**github.com/MahdiHedhli/hermes-omnivoice** (renamed from
+`hermes-omnivoice-studio-bridge`, public, default `main`). `main` was
+force-replaced because local and the old public `main` had unrelated histories
+(no data lost — old main was a subset of `legacy/`).
+
+---
+
+## Update — v0.1.1 (after installing the real SDK)
+
+Installed `torch 2.12.1` + `omnivoice 0.1.5` + `soundfile` into a **dedicated
+venv** (isolated from the Hermes venv) and ran the real `local` backend.
+
+**Correction to my own earlier claim (rows above):** the *actual* SDK
+`generate()` kwarg is **`language`**, NOT `language_id`. The `language_id` in the
+tables/notes above is the OpenAI **HTTP wire** field (correct for
+studio/service) — I had wrongly propagated it into the local backend. Reverted
+`_synth_local` to `language`; the donor adapter had it right. Verified by
+introspecting `omnivoice.models.omnivoice.OmniVoice.generate`.
+
+- **Real local synth works** — `k2-fsa/OmniVoice` loaded on **MPS**, design voice
+  `male, american accent, moderate pitch` → a 24 kHz mono WAV (~200 KB) in ~9s.
+  Note: `instruct` requires **structured items** from a fixed vocabulary
+  (gender/accent/pitch/age/style), not free prose; the dashboard's placeholder
+  already models the correct format.
+- **`service` backend gained `transport: ssh-loopback`** — ported from
+  `legacy/scripts/hermes-omnivoice-remote.py`. Tunnels the `/v1/audio/speech`
+  POST through SSH so a remote host calls its own loopback service; token rides
+  the SSH channel. Unit-tested (framing, routing, host/token guards); not yet run
+  against the live Mac Studio.
+- **v0.1.0 tagged + released**; **additive `ICON_MAP` upstream PR drafted** in
+  `upstream/icon-map-pr.md` (not opened on NousResearch — awaiting your review).
+- Tests: **43 pass** (added SSH-loopback coverage + the corrected `language`
+  regression test).

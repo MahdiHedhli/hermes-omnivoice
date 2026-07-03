@@ -40,15 +40,19 @@ in [`omnivoice/README.md`](omnivoice/README.md).
 
 ## Status
 
-- Code-complete; **37 offline tests pass** (`cd omnivoice && pytest -q`).
+- **43 offline tests pass** (`cd omnivoice && pytest -q`).
 - **Live-tested on Hermes v0.18.0**: provider registers through the real plugin
   loader and appears in the `hermes tools` picker; the dashboard Voices tab and
   its backend routes are discovered; end-to-end synthesis verified against a
   loopback `/v1/audio/speech` mock.
-- Not yet exercised on this machine: real in-process `local` synthesis (needs
-  `torch` + the OmniVoice SDK) and the networked `service` backend against a live
-  server. See [`omnivoice/README.md`](omnivoice/README.md) for those and the
-  deferred `stream()` / cross-provider fallback work.
+- **Real `local` synthesis verified** against `omnivoice 0.1.5` + torch on Apple
+  Silicon (MPS): design voice → 24 kHz WAV in ~9s. (The SDK `generate()` kwarg is
+  `language`, and `instruct` takes structured items like `male, american accent,
+  moderate pitch`.)
+- `service` backend supports `transport: http` and `transport: ssh-loopback`
+  (the latter tunnels the request through SSH so a remote host calls its own
+  loopback service — the proven Mac Studio path). Not yet run against the live
+  Mac Studio. `stream()` and cross-provider fallback remain deferred by design.
 
 ## Security
 
