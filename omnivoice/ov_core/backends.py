@@ -202,7 +202,17 @@ def _synth_local(text: str, output_path: Path, *, voice: VoiceProfile,
     else:
         kwargs["instruct"] = voice.instruct
 
-    audios = model.generate(**kwargs)
+    try:
+        audios = model.generate(**kwargs)
+    except SynthError:
+        raise
+    except Exception as exc:
+        # Surface SDK-side failures — unsupported instruct items, MPS/CUDA OOM,
+        # too-short input — as a clean SynthError instead of an opaque HTTP 500.
+        msg = str(exc).strip()
+        if "zero-size" in msg or "no identity" in msg:
+            msg = "OmniVoice produced no audio for this input (text too short?); try a longer phrase"
+        raise SynthError(msg or f"OmniVoice generate failed: {type(exc).__name__}") from exc
     if not audios:
         raise SynthError("OmniVoice returned no audio")
     sample_rate = int(getattr(model, "sampling_rate", cfg.local.sample_rate) or cfg.local.sample_rate)

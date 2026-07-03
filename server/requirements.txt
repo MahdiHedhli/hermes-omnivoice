@@ -1,0 +1,8 @@
+# Reference OmniVoice speech server — run this on the machine with the model.
+# (The Hermes host running the plugin does NOT need these when using the
+#  studio/service backend; only this server process does.)
+omnivoice      # the OmniVoice SDK (imports as `omnivoice`)
+torch
+soundfile
+fastapi
+uvicorn

@@ -29,6 +29,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 DEFAULT_ALLOWED_USES = ["personal_assistant", "local_generation"]
+# Clone references should be short, clean clips. Long ones both degrade quality
+# and can exhaust GPU/MPS memory during synthesis. Soft-cap at create time
+# (existing voices still load); override with HERMES_OMNIVOICE_MAX_REF_SECONDS.
+DEFAULT_MAX_REF_SECONDS = 45.0
 _ID_ALLOWED = set("abcdefghijklmnopqrstuvwxyz0123456789-_")
 
 
@@ -67,6 +71,32 @@ def _validate_wav(path: Path) -> None:
                 raise RegistryError(f"reference audio has no frames: {path}")
     except wave.Error as exc:
         raise RegistryError(f"reference audio is not valid WAV: {path} ({exc})") from exc
+
+
+def _ref_seconds(path: Path) -> float:
+    with wave.open(str(path), "rb") as wf:
+        rate = wf.getframerate() or 1
+        return wf.getnframes() / float(rate)
+
+
+def _check_ref_duration(path: Path) -> None:
+    max_ref = DEFAULT_MAX_REF_SECONDS
+    raw = os.environ.get("HERMES_OMNIVOICE_MAX_REF_SECONDS", "").strip()
+    if raw:
+        try:
+            max_ref = float(raw)
+        except ValueError:
+            pass
+    if max_ref <= 0:
+        return
+    dur = _ref_seconds(path)
+    if dur > max_ref:
+        raise RegistryError(
+            f"reference audio is {dur:.0f}s — use a short clean clip "
+            f"(~10-30s; max {max_ref:.0f}s). Long references degrade cloning "
+            f"quality and can exhaust GPU/MPS memory. Set "
+            f"HERMES_OMNIVOICE_MAX_REF_SECONDS to override."
+        )
 
 
 def _validate_id(voice_id: str) -> str:
@@ -275,6 +305,7 @@ class VoiceRegistry:
 
         ref_audio_src = Path(ref_audio_src).expanduser()
         _validate_wav(ref_audio_src)
+        _check_ref_duration(ref_audio_src)
 
         voice_dir = _safe_child(self.root, voice_id)
         _reject_symlink(voice_dir, "voice directory")

@@ -57,6 +57,22 @@ def test_clone_rejects_non_wav(voices_dir, tmp_path):
         reg.create_clone("x", "X", junk, "text", consent_source="user_uploaded")
 
 
+def test_clone_rejects_overlong_reference(voices_dir, wav_factory, monkeypatch):
+    monkeypatch.delenv("HERMES_OMNIVOICE_MAX_REF_SECONDS", raising=False)
+    reg = VoiceRegistry(voices_dir)
+    long_ref = wav_factory("long.wav", frames=16000 * 50)  # 50s at 16 kHz > 45s cap
+    with pytest.raises(RegistryError, match="short clean clip"):
+        reg.create_clone("x", "X", long_ref, "text", consent_source="user_uploaded")
+
+
+def test_clone_ref_cap_env_override_disables(voices_dir, wav_factory, monkeypatch):
+    monkeypatch.setenv("HERMES_OMNIVOICE_MAX_REF_SECONDS", "0")  # 0 disables the cap
+    reg = VoiceRegistry(voices_dir)
+    long_ref = wav_factory("long2.wav", frames=16000 * 50)
+    reg.create_clone("x", "X", long_ref, "text", consent_source="user_uploaded")
+    assert reg.get_voice("x").mode == "clone"
+
+
 def test_duplicate_id_rejected_unless_overwrite(voices_dir):
     reg = VoiceRegistry(voices_dir)
     reg.create_design("dup", "Dup", "voice a")

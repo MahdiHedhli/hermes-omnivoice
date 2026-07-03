@@ -192,6 +192,8 @@
         h(Field, { label: "Display name" }, h(C.Input, { value: form.name, onChange: upd("name"), placeholder: "Narrator" })),
         h(Field, { label: "Instruction (voice description)" },
           h("textarea", { className: "ov-textarea", value: form.instruct, onChange: upd("instruct"), rows: 3, placeholder: "male, american accent, moderate pitch" })),
+        h("p", { className: "ov-hint" },
+          "Comma-separated attributes only: gender (male/female), age (child…elderly), pitch (very low…very high), accent (american/british/indian/…), and whisper. Free words like “energetic” aren’t supported."),
         h(Field, { label: "Language" }, h(C.Input, { value: form.language, onChange: upd("language") })),
         h("label", { className: "ov-consent" },
           h("input", { type: "checkbox", checked: form.consent, onChange: upd("consent") }),
