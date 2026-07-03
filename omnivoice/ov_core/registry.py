@@ -22,6 +22,7 @@ user-supplied audio enters the system):
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import wave
 from dataclasses import dataclass, field
@@ -34,6 +35,25 @@ DEFAULT_ALLOWED_USES = ["personal_assistant", "local_generation"]
 # (existing voices still load); override with HERMES_OMNIVOICE_MAX_REF_SECONDS.
 DEFAULT_MAX_REF_SECONDS = 45.0
 _ID_ALLOWED = set("abcdefghijklmnopqrstuvwxyz0123456789-_")
+
+# Design-voice `instruct` accepts ONLY these attributes (from the OmniVoice SDK),
+# not free prose. English items, grouped for the UI guide; the SDK also accepts a
+# parallel Chinese set (kept below so Chinese instructs still validate).
+INSTRUCT_VOCAB = {
+    "gender": ["male", "female"],
+    "age": ["child", "teenager", "young adult", "middle-aged", "elderly"],
+    "pitch": ["very low pitch", "low pitch", "moderate pitch", "high pitch", "very high pitch"],
+    "accent": ["american accent", "british accent", "australian accent", "canadian accent",
+               "indian accent", "chinese accent", "japanese accent", "korean accent",
+               "portuguese accent", "russian accent"],
+    "style": ["whisper"],
+}
+_INSTRUCT_EN = {t for group in INSTRUCT_VOCAB.values() for t in group}
+_INSTRUCT_ZH = {
+    "东北话", "中年", "中音调", "云南话", "低音调", "儿童", "四川话", "女", "宁夏话", "少年",
+    "极低音调", "极高音调", "桂林话", "河南话", "济南话", "甘肃话", "男", "石家庄话", "老年",
+    "耳语", "贵州话", "陕西话", "青岛话", "青年", "高音调",
+}
 
 
 class RegistryError(RuntimeError):
@@ -147,6 +167,31 @@ def validate_consent(source: str, allowed_uses: Optional[List[str]]) -> Dict[str
     if not uses:
         raise RegistryError("consent requires at least one allowed use")
     return {"status": "confirmed", "source": source, "allowed_uses": uses}
+
+
+def instruct_items(instruct: str) -> List[str]:
+    """Split an instruct string into items (English ``, `` or Chinese ``，``)."""
+    return [t.strip() for t in re.split(r"[,，]", instruct or "") if t.strip()]
+
+
+def validate_instruct(instruct: str) -> str:
+    """Confirm every instruct item is a supported OmniVoice attribute.
+
+    Raises RegistryError naming the unsupported item(s) + the valid English set
+    (mirroring the SDK's own error), so a design voice can't be saved with free
+    words like "energetic" that would fail at synthesis time.
+    """
+    instruct = (instruct or "").strip()
+    if not instruct:
+        raise RegistryError("instruct is required for a design voice")
+    bad = [t for t in instruct_items(instruct)
+           if t.lower() not in _INSTRUCT_EN and t not in _INSTRUCT_ZH]
+    if bad:
+        raise RegistryError(
+            "unsupported instruct attribute(s): " + ", ".join(bad)
+            + ". Use comma-separated attributes from: " + ", ".join(sorted(_INSTRUCT_EN)) + "."
+        )
+    return instruct
 
 
 def _assert_consented(consent: Dict[str, Any], voice_id: str) -> None:
@@ -340,8 +385,7 @@ class VoiceRegistry:
         overwrite: bool = False,
     ) -> VoiceProfile:
         voice_id = _validate_id(voice_id)
-        if not (instruct or "").strip():
-            raise RegistryError("instruct is required for a design voice")
+        instruct = validate_instruct(instruct)
         consent = validate_consent(consent_source, allowed_uses)
 
         voice_dir = _safe_child(self.root, voice_id)
@@ -359,6 +403,37 @@ class VoiceRegistry:
             instruct=instruct.strip(), language=language.strip() or "en",
             speed=float(speed or 1.0), consent=consent,
         )
+        self._write_profile(profile)
+        return profile
+
+    def update_voice(
+        self,
+        voice_id: str,
+        *,
+        name: Optional[str] = None,
+        instruct: Optional[str] = None,
+        ref_text: Optional[str] = None,
+        language: Optional[str] = None,
+        speed: Optional[float] = None,
+    ) -> VoiceProfile:
+        """Edit an existing voice's editable fields. ``mode`` and the clone
+        reference audio are fixed; only metadata (name/language/speed) and the
+        mode-specific field (``instruct`` for design, ``ref_text`` for clone) change."""
+        profile = self.get_voice(voice_id)   # loads + (clone) consent/WAV gate
+        if name is not None and name.strip():
+            profile.name = name.strip()
+        if language is not None and language.strip():
+            profile.language = language.strip()
+        if speed is not None:
+            profile.speed = float(speed or 1.0)
+        if profile.mode == "design":
+            if instruct is not None:
+                profile.instruct = validate_instruct(instruct)
+        else:  # clone
+            if ref_text is not None:
+                if not ref_text.strip():
+                    raise RegistryError("ref_text cannot be empty for a clone voice")
+                profile.ref_text = ref_text.strip()
         self._write_profile(profile)
         return profile
 

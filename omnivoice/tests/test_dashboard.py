@@ -87,7 +87,7 @@ def test_design_create_and_list(api):
     client, monkeypatch = api
     _optin(monkeypatch)
     r = client.post(BASE + "/voices/design",
-                    json={"id": "narrator", "name": "Narrator", "instruct": "male, warm"})
+                    json={"id": "narrator", "name": "Narrator", "instruct": "male, moderate pitch"})
     assert r.status_code == 200, r.text
     ids = [v["id"] for v in client.get(BASE + "/voices").json()["voices"]]
     assert "narrator" in ids
@@ -109,6 +109,24 @@ def test_clone_rejects_non_wav(api):
     data = {"id": "cl", "ref_text": "hello", "consent_confirmed": "true"}
     r = client.post(BASE + "/voices/clone", files=files, data=data)
     assert r.status_code == 400
+
+
+def test_instruct_vocab(api):
+    client, _ = api
+    r = client.get(BASE + "/instruct-vocab")
+    assert r.status_code == 200
+    vocab = r.json()["vocab"]
+    assert "gender" in vocab and "male" in vocab["gender"]
+
+
+def test_patch_updates_and_rejects_bad_instruct(api):
+    client, monkeypatch = api
+    _optin(monkeypatch)
+    assert client.post(BASE + "/voices/design",
+                       json={"id": "n", "name": "N", "instruct": "male, moderate pitch"}).status_code == 200
+    r = client.patch(BASE + "/voices/n", json={"name": "N2", "instruct": "female, whisper"})
+    assert r.status_code == 200 and r.json()["voice"]["name"] == "N2"
+    assert client.patch(BASE + "/voices/n", json={"instruct": "female, energetic"}).status_code == 400
 
 
 def test_clone_preview_activate_delete(api):

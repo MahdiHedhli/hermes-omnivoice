@@ -75,10 +75,10 @@ def test_clone_ref_cap_env_override_disables(voices_dir, wav_factory, monkeypatc
 
 def test_duplicate_id_rejected_unless_overwrite(voices_dir):
     reg = VoiceRegistry(voices_dir)
-    reg.create_design("dup", "Dup", "voice a")
+    reg.create_design("dup", "Dup", "male")
     with pytest.raises(RegistryError):
-        reg.create_design("dup", "Dup", "voice b")
-    reg.create_design("dup", "Dup2", "voice b", overwrite=True)
+        reg.create_design("dup", "Dup", "female")
+    reg.create_design("dup", "Dup2", "female", overwrite=True)
     assert reg.get_voice("dup").name == "Dup2"
 
 
@@ -90,7 +90,7 @@ def test_invalid_id_rejected(voices_dir):
 
 def test_symlinked_voice_dir_is_skipped(voices_dir, tmp_path):
     reg = VoiceRegistry(voices_dir)
-    reg.create_design("real", "Real", "voice")
+    reg.create_design("real", "Real", "male")
     # A symlinked voice dir must not be listed or loaded.
     target = tmp_path / "elsewhere"
     target.mkdir()
@@ -106,9 +106,44 @@ def test_symlinked_voice_dir_is_skipped(voices_dir, tmp_path):
         reg.get_voice("evil")
 
 
+def test_design_rejects_unsupported_instruct(voices_dir):
+    reg = VoiceRegistry(voices_dir)
+    with pytest.raises(RegistryError, match="unsupported instruct"):
+        reg.create_design("bad", "Bad", "female, energetic, moderate pitch")
+
+
+def test_design_accepts_valid_instruct(voices_dir):
+    reg = VoiceRegistry(voices_dir)
+    reg.create_design("ok", "Ok", "female, british accent, whisper")
+    assert reg.get_voice("ok").instruct == "female, british accent, whisper"
+
+
+def test_update_voice_design(voices_dir):
+    reg = VoiceRegistry(voices_dir)
+    reg.create_design("nn", "NN", "male, moderate pitch")
+    reg.update_voice("nn", name="Renamed", instruct="female, whisper", language="fr")
+    p = reg.get_voice("nn")
+    assert p.name == "Renamed" and p.instruct == "female, whisper" and p.language == "fr"
+
+
+def test_update_voice_rejects_bad_instruct(voices_dir):
+    reg = VoiceRegistry(voices_dir)
+    reg.create_design("nn", "NN", "male")
+    with pytest.raises(RegistryError, match="unsupported instruct"):
+        reg.update_voice("nn", instruct="male, sassy")
+
+
+def test_update_voice_clone_ref_text(voices_dir, wav_factory):
+    reg = VoiceRegistry(voices_dir)
+    reg.create_clone("cl", "Cl", wav_factory(), "old text", consent_source="user_uploaded")
+    reg.update_voice("cl", name="Cl2", ref_text="new transcript")
+    p = reg.get_voice("cl")
+    assert p.name == "Cl2" and p.ref_text == "new transcript" and p.mode == "clone"
+
+
 def test_delete_clears_active(voices_dir):
     reg = VoiceRegistry(voices_dir)
-    reg.create_design("gone", "Gone", "voice")
+    reg.create_design("gone", "Gone", "male")
     reg.set_active("gone")
     reg.delete_voice("gone")
     assert reg.get_active() is None

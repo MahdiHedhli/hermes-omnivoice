@@ -40,3 +40,13 @@
 .ov-notice { padding: 0.5rem 0.75rem; border-radius: var(--radius); font-size: 0.85rem; }
 .ov-notice-error { background: color-mix(in srgb, var(--color-destructive) 15%, transparent); color: var(--color-destructive); border: 1px solid var(--color-destructive); }
 .ov-notice-ok { background: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary); border: 1px solid var(--color-primary); }
+
+/* hint text + instruct term guide */
+.ov-hint { font-size: 0.78rem; color: var(--color-muted-foreground); margin: -0.35rem 0 0.75rem; line-height: 1.4; }
+.ov-vocab { margin: 0 0 0.9rem; }
+.ov-vocab-title { font-size: 0.78rem; color: var(--color-muted-foreground); margin-bottom: 0.4rem; }
+.ov-vocab-row { display: flex; gap: 0.35rem; align-items: baseline; flex-wrap: wrap; margin-bottom: 0.3rem; }
+.ov-vocab-cat { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--color-muted-foreground); min-width: 3.5rem; }
+.ov-term { cursor: pointer; user-select: none; }
+.ov-term:hover { background: var(--color-primary); color: var(--color-primary-foreground); }
+.ov-edit-card { border-color: var(--color-ring); }

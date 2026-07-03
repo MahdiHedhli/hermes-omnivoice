@@ -12,7 +12,7 @@ from ov_core.registry import VoiceRegistry
 
 def _design_profile(voices_dir):
     reg = VoiceRegistry(voices_dir)
-    reg.create_design("narrator", "Narrator", "male voice")
+    reg.create_design("narrator", "Narrator", "male, moderate pitch")
     return reg.get_voice("narrator")
 
 
@@ -188,7 +188,7 @@ def test_synth_local_sends_language_kwarg(voices_dir, tmp_path, monkeypatch):
 
     assert captured.get("language") == "en"
     assert "language_id" not in captured
-    assert captured.get("instruct") == "male voice"
+    assert captured.get("instruct") == "male, moderate pitch"
     assert captured["_from_pretrained"] == ("k2-fsa/OmniVoice", "cpu", "float32-dtype")
 
 

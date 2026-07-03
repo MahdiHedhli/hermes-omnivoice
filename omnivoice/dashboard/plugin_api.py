@@ -31,7 +31,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from ov_core import config, paths
 from ov_core.backends import SynthError, synthesize
-from ov_core.registry import RegistryError, VoiceRegistry
+from ov_core.registry import INSTRUCT_VOCAB, RegistryError, VoiceRegistry
 
 router = APIRouter()
 
@@ -84,6 +84,31 @@ async def list_voices():
         "active": active,
         "backend": config.load().backend,
     }
+
+
+@router.get("/instruct-vocab")
+async def instruct_vocab():
+    """The valid design-voice `instruct` attributes (single source of truth for
+    the UI's term guide + validation)."""
+    return {"vocab": INSTRUCT_VOCAB}
+
+
+@router.patch("/voices/{voice_id}")
+async def update_voice(voice_id: str, request: Request, body: dict = Body(...)):
+    _require_local_or_optin(request)
+    reg = _registry()
+    try:
+        profile = reg.update_voice(
+            voice_id,
+            name=body.get("name"),
+            instruct=body.get("instruct"),
+            ref_text=body.get("ref_text"),
+            language=body.get("language"),
+            speed=body.get("speed"),
+        )
+    except RegistryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True, "voice": profile.to_public()}
 
 
 @router.post("/voices/design")

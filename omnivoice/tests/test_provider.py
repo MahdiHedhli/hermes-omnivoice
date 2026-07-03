@@ -39,7 +39,7 @@ def test_empty_registry(provider_env):
 
 
 def test_lists_and_defaults_created_voice(provider_env):
-    VoiceRegistry(provider_env).create_design("narrator", "Narrator", "male voice")
+    VoiceRegistry(provider_env).create_design("narrator", "Narrator", "male, moderate pitch")
     p = OmniVoiceProvider()
     voices = p.list_voices()
     assert len(voices) == 1 and voices[0]["id"] == "narrator"
@@ -55,7 +55,7 @@ def test_synthesize_without_voice_raises(provider_env, tmp_path):
 def test_synthesize_local_without_sdk_raises(provider_env, tmp_path):
     # A voice exists but the local backend has no OmniVoice SDK installed here,
     # so synthesize must surface a SynthError (not crash).
-    VoiceRegistry(provider_env).create_design("narrator", "Narrator", "male voice")
+    VoiceRegistry(provider_env).create_design("narrator", "Narrator", "male, moderate pitch")
     p = OmniVoiceProvider()
     with pytest.raises(SynthError):
         p.synthesize("hello", str(tmp_path / "o.wav"), voice="narrator")
