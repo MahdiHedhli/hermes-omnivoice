@@ -1,8 +1,9 @@
 # DRAFT — additive `ICON_MAP` PR for NousResearch/hermes-agent
 
-**Status: draft. Do not open against NousResearch until the owner has read this
-diff.** Target repo: `NousResearch/hermes-agent`. Placeholder issue reference:
-`#XXXX` (open/link a tracking issue before submitting).
+**Status: OPENED as a draft PR (owner-authorized).**
+PR: https://github.com/NousResearch/hermes-agent/pull/57764 — base `main`, +4/−0,
+draft. Target repo: `NousResearch/hermes-agent`. A tracking issue can be linked
+before flipping it to ready-for-review.
 
 ## Why
 
