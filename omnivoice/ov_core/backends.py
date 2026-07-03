@@ -31,14 +31,17 @@ Local SDK contract (verified against k2-fsa/OmniVoice, PyPI ``omnivoice``)::
 
     from omnivoice import OmniVoice
     OmniVoice.from_pretrained("k2-fsa/OmniVoice", device_map=..., dtype=...)
-        .generate(text=, speed=, language_id=, ref_audio=, ref_text=, instruct=)
+        .generate(text=, speed=, language=, ref_audio=, ref_text=, instruct=)
     # -> list[np.ndarray] shape (T,) @ 24 kHz
+    # NB: the SDK kwarg is `language` (omnivoice 0.1.5); the OpenAI HTTP wire
+    # field for studio/service is `language_id` — different layers.
 """
 
 from __future__ import annotations
 
 import json
 import shutil
+import struct
 import subprocess
 import threading
 import urllib.error
@@ -189,7 +192,7 @@ def _synth_local(text: str, output_path: Path, *, voice: VoiceProfile,
     model = _load_local_model(cfg)
     kwargs: Dict[str, object] = {"text": text, "speed": speed}
     if voice.language:
-        kwargs["language_id"] = voice.language  # SDK kwarg is language_id, not language
+        kwargs["language"] = voice.language  # SDK generate() kwarg (verified: omnivoice 0.1.5)
     if voice.mode == "clone":
         ref = voice.ref_audio_path
         if ref is None:
@@ -295,10 +298,121 @@ def _service_semaphore(cfg: OmniVoiceConfig) -> threading.Semaphore:
     return sem
 
 
+# ssh-loopback transport (ported from the archived spike's
+# hermes-omnivoice-remote.py). Tunnels the /v1/audio/speech POST through SSH so a
+# remote host calls its own loopback-only OmniVoice service. Used because direct
+# HTTP to the Mac Studio's tailnet IP was observed to time out; the token travels
+# over the SSH-encrypted stdin channel, not the network in the clear.
+_SSH_REMOTE_SCRIPT = r"""
+import json, struct, sys
+from urllib import error, request
+
+def die(msg, code=1):
+    sys.stderr.write(msg + "\n")
+    raise SystemExit(code)
+
+try:
+    env = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+    body = json.dumps(env["payload"]).encode("utf-8")
+    headers = {
+        "Accept": env.get("accept", "audio/*"),
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + env["token"],
+        "User-Agent": "hermes-omnivoice-service-ssh/1",
+    }
+    req = request.Request(env["url"], data=body, headers=headers, method="POST")
+    try:
+        with request.urlopen(req, timeout=float(env["timeout"])) as r:
+            data = r.read(); status = getattr(r, "status", 200)
+            ctype = r.headers.get("Content-Type", "")
+    except error.HTTPError as exc:
+        data = exc.read(); status = exc.code
+        ctype = exc.headers.get("Content-Type", "") if exc.headers else ""
+    except Exception as exc:
+        die("loopback request failed: %s" % exc, 14)
+    meta = json.dumps({"status": status, "content_type": ctype}, separators=(",", ":")).encode("utf-8")
+    sys.stdout.buffer.write(struct.pack(">I", len(meta)))
+    sys.stdout.buffer.write(meta)
+    sys.stdout.buffer.write(data)
+except SystemExit:
+    raise
+except Exception as exc:
+    die("ssh helper failed: %s" % exc, 15)
+"""
+
+
+def _post_json_ssh_loopback(url: str, payload: Dict[str, object], *, timeout: int,
+                            auth_token: str, ssh_host: str, ssh_port: int = 22,
+                            ssh_identity_file: str = "") -> bytes:
+    import math
+
+    envelope = json.dumps({
+        "url": url, "token": auth_token, "payload": payload,
+        "accept": "audio/wav, audio/*", "timeout": timeout,
+    }).encode("utf-8")
+    connect_timeout = max(1, min(int(math.ceil(timeout)), 30))
+    cmd = ["ssh", "-p", str(ssh_port), "-o", "BatchMode=yes",
+           "-o", f"ConnectTimeout={connect_timeout}"]
+    if ssh_identity_file:
+        cmd += ["-i", ssh_identity_file]
+    cmd += [ssh_host, "python3", "-c", _SSH_REMOTE_SCRIPT]
+    try:
+        proc = subprocess.run(cmd, input=envelope, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, timeout=timeout + 30, check=False)
+    except FileNotFoundError as exc:
+        raise SynthError("ssh executable not found") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise SynthError("ssh-loopback request timed out") from exc
+    if proc.returncode != 0:
+        err = proc.stderr.decode("utf-8", "replace").strip()
+        raise SynthError(f"ssh-loopback request failed (exit {proc.returncode}): {err[:300]}")
+    out = proc.stdout
+    if len(out) < 4:
+        raise SynthError("ssh-loopback helper returned no data")
+    meta_len = struct.unpack(">I", out[:4])[0]
+    if meta_len <= 0 or len(out) < 4 + meta_len:
+        raise SynthError("ssh-loopback helper returned truncated metadata")
+    try:
+        meta = json.loads(out[4:4 + meta_len].decode("utf-8"))
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise SynthError("ssh-loopback helper returned invalid metadata") from exc
+    body = out[4 + meta_len:]
+    status = int(meta.get("status", 200))
+    if status != 200:
+        raise SynthError(f"ssh-loopback service HTTP {status}: {body[:300]!r}")
+    if "application/json" in str(meta.get("content_type", "")).lower():
+        raise SynthError(f"ssh-loopback returned JSON, not audio: {body[:200]!r}")
+    return body
+
+
 def _synth_service(text: str, output_path: Path, *, voice: VoiceProfile,
                    cfg: OmniVoiceConfig, speed: float, fmt: str) -> str:
     if not cfg.service.url:
         raise SynthError("service backend selected but tts.omnivoice.service.url is empty")
+    payload = _http_payload(text, voice, speed, model=cfg.service.model)
+    sem = _service_semaphore(cfg)
+    transport = (cfg.service.transport or "http").strip().lower()
+
+    if transport == "ssh-loopback":
+        # `url` is the remote host's own loopback OmniVoice service; SSH reaches
+        # the host and runs the request from inside it.
+        base = _validate_url(cfg.service.url, require_loopback=True)
+        if not cfg.service.ssh_host:
+            raise SynthError("service transport 'ssh-loopback' requires service.ssh_host")
+        if not cfg.service.auth_token:
+            raise SynthError("ssh-loopback service requires an auth token (the remote service enforces bearer)")
+        with sem:
+            data = _post_json_ssh_loopback(
+                _join(base, cfg.service.speech_path), payload,
+                timeout=cfg.service.timeout, auth_token=cfg.service.auth_token,
+                ssh_host=cfg.service.ssh_host, ssh_port=cfg.service.ssh_port,
+                ssh_identity_file=cfg.service.ssh_identity_file,
+            )
+        return _write_bytes(data, output_path, fmt)
+
+    if transport != "http":
+        raise SynthError(f"unknown service transport: {transport!r} (expected http|ssh-loopback)")
+
     base = _validate_url(cfg.service.url, require_loopback=False)
     # A cross-machine (non-loopback) service must carry auth — never trust the
     # network. Loopback service URLs (rare) may omit the token.
@@ -307,8 +421,6 @@ def _synth_service(text: str, output_path: Path, *, voice: VoiceProfile,
             "service backend at a non-loopback URL requires an auth token; set "
             f"the env named by service.auth_token_env ({cfg.service.auth_token_env})"
         )
-    payload = _http_payload(text, voice, speed, model=cfg.service.model)
-    sem = _service_semaphore(cfg)
     with sem:  # client-side concurrency guard so we don't overrun the node
         data = _post_json(_join(base, cfg.service.speech_path), payload,
                           timeout=cfg.service.timeout, auth_token=cfg.service.auth_token)

@@ -140,8 +140,9 @@ def test_synth_service_sends_bearer(voices_dir, tmp_path, monkeypatch):
     assert captured["auth"] == "sekret"
 
 
-def test_synth_local_sends_language_id_not_language(voices_dir, tmp_path, monkeypatch):
-    """Regression: the SDK kwarg is `language_id`; the port must not send `language`."""
+def test_synth_local_sends_language_kwarg(voices_dir, tmp_path, monkeypatch):
+    """Regression: the omnivoice 0.1.5 SDK kwarg is `language` (not `language_id`,
+    which is the OpenAI HTTP wire field used by the studio/service backends)."""
     import sys
     import types
 
@@ -180,7 +181,89 @@ def test_synth_local_sends_language_id_not_language(voices_dir, tmp_path, monkey
     backends.synthesize("hello", str(tmp_path / "o.wav"),
                         voice=_design_profile(voices_dir), cfg=cfg)
 
-    assert captured.get("language_id") == "en"
-    assert "language" not in captured
+    assert captured.get("language") == "en"
+    assert "language_id" not in captured
     assert captured.get("instruct") == "male voice"
     assert captured["_from_pretrained"] == ("k2-fsa/OmniVoice", "cpu", "float32-dtype")
+
+
+# --- ssh-loopback service transport ----------------------------------------
+
+def _svc(**kw):
+    return OmniVoiceConfig(backend="service", service=ServiceConfig(**kw))
+
+
+def test_service_unknown_transport_raises(voices_dir, tmp_path):
+    cfg = _svc(url="http://127.0.0.1:8880", transport="carrier-pigeon")
+    with pytest.raises(SynthError, match="unknown service transport"):
+        backends.synthesize("hi", str(tmp_path / "o.wav"),
+                            voice=_design_profile(voices_dir), cfg=cfg)
+
+
+def test_service_ssh_loopback_requires_ssh_host(voices_dir, tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_OMNIVOICE_SERVICE_TOKEN", "tok")
+    cfg = _svc(url="http://127.0.0.1:8880", transport="ssh-loopback", ssh_host="")
+    with pytest.raises(SynthError, match="requires service.ssh_host"):
+        backends.synthesize("hi", str(tmp_path / "o.wav"),
+                            voice=_design_profile(voices_dir), cfg=cfg)
+
+
+def test_service_ssh_loopback_requires_token(voices_dir, tmp_path, monkeypatch):
+    monkeypatch.delenv("HERMES_OMNIVOICE_SERVICE_TOKEN", raising=False)
+    cfg = _svc(url="http://127.0.0.1:8880", transport="ssh-loopback", ssh_host="h@1.2.3.4")
+    with pytest.raises(SynthError, match="requires an auth token"):
+        backends.synthesize("hi", str(tmp_path / "o.wav"),
+                            voice=_design_profile(voices_dir), cfg=cfg)
+
+
+def test_synth_service_ssh_loopback_routes(voices_dir, tmp_path, monkeypatch):
+    captured = {}
+
+    def fake_ssh(url, payload, *, timeout, auth_token, ssh_host, ssh_port=22, ssh_identity_file=""):
+        captured.update(url=url, auth=auth_token, host=ssh_host, port=ssh_port)
+        return b"RIFF....WAVEfake"
+
+    monkeypatch.setenv("HERMES_OMNIVOICE_SERVICE_TOKEN", "tok")
+    monkeypatch.setattr(backends, "_post_json_ssh_loopback", fake_ssh)
+    cfg = _svc(url="http://127.0.0.1:8880", transport="ssh-loopback",
+               ssh_host="hermes-ops@100.78.163.62", ssh_port=2222)
+    backends.synthesize("hi", str(tmp_path / "o.wav"),
+                        voice=_design_profile(voices_dir), cfg=cfg)
+    assert captured["url"] == "http://127.0.0.1:8880/v1/audio/speech"
+    assert captured["auth"] == "tok"
+    assert captured["host"] == "hermes-ops@100.78.163.62" and captured["port"] == 2222
+
+
+def test_post_json_ssh_loopback_parses_framed_response(monkeypatch):
+    import json as _json
+    import struct as _struct
+    import types
+
+    meta = _json.dumps({"status": 200, "content_type": "audio/wav"}).encode()
+    body = b"RIFF....WAVE-real-audio"
+    stdout = _struct.pack(">I", len(meta)) + meta + body
+
+    def fake_run(cmd, **kw):
+        assert "ssh" in cmd[0]
+        return types.SimpleNamespace(returncode=0, stdout=stdout, stderr=b"")
+
+    monkeypatch.setattr(backends.subprocess, "run", fake_run)
+    out = backends._post_json_ssh_loopback(
+        "http://127.0.0.1:8880/v1/audio/speech", {"input": "hi"},
+        timeout=30, auth_token="tok", ssh_host="h@1.2.3.4",
+    )
+    assert out == body
+
+
+def test_post_json_ssh_loopback_non_200_raises(monkeypatch):
+    import json as _json
+    import struct as _struct
+    import types
+
+    meta = _json.dumps({"status": 403, "content_type": "application/json"}).encode()
+    stdout = _struct.pack(">I", len(meta)) + meta + b'{"detail":"nope"}'
+    monkeypatch.setattr(backends.subprocess, "run",
+                        lambda cmd, **kw: types.SimpleNamespace(returncode=0, stdout=stdout, stderr=b""))
+    with pytest.raises(SynthError, match="HTTP 403"):
+        backends._post_json_ssh_loopback("http://127.0.0.1:8880/v1/audio/speech", {"input": "hi"},
+                                         timeout=30, auth_token="tok", ssh_host="h@1.2.3.4")

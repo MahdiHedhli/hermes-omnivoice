@@ -32,10 +32,20 @@ tts:
     # Same OpenAI-compatible wire shape as studio. A non-loopback URL REQUIRES an
     # auth token; keep it on a VPN/tailnet.
     service:
-      url: ""                  # e.g. http://mac-studio.local:8880 or a tailnet IP
+      url: ""                  # http: base URL. ssh-loopback: the REMOTE-side
+                               #   loopback URL, e.g. http://127.0.0.1:8880
       speech_path: /v1/audio/speech
       model: omnivoice
       auth_token_env: HERMES_OMNIVOICE_SERVICE_TOKEN
       timeout: 180
       max_concurrency: 2       # client-side guard so the node isn't overrun
       stream: false            # set true once the streaming endpoint is wired
+      # transport: how to reach the service.
+      #   http         -> direct HTTP(S) to `url` (needs a token if non-loopback)
+      #   ssh-loopback -> SSH to ssh_host, which calls its own loopback `url`
+      #                   (the proven Mac Studio path; direct HTTP to the tailnet
+      #                   IP was seen to time out). Requires ssh_host + a token.
+      transport: http
+      ssh_host: ""             # e.g. hermes-ops@100.78.163.62
+      ssh_port: 22
+      ssh_identity_file: ""    # optional path to an SSH private key

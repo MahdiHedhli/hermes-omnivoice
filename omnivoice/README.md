@@ -97,9 +97,10 @@ pytest -q          # runs without the OmniVoice SDK / torch / soundfile / Hermes
 
 - **Local SDK** — `from omnivoice import OmniVoice`,
   `OmniVoice.from_pretrained("k2-fsa/OmniVoice", device_map=, dtype=)` then
-  `.generate(text=, speed=, language_id=, ref_audio=, ref_text=, instruct=)` →
-  `list[np.ndarray]` @ 24 kHz. Note the kwarg is **`language_id`** (not
-  `language`). See `ov_core/backends.py::_synth_local`.
+  `.generate(text=, speed=, language=, ref_audio=, ref_text=, instruct=)` →
+  `list[np.ndarray]` @ 24 kHz. Verified against **omnivoice 0.1.5**: the SDK
+  kwarg is **`language`** (the `language_id` name below is the *HTTP wire*
+  field, a different layer). See `ov_core/backends.py::_synth_local`.
 - **Studio / service HTTP** — OpenAI-compatible `POST {url}{speech_path}`
   (`speech_path` defaults to `/v1/audio/speech`) with a JSON body
   `{model, input, voice, response_format, speed, language_id}` and bearer auth.
@@ -112,15 +113,24 @@ pytest -q          # runs without the OmniVoice SDK / torch / soundfile / Hermes
   TTS providers in `hermes tools` and routing. (The ABC's `plugins/tts/<name>/`
   note is legacy; the general plugin loader + dashboard both use top-level.)
 
+### Networked `service` transports
+
+`tts.omnivoice.service.transport` selects how the `service` backend reaches the node:
+
+- **`http`** (default) — direct HTTP(S) to `service.url`; a non-loopback URL
+  requires a bearer token.
+- **`ssh-loopback`** — SSH to `service.ssh_host`, which calls its own loopback
+  OmniVoice service (`service.url`, e.g. `http://127.0.0.1:8880`). The proven Mac
+  Studio path: direct HTTP to the tailnet IP was observed to time out, and the
+  token travels over the SSH-encrypted channel, not the network. Requires
+  `ssh_host` + a token. Ported from `legacy/scripts/hermes-omnivoice-remote.py`.
+
 ### Still to confirm against YOUR server
 
 - Whether your OmniVoice-Studio exposes a streaming endpoint (for `stream()`)
-  and the exact `voice` ids it holds. On the Mac Studio deployment, direct HTTP
-  to a tailnet IP was observed to time out; the proven transport there is
-  SSH-loopback (see the archived spike's `hermes-omnivoice-remote.py`). The
-  `service` backend here speaks the direct-HTTP wire shape — for the
-  SSH-loopback transport, use the spike wrapper as a command provider or port it
-  into a future backend.
+  and the exact `voice` ids it holds. The `ssh-loopback` transport is unit-tested
+  (response framing, routing, host/token guards) but not yet run against the live
+  Mac Studio.
 
 ## Deferred / rough edges
 

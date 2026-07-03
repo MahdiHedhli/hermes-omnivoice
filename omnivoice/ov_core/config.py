@@ -114,6 +114,15 @@ class ServiceConfig:
     timeout: int = 180
     max_concurrency: int = 2
     stream: bool = False
+    # transport: "http" (direct) or "ssh-loopback" (tunnel the request through
+    # SSH so the remote host calls its own loopback-only OmniVoice service —
+    # the proven Mac Studio path, ported from the archived spike). In
+    # ssh-loopback mode, `url` is the REMOTE-side loopback URL (e.g.
+    # http://127.0.0.1:8880) and `ssh_host` is how to reach that host.
+    transport: str = "http"
+    ssh_host: str = ""
+    ssh_port: int = 22
+    ssh_identity_file: str = ""
 
     @property
     def auth_token(self) -> str:
@@ -169,5 +178,10 @@ def load() -> OmniVoiceConfig:
             timeout=int(service_s.get("timeout", 180) or 180),
             max_concurrency=int(service_s.get("max_concurrency", 2) or 2),
             stream=bool(service_s.get("stream", False)),
+            transport=(_ENV.get("HERMES_OMNIVOICE_SERVICE_TRANSPORT") or service_s.get("transport") or "http").strip(),
+            ssh_host=(_ENV.get("HERMES_OMNIVOICE_SERVICE_SSH_HOST") or service_s.get("ssh_host") or "").strip(),
+            ssh_port=int(_ENV.get("HERMES_OMNIVOICE_SERVICE_SSH_PORT") or service_s.get("ssh_port", 22) or 22),
+            ssh_identity_file=(_ENV.get("HERMES_OMNIVOICE_SERVICE_SSH_IDENTITY_FILE")
+                               or service_s.get("ssh_identity_file") or "").strip(),
         ),
     )
