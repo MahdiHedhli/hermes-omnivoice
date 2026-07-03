@@ -32,6 +32,11 @@ def test_validate_url_rejects_bad_scheme_and_userinfo():
         backends._validate_url("http://user:pw@127.0.0.1", require_loopback=False)
 
 
+def test_health_ok_unreachable_is_false():
+    assert backends.health_ok("") is False
+    assert backends.health_ok("http://127.0.0.1:59999", timeout=0.5) is False
+
+
 def test_join_normalizes_slashes():
     assert backends._join("http://h:1", "/v1/audio/speech") == "http://h:1/v1/audio/speech"
     assert backends._join("http://h:1/", "v1/audio/speech") == "http://h:1/v1/audio/speech"

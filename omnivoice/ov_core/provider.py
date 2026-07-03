@@ -55,10 +55,12 @@ class OmniVoiceProvider(TTSProvider):
                     return True
                 except Exception:
                     return False
-            if cfg.backend == "service":
-                return bool(cfg.service.url)
-            # studio defaults to a loopback URL, always plausibly present
-            return True
+            # studio/service: the model runs behind an HTTP server — ping it so
+            # the picker reflects real readiness. (Explicit tts.provider=omnivoice
+            # still routes here even if this returns False.)
+            from ov_core import backends
+            url = cfg.studio.url if cfg.backend == "studio" else cfg.service.url
+            return backends.health_ok(url)
         except Exception:
             return False
 

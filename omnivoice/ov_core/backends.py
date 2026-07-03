@@ -187,6 +187,21 @@ def _load_local_model(cfg: OmniVoiceConfig):
     return model
 
 
+def _free_device_memory() -> None:
+    """Release the GPU/MPS caching-allocator pool after a synth. Without this the
+    MPS reserved pool grows across calls until it hits the watermark and OOMs —
+    even when system RAM is free."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        mps = getattr(torch.backends, "mps", None)
+        if mps is not None and mps.is_available():
+            torch.mps.empty_cache()
+    except Exception:
+        pass
+
+
 def _synth_local(text: str, output_path: Path, *, voice: VoiceProfile,
                  cfg: OmniVoiceConfig, speed: float, fmt: str) -> str:
     model = _load_local_model(cfg)
@@ -203,20 +218,26 @@ def _synth_local(text: str, output_path: Path, *, voice: VoiceProfile,
         kwargs["instruct"] = voice.instruct
 
     try:
-        audios = model.generate(**kwargs)
-    except SynthError:
-        raise
-    except Exception as exc:
-        # Surface SDK-side failures — unsupported instruct items, MPS/CUDA OOM,
-        # too-short input — as a clean SynthError instead of an opaque HTTP 500.
-        msg = str(exc).strip()
-        if "zero-size" in msg or "no identity" in msg:
-            msg = "OmniVoice produced no audio for this input (text too short?); try a longer phrase"
-        raise SynthError(msg or f"OmniVoice generate failed: {type(exc).__name__}") from exc
-    if not audios:
-        raise SynthError("OmniVoice returned no audio")
-    sample_rate = int(getattr(model, "sampling_rate", cfg.local.sample_rate) or cfg.local.sample_rate)
-    return _write_samples(audios[0], sample_rate, output_path, fmt)
+        try:
+            audios = model.generate(**kwargs)
+        except SynthError:
+            raise
+        except Exception as exc:
+            # Surface SDK-side failures — unsupported instruct items, OOM,
+            # too-short input — as clean messages, not an opaque HTTP 500.
+            msg = str(exc).strip()
+            if "zero-size" in msg or "no identity" in msg:
+                msg = "OmniVoice produced no audio for this input (text too short?); try a longer phrase"
+            elif "out of memory" in msg.lower():
+                msg = ("GPU/MPS out of memory — retry (the cache is freed after each "
+                       "call), and keep clone references short (~10-30s). " + msg)
+            raise SynthError(msg or f"OmniVoice generate failed: {type(exc).__name__}") from exc
+        if not audios:
+            raise SynthError("OmniVoice returned no audio")
+        sample_rate = int(getattr(model, "sampling_rate", cfg.local.sample_rate) or cfg.local.sample_rate)
+        return _write_samples(audios[0], sample_rate, output_path, fmt)
+    finally:
+        _free_device_memory()
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +269,19 @@ def _join(base: str, path: str) -> str:
     if not path.startswith("/"):
         path = "/" + path
     return f"{base.rstrip('/')}{path}"
+
+
+def health_ok(url: str, timeout: float = 1.5) -> bool:
+    """Fast reachability check of a speech server's /health (used by is_available).
+    Never raises."""
+    if not url:
+        return False
+    try:
+        req = urllib.request.Request(url.rstrip("/") + "/health", method="GET")
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return 200 <= int(getattr(r, "status", 200)) < 300
+    except Exception:
+        return False
 
 
 def _http_payload(text: str, voice: VoiceProfile, speed: float, *, model: str) -> Dict[str, object]:

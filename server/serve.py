@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import threading
 import uuid
 from pathlib import Path
 
@@ -50,6 +51,7 @@ app = FastAPI(title="OmniVoice speech server")
 # populated by main() before uvicorn starts
 CFG: OmniVoiceConfig
 AUTH_TOKEN: str = ""
+_synth_lock = threading.Lock()  # the model is single-instance; serialize synths
 
 
 def _check_auth(authorization: str | None) -> None:
@@ -94,8 +96,9 @@ def speech(body: dict = Body(...), authorization: str | None = Header(default=No
 
     out = backends.paths.audio_cache_dir() / f"serve-{uuid.uuid4().hex}.wav"
     try:
-        backends.synthesize(text, str(out), voice=profile, cfg=CFG, speed=speed, fmt="wav")
-        data = out.read_bytes()
+        with _synth_lock:  # one synth at a time; concurrent requests queue here
+            backends.synthesize(text, str(out), voice=profile, cfg=CFG, speed=speed, fmt="wav")
+            data = out.read_bytes()
     except backends.SynthError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
     finally:
