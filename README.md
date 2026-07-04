@@ -5,7 +5,7 @@ Clone a voice from a short sample, design one from a text prompt, preview it, an
 pick the active voice — all from the Hermes dashboard. No per-token cost, no rate
 limits, and your reference audio never leaves your machine.
 
-![The OmniVoice Voices tab in the Hermes dashboard](docs/images/voices-tab.png)
+![OmniVoice for Hermes — clone, design, edit, and select voices from the dashboard](docs/images/demo.gif)
 
 Selecting `tts.provider: omnivoice` routes **every** `text_to_speech` tool call,
 voice-mode reply, Discord VC utterance, and messaging voice delivery through
@@ -101,7 +101,10 @@ Agent v0.18+** (developed on v0.18.0).
 
 ## 🎨 Using it
 
-Run `hermes dashboard` and open the **Voices** tab.
+Run `hermes dashboard` and open the **Voices** tab. Each voice is a card with
+Preview / Edit / Set-active / Delete.
+
+![The Voices tab](docs/images/voices-tab.png)
 
 ### Design a voice from attributes
 
