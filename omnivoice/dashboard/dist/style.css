@@ -50,3 +50,50 @@
 .ov-term { cursor: pointer; user-select: none; }
 .ov-term:hover { background: var(--color-primary); color: var(--color-primary-foreground); }
 .ov-edit-card { border-color: var(--color-ring); }
+
+/* ---- Talk tab ---- */
+.ov-talk { display: flex; flex-direction: column; gap: 0.6rem; max-width: 720px; }
+.ov-transcript {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-input, transparent);
+  padding: 0.75rem;
+  min-height: 220px;
+  max-height: 48vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.ov-msg { display: flex; flex-direction: column; gap: 0.15rem; max-width: 85%; }
+.ov-msg-user { align-self: flex-end; align-items: flex-end; }
+.ov-msg-assistant { align-self: flex-start; align-items: flex-start; }
+.ov-msg-who { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-muted-foreground); }
+.ov-msg-text {
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ov-msg-user .ov-msg-text { background: var(--color-primary); color: var(--color-primary-foreground); }
+.ov-msg-assistant .ov-msg-text { background: var(--color-muted, color-mix(in srgb, var(--color-foreground) 8%, transparent)); color: var(--color-card-foreground); }
+.ov-msg-error .ov-msg-text { background: color-mix(in srgb, var(--color-destructive) 15%, transparent); color: var(--color-destructive); border: 1px solid var(--color-destructive); }
+
+.ov-status-pill { font-size: 0.78rem; color: var(--color-muted-foreground); padding: 0.1rem 0.1rem; }
+
+.ov-talk-input { display: flex; gap: 0.5rem; align-items: center; }
+.ov-input, .ov-talk-text {
+  flex: 1;
+  background: var(--color-input, transparent);
+  color: var(--color-card-foreground);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+}
+.ov-talk-text:disabled { opacity: 0.6; }
+.ov-talk > .ov-hint { margin-top: 0.35rem; }
+.ov-mic-on { animation: ov-pulse 1.1s ease-in-out infinite; }
+@keyframes ov-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }

@@ -23,6 +23,7 @@ OmniVoice automatically — no per-surface wiring.
 |---|---|
 | 🎚️ **One provider** | `tts.provider: omnivoice` routes all of Hermes' voice output through OmniVoice. |
 | 🎨 **Voice authoring UI** | A dashboard **Voices** tab to clone, design, preview, edit, and select voices — the gap Hermes doesn't fill. |
+| 🗣️ **Talk to your agent** | A **Talk** tab: speak (or type), the real Hermes agent answers, and the reply plays back out loud in your active voice. |
 | 🧬 **Clone** | From a short reference `.wav` + transcript. |
 | 🗣️ **Design** | From attributes (`male, american accent, moderate pitch`), with a **clickable guide + validation**. |
 | ✂️ **Edit** | Change a voice's name, language, attributes, or transcript after the fact. |
@@ -143,6 +144,32 @@ read and write the **same** registry, so they always agree.
 
 ---
 
+## 🗣️ Talk to your agent
+
+The **Talk** tab turns the dashboard into a hands-free voice conversation with
+your Hermes agent — it answers out loud in whichever voice you've made active.
+
+![The Talk tab — a spoken conversation with the agent in your active voice](docs/images/talk-tab.png)
+
+Each turn composes three native pieces, no reimplementation:
+
+1. **You speak** (🎙️ Record) or type. Recordings go to Hermes' own
+   `/api/audio/transcribe` (your configured STT — e.g. local Whisper).
+2. **The agent answers.** The transcript is handed to the *real* agent via its
+   stable single-query CLI (`hermes chat -q -Q --resume <session>`), so replies
+   have full tool access and the conversation keeps context across turns.
+3. **The reply is spoken** through the plugin's own OmniVoice synth in your
+   **active voice** — so it answers in your cloned/designed voice regardless of
+   `tts.provider`.
+
+> **Good to know.** This drives your actual agent, tools included — treat a voice
+> message like any agent instruction. Each turn takes a few seconds (the agent
+> thinks, then the reply is synthesized). The mic needs a `127.0.0.1`/HTTPS
+> dashboard (a secure context) and microphone permission. Set an **active voice**
+> first, or replies come back as text only.
+
+---
+
 ## 🔌 Backends & deployment
 
 | Backend | Runs where | Use it for |
@@ -208,10 +235,13 @@ Loopback is clean; non-loopback needs deliberate gating.
 
 ## ✅ Status
 
-- **53 offline tests pass** (`cd omnivoice && pytest -q`).
+- **57 offline tests pass** (`cd omnivoice && pytest -q`).
 - **Live-tested on Hermes v0.18.0**: installs via `hermes plugins install`, shows
   in `hermes tools`, the Voices tab renders and previews play; real synthesis
   ASR-verified across cpu/mps; 10 back-to-back synths, 0 OOM after the memory fix.
+  The **Talk** tab was verified end-to-end in-browser: transcript renders, the
+  agent replies (with `--resume` continuity), and the reply plays in the active
+  voice.
 - Deferred by design: streaming `stream()` and cross-provider fallback.
 
 ---

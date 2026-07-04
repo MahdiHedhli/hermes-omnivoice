@@ -11,6 +11,7 @@ hermes gateway restart
 **What you get**
 • `tts.provider: omnivoice` routes **every** `text_to_speech` call, voice-mode reply, Discord VC utterance, and messaging voice through OmniVoice — zero per-surface wiring
 • A dashboard **Voices** tab: clone / design / **edit** / preview / select, with a clickable attribute guide + validation (no more free words that silently fail at synth)
+• A new **Talk** tab 🎙️ — hold a spoken conversation with your agent right in the browser: it transcribes you, runs the *real* Hermes agent (tools + memory via `--resume`), and replies **out loud in your active voice**
 • **3 backends** — `local` (in-process), `studio` (loopback server), `service` (LAN/tailnet node w/ bearer auth + ssh-loopback). The included OpenAI-compatible model server is the *same artifact* from one host to a shared fleet.
 • Consent gate + path hardening on clone ingestion, MPS-memory-safe synthesis, and an ASR "does it actually speak?" QC check
 

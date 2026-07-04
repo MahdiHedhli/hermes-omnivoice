@@ -223,6 +223,156 @@
     );
   }
 
+  // ---- talk tab --------------------------------------------------------
+  //
+  // A browser voice conversation with the Hermes agent. Each turn: record the
+  // mic → native /api/audio/transcribe (STT) → plugin /talk (the agent, via
+  // `hermes chat -q -Q --resume`) → speak the reply through the active
+  // OmniVoice voice (/voices/{id}/preview). Conversation state lives on the
+  // page so it survives tab switches; updates are functional to stay correct
+  // across the async record→think→speak chain.
+
+  function nativeTranscribe(dataUrl, mime) {
+    return fetch("/api/audio/transcribe", {
+      method: "POST", credentials: "include",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ data_url: dataUrl, mime_type: mime }),
+    }).then(function (res) {
+      if (!res.ok) { return res.json().then(function (j) { throw new Error(j.detail || ("HTTP " + res.status)); }); }
+      return res.json();
+    });
+  }
+
+  function Bubble(props) {
+    var m = props.msg;
+    return h("div", { className: "ov-msg ov-msg-" + m.role + (m.error ? " ov-msg-error" : "") },
+      h("div", { className: "ov-msg-who" }, m.role === "user" ? "You" : "Agent"),
+      h("div", { className: "ov-msg-text" }, m.text)
+    );
+  }
+
+  function TalkTab(props) {
+    var t = props.state;                 // { msgs, session, status, input }
+    var setTalk = props.setState;
+    var mrRef = useRef(null);
+    var chunksRef = useRef([]);
+    var audioRef = props.audioRef;       // shared page player, so replies are replayable
+    var scrollRef = useRef(null);
+
+    var busy = t.status && t.status !== "recording"; // transcribing | thinking | speaking
+    var recording = t.status === "recording";
+
+    var patch = function (o) { setTalk(function (p) { return Object.assign({}, p, o); }); };
+    var appendMsg = function (m) { setTalk(function (p) { return Object.assign({}, p, { msgs: p.msgs.concat([m]) }); }); };
+    var setStatus = function (s) { setTalk(function (p) { return Object.assign({}, p, { status: s }); }); };
+
+    useEffect(function () {
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }, [t.msgs.length, t.status]);
+
+    var speak = function (text) {
+      if (!props.activeVoice) { setStatus(""); return; }
+      setStatus("speaking");
+      return fetch(BASE + "/voices/" + props.activeVoice + "/preview", {
+        method: "POST", credentials: "include",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ text: text }),
+      }).then(function (res) {
+        if (!res.ok) { return res.json().then(function (j) { throw new Error(j.detail || ("HTTP " + res.status)); }); }
+        return res.blob();
+      }).then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        if (audioRef.current) { audioRef.current.src = url; return audioRef.current.play(); }
+      }).catch(function (e) {
+        props.onError("Reply received, but couldn't speak it: " + e.message);
+      }).then(function () { setStatus(""); });
+    };
+
+    var sendText = function (raw) {
+      var text = (raw || "").trim();
+      if (!text || busy) return;
+      var sess = t.session;
+      props.onError("");
+      appendMsg({ role: "user", text: text });
+      patch({ input: "", status: "thinking" });
+      jsonReq("/talk", { text: text, session_id: sess })
+        .then(function (r) {
+          setTalk(function (p) { return Object.assign({}, p, { session: r.session_id || p.session, msgs: p.msgs.concat([{ role: "assistant", text: r.reply }]) }); });
+          return speak(r.reply);
+        })
+        .catch(function (e) {
+          appendMsg({ role: "assistant", text: "⚠️ " + e.message, error: true });
+          setStatus("");
+        });
+    };
+
+    var transcribeAndSend = function (blob) {
+      setStatus("transcribing");
+      var reader = new FileReader();
+      reader.onloadend = function () {
+        nativeTranscribe(reader.result, blob.type || "audio/webm")
+          .then(function (j) {
+            var text = ((j && j.transcript) || "").trim();
+            if (!text) { setStatus(""); props.onError("Didn't catch that — try again, or type instead."); return; }
+            sendText(text);
+          })
+          .catch(function (e) { setStatus(""); props.onError("Transcription failed: " + e.message); });
+      };
+      reader.readAsDataURL(blob);
+    };
+
+    var startRec = function () {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { props.onError("This browser can't record audio."); return; }
+      props.onError("");
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        var mr = new MediaRecorder(stream);
+        chunksRef.current = [];
+        mr.ondataavailable = function (e) { if (e.data && e.data.size) chunksRef.current.push(e.data); };
+        mr.onstop = function () {
+          stream.getTracks().forEach(function (tr) { tr.stop(); });
+          transcribeAndSend(new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" }));
+        };
+        mrRef.current = mr;
+        mr.start();
+        setStatus("recording");
+      }).catch(function (e) { props.onError("Microphone unavailable: " + e.message); });
+    };
+
+    var stopRec = function () { if (mrRef.current && mrRef.current.state !== "inactive") mrRef.current.stop(); };
+
+    var statusLabel = { recording: "🎙️ Recording… tap Stop when done", transcribing: "✍️ Transcribing…", thinking: "🧠 Agent is thinking…", speaking: "🔊 Speaking…" };
+
+    return h("div", { className: "ov-talk" },
+      h("p", { className: "ov-hint" },
+        props.activeVoice
+          ? "Voice chat with your Hermes agent — it replies out loud in your active voice (“" + props.activeVoice + "”). This drives the real agent (tools included); each turn takes a few seconds."
+          : "Set an active voice in the Voices tab to hear spoken replies. You can still chat by text below."),
+      h("div", { className: "ov-transcript", ref: scrollRef },
+        t.msgs.length
+          ? t.msgs.map(function (m, i) { return h(Bubble, { key: i, msg: m }); })
+          : h("p", { className: "ov-empty" }, "Say something, or type below, to start talking with your agent.")
+      ),
+      t.status ? h("div", { className: "ov-status-pill" }, statusLabel[t.status] || t.status) : null,
+      h("div", { className: "ov-talk-input" },
+        h(C.Button, {
+          className: "ov-mic" + (recording ? " ov-mic-on" : ""),
+          variant: recording ? "destructive" : "secondary",
+          disabled: busy,
+          onClick: recording ? stopRec : startRec,
+        }, recording ? "⏹ Stop" : "🎙️ Record"),
+        h("input", {
+          className: "ov-input ov-talk-text",
+          value: t.input,
+          placeholder: busy ? "…" : "Type a message and press Enter",
+          disabled: busy || recording,
+          onChange: function (e) { patch({ input: e.target.value }); },
+          onKeyDown: function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(t.input); } },
+        }),
+        h(C.Button, { disabled: busy || recording || !t.input.trim(), onClick: function () { sendText(t.input); } }, "Send")
+      )
+    );
+  }
+
   // ---- page ------------------------------------------------------------
 
   function VoicesPage() {
@@ -234,6 +384,7 @@
     var ts = useState("voices"); var tab = ts[0], setTab = ts[1];
     var vv = useState(null); var vocab = vv[0], setVocab = vv[1];
     var eds = useState(null); var editing = eds[0], setEditing = eds[1];
+    var tk = useState({ msgs: [], session: "", status: "", input: "" }); var talk = tk[0], setTalk = tk[1];
     var audioRef = useRef(null);
 
     var refresh = useCallback(function () { return api("/voices", {}).then(setState).catch(function (e) { setErr(e.message); }); }, []);
@@ -307,7 +458,7 @@
         ? h(EditForm, { key: editing.id, voice: editing, vocab: vocab, busy: formBusy, onSave: saveEdit, onCancel: function () { setEditing(null); }, onError: setErr })
         : h("div", null,
             h("div", { className: "ov-tabbar" },
-              ["voices", "clone", "design"].map(function (t) {
+              ["voices", "clone", "design", "talk"].map(function (t) {
                 return h(C.Button, {
                   key: t,
                   variant: tab === t ? "default" : "secondary",
@@ -318,7 +469,8 @@
             ),
             tab === "voices" ? h(VoiceGrid, { voices: state.voices, busyId: busyId, onActivate: activate, onPreview: preview, onDelete: remove, onEdit: startEdit }) : null,
             tab === "clone" ? h(CloneForm, { busy: formBusy, onSubmit: onFormSubmit, onError: setErr }) : null,
-            tab === "design" ? h(DesignForm, { busy: formBusy, vocab: vocab, onSubmit: onFormSubmit, onError: setErr }) : null
+            tab === "design" ? h(DesignForm, { busy: formBusy, vocab: vocab, onSubmit: onFormSubmit, onError: setErr }) : null,
+            tab === "talk" ? h(TalkTab, { state: talk, setState: setTalk, activeVoice: state.active, audioRef: audioRef, onError: setErr }) : null
           ),
       h("audio", { ref: audioRef, controls: true, className: "ov-audio" })
     );

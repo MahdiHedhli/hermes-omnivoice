@@ -129,6 +129,64 @@ def test_patch_updates_and_rejects_bad_instruct(api):
     assert client.patch(BASE + "/voices/n", json={"instruct": "female, energetic"}).status_code == 400
 
 
+class _FakeProc:
+    def __init__(self, returncode=0, stdout="", stderr=""):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+def test_talk_returns_reply_and_session(api):
+    import subprocess
+
+    client, monkeypatch = api
+    _optin(monkeypatch)
+    captured = {}
+
+    def fake_run(cmd, capture_output, text, timeout):
+        captured["cmd"] = cmd
+        # Mirror the real CLI: reply on stdout, `session_id:` line on stderr.
+        return _FakeProc(stdout="Hello there, friend.",
+                         stderr="\nsession_id: 20260101_000000_abcdef")
+
+    # plugin_api does `import subprocess`, so patching the shared module's `run`
+    # attribute reaches the route without needing a handle on the loaded module.
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    r = client.post(BASE + "/talk", json={"text": "hi"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["reply"] == "Hello there, friend."
+    assert body["session_id"] == "20260101_000000_abcdef"
+    # continuity: a provided session id becomes --resume <id>
+    r2 = client.post(BASE + "/talk", json={"text": "again", "session_id": "sess42"})
+    assert r2.status_code == 200
+    assert "--resume" in captured["cmd"] and "sess42" in captured["cmd"]
+
+
+def test_talk_requires_text(api):
+    client, monkeypatch = api
+    _optin(monkeypatch)
+    assert client.post(BASE + "/talk", json={"text": "  "}).status_code == 400
+
+
+def test_talk_non_loopback_refused_without_optin(api):
+    client, monkeypatch = api
+    monkeypatch.delenv("HERMES_OMNIVOICE_ALLOW_REMOTE_CLONE", raising=False)
+    assert client.post(BASE + "/talk", json={"text": "hi"}).status_code == 403
+
+
+def test_talk_agent_error_is_502(api):
+    import subprocess
+
+    client, monkeypatch = api
+    _optin(monkeypatch)
+    monkeypatch.setattr(subprocess, "run",
+                        lambda *a, **k: _FakeProc(returncode=1, stderr="model not configured"))
+    r = client.post(BASE + "/talk", json={"text": "hi"})
+    assert r.status_code == 502 and "model not configured" in r.json()["detail"]
+
+
 def test_clone_preview_activate_delete(api):
     client, monkeypatch = api
     _optin(monkeypatch)

@@ -18,6 +18,8 @@ a VPN/tailnet) — see the integration SPEC, Section 6.
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 import sys
 import uuid
 from pathlib import Path
@@ -37,6 +39,7 @@ router = APIRouter()
 
 _LOOPBACK = {"127.0.0.1", "::1", "localhost", None, ""}
 _MAX_UPLOAD_BYTES = 25 * 1024 * 1024  # 25 MiB cap on clone reference uploads
+_HERMES_BIN = shutil.which("hermes") or "hermes"  # for the Talk tab agent bridge
 _PREVIEW_MAX_CHARS = 500
 _PREVIEW_TEXT = (
     "The quick brown fox jumps over the lazy dog. This is a preview of the "
@@ -201,6 +204,77 @@ async def preview(voice_id: str, request: Request, body: dict = Body(default={})
     except SynthError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
     return Response(content=data, media_type="audio/wav")
+
+
+_TALK_MAX_CHARS = 4000
+
+
+def _run_agent(text: str, session_id: str, max_turns: int, timeout: int):
+    """Bridge to the Hermes agent via its stable single-query CLI contract.
+
+    `hermes chat -q <text> -Q` runs one non-interactive turn and prints only the
+    final response plus a `session_id:` line (see `hermes chat --help`). Passing
+    `--resume <id>` continues an existing conversation, which is how the Talk tab
+    keeps context across turns. We deliberately drive the CLI rather than the
+    dashboard's `/api/pty` chat, which is a raw terminal (xterm/Ink) stream with
+    no machine-readable reply to hand to TTS.
+    """
+    cmd = [_HERMES_BIN, "chat", "-q", text, "-Q", "--max-turns", str(max_turns)]
+    if session_id:
+        cmd += ["--resume", session_id]
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+
+
+@router.post("/talk")
+async def talk(request: Request, body: dict = Body(...)):
+    """One voice-chat turn: transcribed text in, agent reply + session id out.
+
+    The browser Talk tab records the mic, sends it to the native
+    `/api/audio/transcribe`, posts the transcript here, then speaks the reply
+    back through the plugin's own OmniVoice synth (`/voices/{id}/preview`) so the
+    agent always answers in the selected voice regardless of `tts.provider`.
+    """
+    _require_local_or_optin(request)
+    text = str((body or {}).get("text") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text is required")
+    if len(text) > _TALK_MAX_CHARS:
+        raise HTTPException(status_code=400, detail="text too long")
+    session_id = str((body or {}).get("session_id") or "").strip()
+    try:
+        max_turns = max(1, min(int((body or {}).get("max_turns") or 8), 40))
+    except (TypeError, ValueError):
+        max_turns = 8
+    try:
+        timeout = max(10, min(int((body or {}).get("timeout") or 300), 600))
+    except (TypeError, ValueError):
+        timeout = 300
+
+    try:
+        proc = await run_in_threadpool(_run_agent, text, session_id, max_turns, timeout)
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="the agent took too long to respond")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="the `hermes` CLI was not found on PATH")
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "agent failed").strip()
+        raise HTTPException(status_code=502, detail=f"agent error: {detail[:400]}")
+
+    # `hermes chat -Q` prints the reply on stdout and a `session_id:` line on
+    # stderr. We scan both streams for the id (order-independent, version-proof)
+    # and take the reply from stdout with any stray id line removed.
+    sid = session_id
+    for stream in ((proc.stderr or ""), (proc.stdout or "")):
+        for line in stream.splitlines():
+            if line.startswith("session_id:"):
+                sid = line.split(":", 1)[1].strip()
+                break
+    reply = "\n".join(
+        ln for ln in (proc.stdout or "").splitlines() if not ln.startswith("session_id:")
+    ).strip()
+    if not reply:
+        raise HTTPException(status_code=502, detail="the agent returned an empty reply")
+    return {"reply": reply, "session_id": sid}
 
 
 @router.put("/voices/{voice_id}/active")

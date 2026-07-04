@@ -1,9 +1,9 @@
 {
   "name": "omnivoice",
   "label": "Voices",
-  "description": "Clone, design, preview, and select OmniVoice voices",
+  "description": "Clone, design, preview, and select OmniVoice voices — plus a Talk tab to converse with your agent by voice",
   "icon": "MessageSquare",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "tab": {
     "path": "/voices",
     "position": "after:skills"
