@@ -176,6 +176,41 @@ def test_talk_non_loopback_refused_without_optin(api):
     assert client.post(BASE + "/talk", json={"text": "hi"}).status_code == 403
 
 
+def test_set_provider_is_surgical_and_preserves_comments(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    home.mkdir()
+    cfg = home / "config.yaml"
+    cfg.write_text(
+        "# top comment\n"
+        "model:\n  provider: openai\n"
+        "tts:\n"
+        "  provider: edge   # inline comment\n"
+        "  edge:\n    voice: en-US-AriaNeural\n"
+        "stt:\n  provider: local\n"
+        "# trailing comment block\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    mod = _load_api()
+    assert mod._set_tts_provider_omnivoice() is True
+    out = cfg.read_text(encoding="utf-8")
+    assert "provider: omnivoice" in out
+    # only the tts provider changed; other providers + all comments intact
+    assert "  provider: openai\n" in out           # model.provider untouched
+    assert "stt:\n  provider: local\n" in out       # stt.provider untouched
+    assert "# top comment" in out and "# trailing comment block" in out
+    assert "voice: en-US-AriaNeural" in out
+    # idempotent
+    assert mod._set_tts_provider_omnivoice() is True
+    assert out.count("provider: omnivoice") == 1
+
+
+def test_provider_reported_in_list(api):
+    client, _ = api
+    r = client.get(BASE + "/voices")
+    assert r.status_code == 200 and "provider" in r.json()
+
+
 def test_talk_agent_error_is_502(api):
     import subprocess
 

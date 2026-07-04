@@ -44,6 +44,17 @@
   function Field(props) { return h("div", { className: "ov-field" }, h(C.Label, null, props.label), props.children); }
   function Notice(props) { if (!props.text) return null; return h("div", { className: "ov-notice ov-notice-" + (props.kind || "error") }, props.text); }
 
+  // Trim a reply down to what should be *spoken*: strip stray markdown and cap
+  // length (synthesis is ~1s/word, so long replies are slow). The full text is
+  // still shown in the transcript.
+  function forSpeech(text) {
+    var t = (text || "").replace(/```[\s\S]*?```/g, " ").replace(/[*_#`>|~]/g, "").replace(/\s+/g, " ").trim();
+    if (t.length <= 360) return t;
+    var cut = t.slice(0, 360);
+    var stop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+    return (stop > 120 ? cut.slice(0, stop + 1) : cut).trim();
+  }
+
   function splitItems(s) { return (s || "").split(/[,，]/).map(function (x) { return x.trim(); }).filter(Boolean); }
   function addTerm(instruct, term) { var items = splitItems(instruct); if (items.indexOf(term) === -1) items.push(term); return items.join(", "); }
   function badTerms(instruct, vocab) {
@@ -270,22 +281,51 @@
       if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }, [t.msgs.length, t.status]);
 
-    var speak = function (text) {
-      if (!props.activeVoice) { setStatus(""); return; }
-      setStatus("speaking");
+    var synthBlob = function (chunk) {
       return fetch(BASE + "/voices/" + props.activeVoice + "/preview", {
         method: "POST", credentials: "include",
         headers: authHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ text: text }),
+        body: JSON.stringify({ text: chunk }),
       }).then(function (res) {
         if (!res.ok) { return res.json().then(function (j) { throw new Error(j.detail || ("HTTP " + res.status)); }); }
         return res.blob();
-      }).then(function (blob) {
-        var url = URL.createObjectURL(blob);
-        if (audioRef.current) { audioRef.current.src = url; return audioRef.current.play(); }
-      }).catch(function (e) {
+      });
+    };
+    var playBlob = function (blob) {
+      return new Promise(function (resolve) {
+        var a = audioRef.current;
+        if (!a) { resolve(); return; }
+        a.src = URL.createObjectURL(blob);
+        a.onended = function () { resolve(); };
+        a.onerror = function () { resolve(); };
+        var p = a.play();
+        if (p && p.catch) p.catch(function () { resolve(); });
+      });
+    };
+
+    // Speak the reply sentence-by-sentence so the first words play in ~one
+    // sentence's synth time instead of waiting for the whole reply. The next
+    // chunk is synthesized while the current one plays (overlap hides latency).
+    var speak = function (text) {
+      if (!props.activeVoice) { setStatus(""); return Promise.resolve(); }
+      var chunks = (forSpeech(text).match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [text])
+        .map(function (s) { return s.trim(); }).filter(Boolean);
+      if (!chunks.length) { setStatus(""); return Promise.resolve(); }
+      setStatus("speaking");
+      var i = 0;
+      var pending = synthBlob(chunks[0]);
+      function step() {
+        if (i >= chunks.length) { setStatus(""); return; }
+        return pending.then(function (blob) {
+          i += 1;
+          pending = i < chunks.length ? synthBlob(chunks[i]) : null; // prefetch next
+          return playBlob(blob).then(step);
+        });
+      }
+      return step().catch(function (e) {
         props.onError("Reply received, but couldn't speak it: " + e.message);
-      }).then(function () { setStatus(""); });
+        setStatus("");
+      });
     };
 
     var sendText = function (raw) {
@@ -298,7 +338,7 @@
       jsonReq("/talk", { text: text, session_id: sess })
         .then(function (r) {
           setTalk(function (p) { return Object.assign({}, p, { session: r.session_id || p.session, msgs: p.msgs.concat([{ role: "assistant", text: r.reply }]) }); });
-          return speak(r.reply);
+          return speak(forSpeech(r.reply));
         })
         .catch(function (e) {
           appendMsg({ role: "assistant", text: "⚠️ " + e.message, error: true });
@@ -395,8 +435,15 @@
 
     var activate = function (id) {
       setBusyId(id); setErr(""); setNote("");
-      jsonReq("/voices/" + id + "/active", { set_provider: false }, "PUT")
-        .then(function () { setNote("Active voice set to '" + id + "'."); return refresh(); })
+      // set_provider:true also writes tts.provider: omnivoice, so this voice is
+      // used on *every* Hermes surface — not just the Talk tab.
+      jsonReq("/voices/" + id + "/active", { set_provider: true }, "PUT")
+        .then(function (r) {
+          setNote(r && r.provider_set
+            ? "'" + id + "' is now your agent's voice everywhere. Restart the gateway (or run `hermes gateway restart`) to apply it to running sessions."
+            : "Active voice set to '" + id + "'.");
+          return refresh();
+        })
         .catch(function (e) { setErr(e.message); })
         .then(function () { setBusyId(null); });
     };
@@ -448,10 +495,16 @@
         h(C.CardContent, null,
           h("div", { className: "ov-status-row" },
             h("span", null, "Backend: ", h(C.Badge, null, state.backend || "?")),
-            h("span", null, "Active: ", state.active ? h(C.Badge, null, state.active) : h("em", null, "none"))
+            h("span", null, "Active: ", state.active ? h(C.Badge, null, state.active) : h("em", null, "none")),
+            h("span", null, "Agent voice: ", state.provider === "omnivoice"
+              ? h(C.Badge, { className: "ov-active-badge" }, "OmniVoice")
+              : h(C.Badge, { className: "ov-warn-badge" }, (state.provider || "?") + " — not OmniVoice"))
           )
         )
       ),
+      state.provider && state.provider !== "omnivoice"
+        ? h(Notice, { kind: "warn", text: "Hermes speaks with '" + state.provider + "' everywhere except this Talk tab. Click Set active on a voice to make OmniVoice your agent's voice — then restart the gateway to apply it." })
+        : null,
       h(Notice, { kind: "error", text: err }),
       h(Notice, { kind: "ok", text: note }),
       editing

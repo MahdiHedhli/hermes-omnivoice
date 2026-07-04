@@ -18,6 +18,7 @@ a VPN/tailnet) — see the integration SPEC, Section 6.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -78,6 +79,21 @@ def _split_uses(raw: str):
 # Routes
 # ---------------------------------------------------------------------------
 
+def _current_tts_provider() -> str:
+    """The global ``tts.provider`` from config.yaml — the UI shows whether
+    OmniVoice is what Hermes actually speaks with everywhere (not just the
+    plugin's Talk tab, which calls OmniVoice directly)."""
+    try:
+        import yaml
+        cfg_path = paths.hermes_home() / "config.yaml"
+        if cfg_path.is_file():
+            data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+            return str(((data.get("tts") or {}).get("provider")) or "")
+    except Exception:
+        pass
+    return ""
+
+
 @router.get("/voices")
 async def list_voices():
     reg = _registry()
@@ -86,6 +102,7 @@ async def list_voices():
         "voices": [p.to_public() | {"active": p.id == active} for p in reg.list_voices()],
         "active": active,
         "backend": config.load().backend,
+        "provider": _current_tts_provider(),
     }
 
 
@@ -208,6 +225,17 @@ async def preview(voice_id: str, request: Request, body: dict = Body(default={})
 
 _TALK_MAX_CHARS = 4000
 
+# Synthesis time scales with reply length (~1s/word on Apple-Silicon MPS), so a
+# spoken assistant must answer briefly. Prepended to the query (never shown in the
+# transcript, which keeps the user's own words) to steer replies short.
+_VOICE_PREAMBLE = (
+    "You are in a spoken voice conversation and your reply is read aloud by a "
+    "slow text-to-speech voice, so brevity matters. Reply with AT MOST two short "
+    "sentences (about 25 words total). Be direct and conversational — no preamble, "
+    "markdown, lists, headings, emojis, or code. If more detail is truly needed, "
+    "offer to go deeper instead of dumping it. Here is what I said:\n\n"
+)
+
 
 def _run_agent(text: str, session_id: str, max_turns: int, timeout: int):
     """Bridge to the Hermes agent via its stable single-query CLI contract.
@@ -241,6 +269,7 @@ async def talk(request: Request, body: dict = Body(...)):
     if len(text) > _TALK_MAX_CHARS:
         raise HTTPException(status_code=400, detail="text too long")
     session_id = str((body or {}).get("session_id") or "").strip()
+    concise = bool((body or {}).get("concise", True))
     try:
         max_turns = max(1, min(int((body or {}).get("max_turns") or 8), 40))
     except (TypeError, ValueError):
@@ -250,8 +279,9 @@ async def talk(request: Request, body: dict = Body(...)):
     except (TypeError, ValueError):
         timeout = 300
 
+    query = (_VOICE_PREAMBLE + text) if concise else text
     try:
-        proc = await run_in_threadpool(_run_agent, text, session_id, max_turns, timeout)
+        proc = await run_in_threadpool(_run_agent, query, session_id, max_turns, timeout)
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=504, detail="the agent took too long to respond")
     except FileNotFoundError:
@@ -309,26 +339,31 @@ async def delete_voice(voice_id: str, request: Request):
 # ---------------------------------------------------------------------------
 
 def _set_tts_provider_omnivoice() -> bool:
-    """Set ``tts.provider: omnivoice`` in config.yaml, preserving other keys."""
-    try:
-        import yaml
-    except Exception:
-        return False
+    """Set ``tts.provider: omnivoice`` in config.yaml via a surgical, in-place line
+    edit — only the one line changes, so the file's comments and formatting are
+    preserved (a YAML round-trip would strip every comment)."""
     cfg_path = paths.hermes_home() / "config.yaml"
     try:
-        data = {}
-        if cfg_path.is_file():
-            with cfg_path.open("r", encoding="utf-8") as fh:
-                data = yaml.safe_load(fh) or {}
-        if not isinstance(data, dict):
+        if not cfg_path.is_file():
             return False
-        tts = data.get("tts")
-        if not isinstance(tts, dict):
-            tts = {}
-        tts["provider"] = "omnivoice"
-        data["tts"] = tts
-        with cfg_path.open("w", encoding="utf-8") as fh:
-            yaml.safe_dump(data, fh, sort_keys=False)
-        return True
+        lines = cfg_path.read_text(encoding="utf-8").splitlines(keepends=True)
+        in_tts = False
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            # a top-level key (no indent, not a comment/blank) ends the tts block
+            if line[:1] not in (" ", "\t", "\n", "#", "") and stripped and not stripped.startswith("#"):
+                if in_tts:
+                    break
+                in_tts = stripped.split(":", 1)[0] == "tts"
+                continue
+            if in_tts:
+                m = re.match(r"^(\s+)provider:\s*(.*?)\s*$", line)
+                if m:
+                    if m.group(2) == "omnivoice":
+                        return True  # already set
+                    lines[i] = f"{m.group(1)}provider: omnivoice\n"
+                    cfg_path.write_text("".join(lines), encoding="utf-8")
+                    return True
+        return False
     except Exception:
         return False

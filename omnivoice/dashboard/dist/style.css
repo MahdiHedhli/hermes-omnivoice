@@ -40,6 +40,8 @@
 .ov-notice { padding: 0.5rem 0.75rem; border-radius: var(--radius); font-size: 0.85rem; }
 .ov-notice-error { background: color-mix(in srgb, var(--color-destructive) 15%, transparent); color: var(--color-destructive); border: 1px solid var(--color-destructive); }
 .ov-notice-ok { background: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary); border: 1px solid var(--color-primary); }
+.ov-notice-warn { background: color-mix(in srgb, #d97706 16%, transparent); color: #d97706; border: 1px solid #d97706; }
+.ov-warn-badge { background: color-mix(in srgb, #d97706 20%, transparent); color: #d97706; border: 1px solid #d97706; }
 
 /* hint text + instruct term guide */
 .ov-hint { font-size: 0.78rem; color: var(--color-muted-foreground); margin: -0.35rem 0 0.75rem; line-height: 1.4; }
