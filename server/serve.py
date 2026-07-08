@@ -134,6 +134,10 @@ def main(argv=None) -> int:
     p.add_argument("--device", default=os.environ.get("HERMES_OMNIVOICE_DEVICE", "auto"),
                    help="auto | cpu | cuda | mps")
     p.add_argument("--dtype", default=os.environ.get("HERMES_OMNIVOICE_DTYPE", "float16"))
+    p.add_argument("--num-step", type=int, default=int(os.environ.get("HERMES_OMNIVOICE_NUM_STEP", 16)),
+                   help="diffusion denoising steps — lower is faster (measured on MPS: 32->36.6s, "
+                        "16->19.4s, 8->11.4s, 4->6.3s for the same phrase). 16 is ASR-verified as "
+                        "identical output to the SDK's 32 default; 8 starts dropping words")
     p.add_argument("--voices-dir", default=str(default_voices))
     p.add_argument("--auth-token", default=os.environ.get("HERMES_OMNIVOICE_SERVICE_TOKEN", ""))
     p.add_argument("--require-auth", action="store_true",
@@ -150,11 +154,11 @@ def main(argv=None) -> int:
     CFG = OmniVoiceConfig(
         backend="local",
         voices_dir=Path(args.voices_dir).expanduser(),
-        local=LocalConfig(model=args.model, device=args.device, dtype=args.dtype),
+        local=LocalConfig(model=args.model, device=args.device, dtype=args.dtype, num_step=args.num_step),
     )
 
     print(f"OmniVoice speech server → http://{args.host}:{args.port}  "
-          f"(model={args.model}, device={args.device}, dtype={args.dtype}, "
+          f"(model={args.model}, device={args.device}, dtype={args.dtype}, num_step={args.num_step}, "
           f"voices={CFG.voices_dir}, auth={'on' if AUTH_TOKEN else 'off'})", flush=True)
     if not args.no_warmup:
         _warmup()

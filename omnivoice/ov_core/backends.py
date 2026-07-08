@@ -202,10 +202,25 @@ def _free_device_memory() -> None:
         pass
 
 
+def _generation_config(num_step: int):
+    """Build the SDK's diffusion generation_config for our configured step
+    count. Soft-fails to None (SDK default: num_step=32) on older SDK layouts
+    that lack this class, since num_step is a speed knob, not a correctness
+    requirement."""
+    try:
+        from omnivoice.models.omnivoice import OmniVoiceGenerationConfig
+    except ImportError:
+        return None
+    return OmniVoiceGenerationConfig(num_step=num_step)
+
+
 def _synth_local(text: str, output_path: Path, *, voice: VoiceProfile,
                  cfg: OmniVoiceConfig, speed: float, fmt: str) -> str:
     model = _load_local_model(cfg)
     kwargs: Dict[str, object] = {"text": text, "speed": speed}
+    generation_config = _generation_config(cfg.local.num_step)
+    if generation_config is not None:
+        kwargs["generation_config"] = generation_config
     if voice.language:
         kwargs["language"] = voice.language  # SDK generate() kwarg (verified: omnivoice 0.1.5)
     if voice.mode == "clone":

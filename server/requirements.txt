@@ -1,8 +1,13 @@
 # Reference OmniVoice speech server — run this on the machine with the model.
 # (The Hermes host running the plugin does NOT need these when using the
 #  studio/service backend; only this server process does.)
-omnivoice      # the OmniVoice SDK (imports as `omnivoice`)
-torch
+#
+# omnivoice/torch are pinned: omnivoice==0.2.0 + torch==2.13.0 (the latest
+# pair as of 2026-07) segfaults loading the model onto MPS on Apple Silicon.
+# 0.1.5 + 2.12.1 is the combo verified working (real synths, ASR-checked,
+# 0 crashes) — bump only after re-verifying on real MPS hardware.
+omnivoice==0.1.5
+torch==2.12.1
 soundfile
 fastapi
 uvicorn

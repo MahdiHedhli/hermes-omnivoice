@@ -192,6 +192,60 @@ def test_synth_local_sends_language_kwarg(voices_dir, tmp_path, monkeypatch):
     assert captured["_from_pretrained"] == ("k2-fsa/OmniVoice", "cpu", "float32-dtype")
 
 
+def test_synth_local_passes_configured_num_step(voices_dir, tmp_path, monkeypatch):
+    """OmniVoice is a diffusion-LM TTS model: num_step is the denoising step
+    count and is the main speed/quality knob (measured on MPS: 16 steps is
+    ASR-identical to the 32 default at ~1.9x the speed). Regression: the
+    configured value must actually reach generate()'s generation_config."""
+    import sys
+    import types
+
+    from ov_core.config import LocalConfig
+
+    torch = types.ModuleType("torch")
+    torch.float32 = "float32-dtype"
+    torch.backends = types.SimpleNamespace(mps=types.SimpleNamespace(is_available=lambda: False))
+    torch.cuda = types.SimpleNamespace(is_available=lambda: False)
+
+    captured = {}
+
+    class FakeModel:
+        sampling_rate = 24000
+
+        def generate(self, **kw):
+            captured.update(kw)
+            return [[0.0, 0.0, 0.0]]
+
+    class FakeOmni:
+        @staticmethod
+        def from_pretrained(model, device_map=None, dtype=None):
+            return FakeModel()
+
+    class FakeGenerationConfig:
+        def __init__(self, num_step):
+            self.num_step = num_step
+
+    omni = types.ModuleType("omnivoice")
+    omni.OmniVoice = FakeOmni
+    omni_models = types.ModuleType("omnivoice.models")
+    omni_models_ov = types.ModuleType("omnivoice.models.omnivoice")
+    omni_models_ov.OmniVoiceGenerationConfig = FakeGenerationConfig
+    monkeypatch.setitem(sys.modules, "torch", torch)
+    monkeypatch.setitem(sys.modules, "omnivoice", omni)
+    monkeypatch.setitem(sys.modules, "omnivoice.models", omni_models)
+    monkeypatch.setitem(sys.modules, "omnivoice.models.omnivoice", omni_models_ov)
+    monkeypatch.setattr(backends, "_write_samples", lambda samples, sr, out, fmt: str(out))
+    backends._model_cache.clear()
+
+    cfg = OmniVoiceConfig(backend="local", local=LocalConfig(device="cpu", dtype="float32", num_step=8))
+    backends.synthesize("hello", str(tmp_path / "o.wav"),
+                        voice=_design_profile(voices_dir), cfg=cfg)
+
+    gen_cfg = captured.get("generation_config")
+    assert isinstance(gen_cfg, FakeGenerationConfig)
+    assert gen_cfg.num_step == 8
+
+
 # --- ssh-loopback service transport ----------------------------------------
 
 def _svc(**kw):

@@ -20,6 +20,7 @@ Config shape (see ``config.example.yaml``)::
           device: auto            # auto | cpu | cuda | mps
           dtype: float16
           sample_rate: 24000
+          num_step: 16             # diffusion denoising steps; speed/quality tradeoff (see LocalConfig)
         studio:
           url: http://127.0.0.1:3900
           speech_path: /v1/audio/speech
@@ -90,6 +91,13 @@ class LocalConfig:
     device: str = "auto"
     dtype: str = "float16"
     sample_rate: int = 24000
+    # OmniVoice is a diffusion-LM TTS model: `num_step` is the denoising step
+    # count and scales synthesis time roughly linearly (measured on Apple
+    # Silicon/MPS: 32->36.6s, 16->19.4s, 8->11.4s, 4->6.3s for the same phrase).
+    # ASR-verified: 16 produces the identical transcript as the 32 default; 8
+    # starts dropping words; 4 is broken. 16 is the default here as the best
+    # verified speed/quality tradeoff — override via HERMES_OMNIVOICE_NUM_STEP.
+    num_step: int = 16
 
 
 @dataclass
@@ -160,6 +168,7 @@ def load() -> OmniVoiceConfig:
             device=(_ENV.get("HERMES_OMNIVOICE_DEVICE") or local_s.get("device") or "auto").strip(),
             dtype=(_ENV.get("HERMES_OMNIVOICE_DTYPE") or local_s.get("dtype") or "float16").strip(),
             sample_rate=int(local_s.get("sample_rate", 24000) or 24000),
+            num_step=int(_ENV.get("HERMES_OMNIVOICE_NUM_STEP") or local_s.get("num_step", 16) or 16),
         ),
         studio=StudioConfig(
             url=(_ENV.get("HERMES_OMNIVOICE_STUDIO_URL") or studio_s.get("url") or "http://127.0.0.1:3900").strip(),

@@ -27,9 +27,30 @@ python server/serve.py --host 0.0.0.0 --port 8880 --require-auth
 ```
 
 Options: `--model` (default `k2-fsa/OmniVoice`), `--device auto|cpu|cuda|mps`,
-`--dtype float16` (default; less memory than float32), `--voices-dir`,
-`--auth-token`, `--no-warmup`. The server **warms the model at startup** so the
-first real request is reliable.
+`--dtype float16` (default; less memory than float32), `--num-step` (diffusion
+denoising steps, default `16` — see below), `--voices-dir`, `--auth-token`,
+`--no-warmup`. The server **warms the model at startup** so the first real
+request is reliable.
+
+### Speed: `--num-step`
+
+OmniVoice is a **diffusion-LM** TTS model — synthesis runs `num_step` denoising
+passes per generation, and time scales roughly linearly with it. Measured on
+Apple Silicon (MPS/float16, a ~13s phrase against a real clone reference):
+
+| `num_step` | synth time | ASR-checked output |
+|---|---|---|
+| 32 (SDK default) | 36.6s | reference transcript |
+| **16 (this server's default)** | **19.4s** | **identical transcript** |
+| 8 | 11.4s | starts dropping words |
+| 4 | 6.3s | broken/garbled |
+
+16 is the verified sweet spot — same output as the SDK default at ~1.9x the
+speed. Pass `--num-step 32` for max quality or `--num-step 8` to trade a little
+accuracy for more speed; below 8 the output degrades noticeably. There is no
+MLX build of OmniVoice (it's pure PyTorch/`transformers`), so on Apple Silicon
+this diffusion-step count — not device choice — is the main lever you control;
+device/dtype (`mps`/`float16`) already get you the ~3.3x speedup over CPU.
 
 ## Endpoints
 
