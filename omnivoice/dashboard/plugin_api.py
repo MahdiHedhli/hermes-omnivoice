@@ -32,7 +32,7 @@ if str(_PLUGIN_ROOT) not in sys.path:
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
-from ov_core import config, paths
+from ov_core import config, gallery, paths
 from ov_core.backends import SynthError, synthesize
 from ov_core.registry import INSTRUCT_VOCAB, RegistryError, VoiceRegistry
 
@@ -111,6 +111,65 @@ async def instruct_vocab():
     """The valid design-voice `instruct` attributes (single source of truth for
     the UI's term guide + validation)."""
     return {"vocab": INSTRUCT_VOCAB}
+
+
+# ---------------------------------------------------------------------------
+# Voice gallery — browse ready-made designed voices, install into the registry
+# ---------------------------------------------------------------------------
+
+@router.get("/gallery")
+async def list_gallery():
+    """Ready-made presets plus which ones are already in the registry.
+
+    Reads a local file only — the bundled snapshot, or the user's refreshed
+    cache. No network call happens here.
+    """
+    data = gallery.load()
+    have = {p.id for p in _registry().list_voices()}
+    items = [dict(item, installed=str(item.get("id", "")).lower() in have)
+             for item in data["items"]]
+    return {**data, "items": items}
+
+
+@router.post("/gallery/refresh")
+async def refresh_gallery(request: Request):
+    """Explicitly re-fetch the published manifest (the only outbound call the
+    plugin ever makes, and only when the user asks for it)."""
+    _require_local_or_optin(request)
+    try:
+        count, updated_at = await run_in_threadpool(gallery.refresh)
+    except RegistryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    return {"ok": True, "count": count, "updated_at": updated_at}
+
+
+@router.post("/gallery/{preset_id}/install")
+async def install_gallery_preset(preset_id: str, request: Request, body: dict = Body(default={})):
+    """Create a design voice from a gallery preset.
+
+    Goes through the same create_design() path as the Design tab, so id rules,
+    instruct validation and the consent record are identical — a preset is just
+    a pre-filled design, not a privileged import.
+    """
+    _require_local_or_optin(request)
+    try:
+        preset = gallery.get(preset_id)
+    except RegistryError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    voice_id = str((body or {}).get("voice_id") or preset["id"]).strip()
+    try:
+        profile = _registry().create_design(
+            voice_id,
+            str((body or {}).get("name") or preset.get("name") or voice_id),
+            str(preset.get("instruct") or ""),
+            consent_source="omnivoice_gallery",
+            language=gallery.language_code(str(preset.get("language") or "")),
+            overwrite=bool((body or {}).get("overwrite", False)),
+        )
+    except RegistryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True, "voice": profile.to_public()}
 
 
 @router.patch("/voices/{voice_id}")

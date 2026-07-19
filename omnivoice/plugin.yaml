@@ -1,5 +1,10 @@
 name: omnivoice
-version: 0.4.0
+version: 0.5.0
+# Hermes reads `provides` to surface plugin-backed voice providers in the
+# Settings voice-provider dropdown (upstream _installed_tts_plugin_names()).
+# Without it the provider registers and works, but never appears in the picker.
+provides:
+  - tts
 description: >-
   OmniVoice / OmniVoice-Studio as a native Hermes TTS provider, with a voice
   registry (clone + design), a local / Studio-HTTP / networked-service backend,

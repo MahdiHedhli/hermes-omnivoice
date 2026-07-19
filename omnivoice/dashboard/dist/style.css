@@ -99,3 +99,9 @@
 .ov-talk > .ov-hint { margin-top: 0.35rem; }
 .ov-mic-on { animation: ov-pulse 1.1s ease-in-out infinite; }
 @keyframes ov-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* gallery */
+.ov-gallery-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; flex-wrap: wrap; }
+.ov-gallery-group { margin-bottom: 1.25rem; }
+.ov-gallery-title { margin: 0 0 .5rem; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; opacity: .65; }
+.ov-gallery-script { margin: .4rem 0 0; font-size: .8rem; opacity: .6; font-style: italic; }

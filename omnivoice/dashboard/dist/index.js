@@ -117,6 +117,88 @@
     );
   }
 
+  // ---- gallery ---------------------------------------------------------
+
+  // Ready-made designed voices. Ships bundled with the plugin, so this tab
+  // works with no network; Refresh is the only outbound call and only fires
+  // when the user clicks it.
+  function GalleryTab(props) {
+    var s = useState({ items: [], origin: "", updated_at: "", loaded: false });
+    var g = s[0], setG = s[1];
+    var b = useState(null); var busyId = b[0], setBusyId = b[1];
+    var r = useState(false); var refreshing = r[0], setRefreshing = r[1];
+
+    var load = function () {
+      return api("/gallery")
+        .then(function (d) { setG({ items: d.items || [], origin: d.origin, updated_at: d.updated_at, loaded: true }); })
+        .catch(function (e) { props.onError(e.message); setG(function (p) { return Object.assign({}, p, { loaded: true }); }); });
+    };
+    useEffect(function () { load(); }, []);
+
+    var install = function (item) {
+      setBusyId(item.id); props.onError("");
+      jsonReq("/gallery/" + encodeURIComponent(item.id) + "/install", {})
+        .then(function () { props.onInstalled("Added '" + item.name + "' to your voices."); return load(); })
+        .catch(function (e) { props.onError(e.message); })
+        .then(function () { setBusyId(null); });
+    };
+
+    var refresh = function () {
+      setRefreshing(true); props.onError("");
+      jsonReq("/gallery/refresh", {})
+        .then(function (d) { props.onInstalled("Gallery refreshed — " + d.count + " voices available."); return load(); })
+        .catch(function (e) { props.onError(e.message); })
+        .then(function () { setRefreshing(false); });
+    };
+
+    if (!g.loaded) return h("p", { className: "ov-empty" }, "Loading voices…");
+    if (!g.items.length) return h("p", { className: "ov-empty" }, "No gallery voices available.");
+
+    // group by use case so the list reads as a library, not a flat dump
+    var groups = {}, order = [];
+    g.items.forEach(function (i) {
+      var k = i.use_case || "other";
+      if (!groups[k]) { groups[k] = []; order.push(k); }
+      groups[k].push(i);
+    });
+
+    return h("div", null,
+      h("div", { className: "ov-gallery-head" },
+        h("span", { className: "ov-hint" },
+          g.items.length + " ready-made voices · " +
+          (g.origin === "bundled" ? "bundled with the plugin" : "refreshed") +
+          (g.updated_at ? " · " + g.updated_at : "")),
+        h(C.Button, { variant: "secondary", disabled: refreshing, onClick: refresh },
+          refreshing ? "Refreshing…" : "Refresh from gallery")
+      ),
+      order.map(function (k) {
+        return h("div", { key: k, className: "ov-gallery-group" },
+          h("h4", { className: "ov-gallery-title" }, k),
+          h("div", { className: "ov-grid" },
+            groups[k].map(function (item) {
+              return h(C.Card, { key: item.id, className: "ov-card" },
+                h(C.CardContent, null,
+                  h("div", { className: "ov-card-head" },
+                    h("strong", null, item.name),
+                    item.installed ? h(C.Badge, { className: "ov-active-badge" }, "added") : null),
+                  h("div", { className: "ov-meta" },
+                    h("span", { className: "ov-instruct" }, "“" + item.instruct + "”")),
+                  item.sample_script ? h("p", { className: "ov-gallery-script" }, item.sample_script) : null,
+                  h("div", { className: "ov-row" },
+                    h(C.Button, {
+                      disabled: busyId === item.id || item.installed,
+                      onClick: function () { install(item); },
+                    }, item.installed ? "Added" : (busyId === item.id ? "Adding…" : "Add to my voices"))
+                  )
+                )
+              );
+            })
+          )
+        );
+      })
+    );
+  }
+
   // ---- clone form ------------------------------------------------------
 
   function CloneForm(props) {
@@ -511,7 +593,7 @@
         ? h(EditForm, { key: editing.id, voice: editing, vocab: vocab, busy: formBusy, onSave: saveEdit, onCancel: function () { setEditing(null); }, onError: setErr })
         : h("div", null,
             h("div", { className: "ov-tabbar" },
-              ["voices", "clone", "design", "talk"].map(function (t) {
+              ["voices", "gallery", "clone", "design", "talk"].map(function (t) {
                 return h(C.Button, {
                   key: t,
                   variant: tab === t ? "default" : "secondary",
@@ -521,6 +603,10 @@
               })
             ),
             tab === "voices" ? h(VoiceGrid, { voices: state.voices, busyId: busyId, onActivate: activate, onPreview: preview, onDelete: remove, onEdit: startEdit }) : null,
+            tab === "gallery" ? h(GalleryTab, {
+              onError: setErr,
+              onInstalled: function (msg) { setNote(msg); refresh(); },
+            }) : null,
             tab === "clone" ? h(CloneForm, { busy: formBusy, onSubmit: onFormSubmit, onError: setErr }) : null,
             tab === "design" ? h(DesignForm, { busy: formBusy, vocab: vocab, onSubmit: onFormSubmit, onError: setErr }) : null,
             tab === "talk" ? h(TalkTab, { state: talk, setState: setTalk, activeVoice: state.active, audioRef: audioRef, onError: setErr }) : null

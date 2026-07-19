@@ -1,0 +1,272 @@
+{
+  "schema_version": 1,
+  "source": "https://github.com/debpalash/omnivoice-gallery",
+  "manifest_url": "https://cdn.jsdelivr.net/gh/debpalash/omnivoice-gallery@main/manifest.json",
+  "snapshot_updated_at": "2026-05-31",
+  "items": [
+    {
+      "id": "feat_00_the_librarian",
+      "name": "The Librarian",
+      "use_case": "narration",
+      "instruct": "female, middle-aged, low pitch, british accent",
+      "language": "English",
+      "sample_script": "The valley had been quiet for a hundred years, and tonight, for the first time, something stirred beneath the old stone bridge.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Library"
+    },
+    {
+      "id": "feat_01_the_documentarian",
+      "name": "The Documentarian",
+      "use_case": "narration",
+      "instruct": "male, middle-aged, low pitch, american accent",
+      "language": "English",
+      "sample_script": "The valley had been quiet for a hundred years, and tonight, for the first time, something stirred beneath the old stone bridge.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Mic"
+    },
+    {
+      "id": "feat_02_the_calm_guide",
+      "name": "The Calm Guide",
+      "use_case": "narration",
+      "instruct": "female, middle-aged, low pitch, whisper",
+      "language": "English",
+      "sample_script": "The valley had been quiet for a hundred years, and tonight, for the first time, something stirred beneath the old stone bridge.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Moon"
+    },
+    {
+      "id": "feat_03_the_storyteller",
+      "name": "The Storyteller",
+      "use_case": "narration",
+      "instruct": "male, elderly, low pitch, british accent",
+      "language": "English",
+      "sample_script": "The valley had been quiet for a hundred years, and tonight, for the first time, something stirred beneath the old stone bridge.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Wand2"
+    },
+    {
+      "id": "feat_04_the_neighbor",
+      "name": "The Neighbor",
+      "use_case": "conversational",
+      "instruct": "female, young adult, moderate pitch, american accent",
+      "language": "English",
+      "sample_script": "Oh hey, I didn't expect to run into you here! How have you been? We should really catch up properly one of these days.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Smile"
+    },
+    {
+      "id": "feat_05_the_helpdesk",
+      "name": "The Helpdesk",
+      "use_case": "conversational",
+      "instruct": "female, young adult, moderate pitch, indian accent",
+      "language": "English",
+      "sample_script": "Oh hey, I didn't expect to run into you here! How have you been? We should really catch up properly one of these days.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Headphones"
+    },
+    {
+      "id": "feat_06_the_mate",
+      "name": "The Mate",
+      "use_case": "conversational",
+      "instruct": "male, young adult, moderate pitch, australian accent",
+      "language": "English",
+      "sample_script": "Oh hey, I didn't expect to run into you here! How have you been? We should really catch up properly one of these days.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "MessageSquare"
+    },
+    {
+      "id": "feat_07_the_companion",
+      "name": "The Companion",
+      "use_case": "conversational",
+      "instruct": "female, middle-aged, moderate pitch, canadian accent",
+      "language": "English",
+      "sample_script": "Oh hey, I didn't expect to run into you here! How have you been? We should really catch up properly one of these days.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Coffee"
+    },
+    {
+      "id": "feat_08_captain_crusty",
+      "name": "Captain Crusty",
+      "use_case": "characters",
+      "instruct": "male, elderly, very low pitch",
+      "language": "English",
+      "sample_script": "You think you can stop me? Ha! I have crossed oceans of time and bent whole kingdoms to my will.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Skull"
+    },
+    {
+      "id": "feat_09_junior_quacks",
+      "name": "Junior Quacks",
+      "use_case": "characters",
+      "instruct": "teenager, high pitch",
+      "language": "English",
+      "sample_script": "You think you can stop me? Ha! I have crossed oceans of time and bent whole kingdoms to my will.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Bird"
+    },
+    {
+      "id": "feat_10_the_champion",
+      "name": "The Champion",
+      "use_case": "characters",
+      "instruct": "male, young adult, high pitch, american accent",
+      "language": "English",
+      "sample_script": "You think you can stop me? Ha! I have crossed oceans of time and bent whole kingdoms to my will.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Shield"
+    },
+    {
+      "id": "feat_11_the_pixie",
+      "name": "The Pixie",
+      "use_case": "characters",
+      "instruct": "female, child, very high pitch",
+      "language": "English",
+      "sample_script": "You think you can stop me? Ha! I have crossed oceans of time and bent whole kingdoms to my will.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Sparkles"
+    },
+    {
+      "id": "feat_12_the_ogre",
+      "name": "The Ogre",
+      "use_case": "characters",
+      "instruct": "male, middle-aged, very low pitch",
+      "language": "English",
+      "sample_script": "You think you can stop me? Ha! I have crossed oceans of time and bent whole kingdoms to my will.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Ghost"
+    },
+    {
+      "id": "feat_13_the_podcaster",
+      "name": "The Podcaster",
+      "use_case": "social",
+      "instruct": "female, young adult, high pitch, australian accent",
+      "language": "English",
+      "sample_script": "What is up, everyone, welcome back to the channel! Today we are trying something I have honestly never done before.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Radio"
+    },
+    {
+      "id": "feat_14_the_hype_host",
+      "name": "The Hype Host",
+      "use_case": "social",
+      "instruct": "male, young adult, very high pitch, american accent",
+      "language": "English",
+      "sample_script": "What is up, everyone, welcome back to the channel! Today we are trying something I have honestly never done before.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Zap"
+    },
+    {
+      "id": "feat_15_the_vlogger",
+      "name": "The Vlogger",
+      "use_case": "social",
+      "instruct": "female, young adult, high pitch",
+      "language": "English",
+      "sample_script": "What is up, everyone, welcome back to the channel! Today we are trying something I have honestly never done before.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Video"
+    },
+    {
+      "id": "feat_16_the_anchor",
+      "name": "The Anchor",
+      "use_case": "entertainment",
+      "instruct": "male, middle-aged, moderate pitch, american accent",
+      "language": "English",
+      "sample_script": "Good evening, and welcome. Tonight's top story is one you will not want to miss, so stay right there — we'll be back after this.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Tv"
+    },
+    {
+      "id": "feat_17_the_commentator",
+      "name": "The Commentator",
+      "use_case": "entertainment",
+      "instruct": "male, middle-aged, high pitch, british accent",
+      "language": "English",
+      "sample_script": "Good evening, and welcome. Tonight's top story is one you will not want to miss, so stay right there — we'll be back after this.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Trophy"
+    },
+    {
+      "id": "feat_18_the_game_host",
+      "name": "The Game Host",
+      "use_case": "entertainment",
+      "instruct": "male, middle-aged, moderate pitch",
+      "language": "English",
+      "sample_script": "Good evening, and welcome. Tonight's top story is one you will not want to miss, so stay right there — we'll be back after this.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Clapperboard"
+    },
+    {
+      "id": "feat_19_the_promo_voice",
+      "name": "The Promo Voice",
+      "use_case": "advertisement",
+      "instruct": "male, middle-aged, low pitch",
+      "language": "English",
+      "sample_script": "Introducing a whole new way to get more done in less time. Available today. Your best work starts right now.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Megaphone"
+    },
+    {
+      "id": "feat_20_the_luxe",
+      "name": "The Luxe",
+      "use_case": "advertisement",
+      "instruct": "female, middle-aged, moderate pitch, british accent",
+      "language": "English",
+      "sample_script": "Introducing a whole new way to get more done in less time. Available today. Your best work starts right now.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Gem"
+    },
+    {
+      "id": "feat_21_the_upbeat",
+      "name": "The Upbeat",
+      "use_case": "advertisement",
+      "instruct": "female, young adult, high pitch, american accent",
+      "language": "English",
+      "sample_script": "Introducing a whole new way to get more done in less time. Available today. Your best work starts right now.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Music"
+    },
+    {
+      "id": "feat_22_the_teacher",
+      "name": "The Teacher",
+      "use_case": "informative",
+      "instruct": "female, middle-aged, moderate pitch, american accent",
+      "language": "English",
+      "sample_script": "Let's break this down simply. There are three things you need to know, and the very first one surprises most people.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "GraduationCap"
+    },
+    {
+      "id": "feat_23_the_explainer",
+      "name": "The Explainer",
+      "use_case": "informative",
+      "instruct": "male, young adult, moderate pitch, british accent",
+      "language": "English",
+      "sample_script": "Let's break this down simply. There are three things you need to know, and the very first one surprises most people.",
+      "author": "OmniVoice",
+      "license": "OpenRAIL-M",
+      "icon": "Lightbulb"
+    }
+  ]
+}

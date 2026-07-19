@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 import wave
 from pathlib import Path
 
@@ -237,3 +238,101 @@ def test_clone_preview_activate_delete(api):
 
     assert client.delete(BASE + "/voices/cl").status_code == 200
     assert client.get(BASE + "/voices").json()["voices"] == []
+
+
+# --- voice gallery ----------------------------------------------------------
+
+def test_gallery_lists_bundled_presets_without_network(api):
+    """The tab must work offline: listing reads the vendored snapshot only."""
+    client, _ = api
+    r = client.get(BASE + "/gallery")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["origin"] == "bundled"
+    assert len(body["items"]) >= 20
+    assert all(not i["installed"] for i in body["items"])
+
+
+def test_every_bundled_preset_passes_our_instruct_validator(api):
+    """Guards the failure this validation was added for: a preset using a word
+    outside OmniVoice's fixed vocabulary would install fine and only blow up
+    later at synthesis."""
+    from ov_core.registry import validate_instruct
+    client, _ = api
+    for item in client.get(BASE + "/gallery").json()["items"]:
+        validate_instruct(item["instruct"])
+
+
+def test_install_preset_creates_design_voice_and_marks_installed(api):
+    client, monkeypatch = api
+    _optin(monkeypatch)
+    preset = client.get(BASE + "/gallery").json()["items"][0]
+
+    r = client.post(BASE + f"/gallery/{preset['id']}/install")
+    assert r.status_code == 200
+    voice = r.json()["voice"]
+    assert voice["id"] == preset["id"] and voice["mode"] == "design"
+
+    # it now shows in the registry, and the gallery reflects that
+    assert any(v["id"] == preset["id"] for v in client.get(BASE + "/voices").json()["voices"])
+    listed = {i["id"]: i for i in client.get(BASE + "/gallery").json()["items"]}
+    assert listed[preset["id"]]["installed"] is True
+
+
+def test_installing_twice_is_rejected_without_overwrite(api):
+    client, monkeypatch = api
+    _optin(monkeypatch)
+    pid = client.get(BASE + "/gallery").json()["items"][0]["id"]
+    assert client.post(BASE + f"/gallery/{pid}/install").status_code == 200
+    assert client.post(BASE + f"/gallery/{pid}/install").status_code == 400
+    assert client.post(BASE + f"/gallery/{pid}/install",
+                       json={"overwrite": True}).status_code == 200
+
+
+def test_install_unknown_preset_is_404(api):
+    client, monkeypatch = api
+    _optin(monkeypatch)
+    assert client.post(BASE + "/gallery/nope/install").status_code == 404
+
+
+def test_gallery_mutations_respect_the_loopback_gate(api):
+    client, monkeypatch = api
+    monkeypatch.delenv("HERMES_OMNIVOICE_ALLOW_REMOTE_CLONE", raising=False)
+    pid = client.get(BASE + "/gallery").json()["items"][0]["id"]
+    assert client.post(BASE + f"/gallery/{pid}/install").status_code == 403
+    assert client.post(BASE + "/gallery/refresh").status_code == 403
+
+
+def test_refresh_prefers_cache_and_survives_a_corrupt_one(api, monkeypatch):
+    """A refreshed cache wins over the bundled snapshot; a corrupt cache must
+    fall back instead of breaking the tab."""
+    from ov_core import gallery as gal
+    client, _ = api
+    cache = gal.paths.gallery_cache_path()
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps({
+        "snapshot_updated_at": "2026-01-01",
+        "items": [{"id": "solo", "name": "Solo", "instruct": "female, low pitch",
+                   "language": "English"}],
+    }), encoding="utf-8")
+    body = client.get(BASE + "/gallery").json()
+    assert body["origin"] == "refreshed" and [i["id"] for i in body["items"]] == ["solo"]
+
+    cache.write_text("{ not json", encoding="utf-8")
+    fallback = client.get(BASE + "/gallery").json()
+    assert fallback["origin"] == "bundled" and len(fallback["items"]) >= 20
+
+
+def test_refresh_rejects_an_oversized_manifest(api, monkeypatch):
+    """Size cap on the one outbound call."""
+    from ov_core import gallery as gal
+    from ov_core.registry import RegistryError
+
+    class _Resp:
+        def read(self, n=-1): return b"x" * (gal._MAX_MANIFEST_BYTES + 1)
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    monkeypatch.setattr(gal.urllib.request, "urlopen", lambda *a, **k: _Resp())
+    with pytest.raises(RegistryError, match="unexpectedly large"):
+        gal.refresh()
