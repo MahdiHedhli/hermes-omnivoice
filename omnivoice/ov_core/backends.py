@@ -47,6 +47,7 @@ import threading
 import urllib.error
 import urllib.request
 import uuid
+from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, Iterator, Optional, Tuple
 from urllib.parse import urlparse
@@ -148,6 +149,16 @@ def _resolve_dtype(torch_mod, name: str):
 _model_cache: Dict[Tuple[str, str, str], object] = {}
 _model_lock = threading.Lock()
 
+# Encoding a clone's reference audio is a large FIXED cost paid per synth —
+# measured at ~32s for a 35.5s reference, dwarfing every other knob (a design
+# voice with no reference answered in 6.4s where the same phrase on that clone
+# took 38.4s). The SDK can precompute it once into a VoiceClonePrompt, so cache
+# that per (reference, mtime, transcript): a voice used repeatedly — which is
+# every voice, in a server or a conversation — pays it once.
+_prompt_cache: "OrderedDict[Tuple[str, float, str], object]" = OrderedDict()
+_prompt_lock = threading.Lock()
+_PROMPT_CACHE_MAX = 8  # prompts are large; keep the few voices actually in use
+
 
 def _import_omnivoice():
     """Import the real OmniVoice SDK class (NOT the ov_core package).
@@ -214,6 +225,36 @@ def _generation_config(num_step: int):
     return OmniVoiceGenerationConfig(num_step=num_step)
 
 
+def _clone_prompt(model, ref: Path, ref_text: str):
+    """Return a cached, precomputed VoiceClonePrompt for this reference.
+
+    Returns None when the SDK can't precompute one, so the caller falls back to
+    passing ref_audio/ref_text directly (correct, just slower).
+    """
+    if not hasattr(model, "create_voice_clone_prompt"):
+        return None
+    try:
+        mtime = ref.stat().st_mtime
+    except OSError:
+        return None
+    key = (str(ref), mtime, ref_text or "")
+    with _prompt_lock:
+        hit = _prompt_cache.get(key)
+        if hit is not None:
+            _prompt_cache.move_to_end(key)
+            return hit
+    try:
+        prompt = model.create_voice_clone_prompt(str(ref), ref_text=ref_text)
+    except Exception:
+        return None  # never let an optimization break synthesis
+    with _prompt_lock:
+        _prompt_cache[key] = prompt
+        _prompt_cache.move_to_end(key)
+        while len(_prompt_cache) > _PROMPT_CACHE_MAX:
+            _prompt_cache.popitem(last=False)
+    return prompt
+
+
 def _synth_local(text: str, output_path: Path, *, voice: VoiceProfile,
                  cfg: OmniVoiceConfig, speed: float, fmt: str) -> str:
     model = _load_local_model(cfg)
@@ -227,8 +268,12 @@ def _synth_local(text: str, output_path: Path, *, voice: VoiceProfile,
         ref = voice.ref_audio_path
         if ref is None:
             raise SynthError(f"clone voice '{voice.id}' has no reference audio")
-        kwargs["ref_audio"] = str(ref)
-        kwargs["ref_text"] = voice.ref_text
+        prompt = _clone_prompt(model, ref, voice.ref_text or "")
+        if prompt is not None:
+            kwargs["voice_clone_prompt"] = prompt
+        else:
+            kwargs["ref_audio"] = str(ref)
+            kwargs["ref_text"] = voice.ref_text
     else:
         kwargs["instruct"] = voice.instruct
 

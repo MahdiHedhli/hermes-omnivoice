@@ -28,7 +28,7 @@ OmniVoice automatically — no per-surface wiring.
 | 🧬 **Clone** | From a short reference `.wav` + transcript. |
 | 🗣️ **Design** | From attributes (`male, american accent, moderate pitch`), with a **clickable guide + validation**. |
 | ✂️ **Edit** | Change a voice's name, language, attributes, or transcript after the fact. |
-| ⚡ **~2× faster synthesis** | Tuned the diffusion step count (`num_step`) against ASR-verified output — same speech, roughly half the time. |
+| ⚡ **Tuned for speed** | Diffusion step count tuned against ASR-verified output (~2× faster), and a benchmark that reports time-to-first-word and whether synthesis keeps up with playback. |
 | ✅ **Consent + hardening** | Confirmed consent, WAV validation, symlink rejection, `0600` writes, reference-length cap. |
 | 🔌 **Three backends** | `local` (in-process), `studio` (loopback server), `service` (LAN/tailnet node, bearer auth, ssh-loopback). |
 | 🖥️ **Model server included** | A small OpenAI-compatible `/v1/audio/speech` server — the same artifact from one host to a shared fleet. |
@@ -147,9 +147,13 @@ at synthesis.
 
 ### Clone a voice from a sample
 
-Pick *Clone*, upload a **short, clean `.wav` (~10–30 s)**, paste the exact
-transcript, confirm consent, and create. Reference audio and transcripts never
-leave your machine.
+Pick *Clone*, upload a **short, clean `.wav` — 5–10 s is the sweet spot**, paste
+the exact transcript, confirm consent, and create. Reference audio and
+transcripts never leave your machine.
+
+> **Keep it short.** Reference length is the single biggest factor in how fast a
+> cloned voice speaks — a 9 s reference reached the first word **3× sooner** than
+> a 35 s one and stopped stalling mid-reply. See [Speed](#-speed).
 
 ![Clone a voice from a reference sample](docs/images/clone-voice.png)
 
@@ -222,6 +226,26 @@ See [`server/README.md`](server/README.md) for all options.
 
 ## ⚡ Speed
 
+Run the benchmark on your own hardware — it reports what a listener actually
+experiences (`tools/bench_live.py`, see [Is it fast enough to be live?](#-is-it-fast-enough-to-be-live)).
+
+### For cloned voices, reference length dominates everything
+
+Keep the reference clip **5–10 s**. It matters more than every other setting
+combined. Same phrase, same server, only the reference differs:
+
+| Reference | Time to first word | RTF | Stalls |
+|---|---|---|---|
+| 35.5 s clip | 37.2 s | 10.7 | 1 |
+| **9 s clip** | **12.4 s** | **2.0** | **0** |
+
+3× faster to the first word, and the mid-reply stall disappears. (The SDK warns
+above 20 s and recommends 3–10 s — it's right.) Re-clone with a shorter clip
+rather than tuning anything else first. Design voices have no reference at all
+and are faster still.
+
+### Diffusion steps
+
 OmniVoice is a **diffusion** TTS model: it denoises each generation over
 `num_step` passes, and time scales roughly linearly with that count. Measured on
 Apple Silicon (MPS/float16), same phrase, transcript checked with ASR at every
@@ -248,6 +272,40 @@ Two things that are *not* the lever, in case you're chasing them:
   The Talk tab keeps replies to ~2 sentences and speaks them sentence-by-sentence
   (synthesizing the next while the current plays), so you hear the first words in
   one sentence's time instead of the whole reply's.
+
+---
+
+## ⏱️ Is it fast enough to be live?
+
+"Fast enough" for a spoken assistant isn't raw throughput — it's **time to first
+word**, and whether synthesis **keeps up with playback** once speech starts.
+`tools/bench_live.py` measures both, synthesizing the way the Talk tab does
+(sentence by sentence, next chunk produced while the current one plays):
+
+```bash
+python tools/bench_live.py --voice arnold --server http://127.0.0.1:8880
+```
+
+```
+case     step  chunks    TTFA  speech   synth    RTF  stalls
+reply       -       2  12.35s   8.06s  15.71s   1.95       0
+```
+
+- **TTFA** — silence before the first word. This is what reads as responsive.
+- **RTF** — synthesis seconds per second of speech. **Below 1.0** means speech is
+  produced faster than it is spoken, so a reply of *any* length streams without
+  falling behind.
+- **stalls** — playback running dry mid-reply. Worse than a longer initial wait.
+
+Useful flags: `--sweep 32,16,8,4` to find the step-count knee on your hardware,
+and `--save-baseline`/`--baseline` to gate a dev loop on regressions (absolute
+budgets answer "is it fast enough"; a baseline answers "did we make it slower",
+which stays useful on hardware that never hit the ideal). It records machine
+load with each run and warns when the box is too busy for the numbers to mean
+anything. Exit codes: `0` pass, `1` over budget or regressed, `2` couldn't run.
+
+The timing model behind it is unit-tested offline, so the thing deciding
+"is this real-time" is itself covered by the suite.
 
 ---
 
@@ -294,7 +352,7 @@ Loopback is clean; non-loopback needs deliberate gating.
 
 ## ✅ Status
 
-- **68 offline tests pass** (`cd omnivoice && pytest -q`).
+- **80 offline tests pass** (`cd omnivoice && pytest -q`).
 - **Live-tested on Hermes v0.18.0**: installs via `hermes plugins install`, shows
   in `hermes tools`, the Voices tab renders and previews play; real synthesis
   ASR-verified across cpu/mps; 10 back-to-back synths, 0 OOM after the memory fix.

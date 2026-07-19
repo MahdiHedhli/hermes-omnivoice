@@ -16,6 +16,13 @@ def _design_profile(voices_dir):
     return reg.get_voice("narrator")
 
 
+def _clone_profile(voices_dir, wav_factory, voice_id="cl"):
+    reg = VoiceRegistry(voices_dir)
+    reg.create_clone(voice_id, voice_id.upper(), wav_factory(), "ref text",
+                     consent_source="user_uploaded")
+    return reg.get_voice(voice_id)
+
+
 def test_validate_url_loopback_ok():
     assert backends._validate_url("http://127.0.0.1:3900", require_loopback=True) == "http://127.0.0.1:3900"
 
@@ -326,3 +333,102 @@ def test_post_json_ssh_loopback_non_200_raises(monkeypatch):
     with pytest.raises(SynthError, match="HTTP 403"):
         backends._post_json_ssh_loopback("http://127.0.0.1:8880/v1/audio/speech", {"input": "hi"},
                                          timeout=30, auth_token="tok", ssh_host="h@1.2.3.4")
+
+
+def test_clone_prompt_is_precomputed_once_and_reused(voices_dir, tmp_path, monkeypatch, wav_factory):
+    """The reference encode is the dominant per-request cost for a clone
+    (measured ~32s for a 35.5s reference). It must be computed once per
+    reference and reused, not repeated on every synth."""
+    import sys
+    import types
+
+    from ov_core.config import LocalConfig
+
+    torch = types.ModuleType("torch")
+    torch.float32 = "float32-dtype"
+    torch.cuda = types.SimpleNamespace(is_available=lambda: False)
+    torch.backends = types.SimpleNamespace(mps=types.SimpleNamespace(is_available=lambda: False))
+
+    calls = {"prompt": 0, "generate": []}
+
+    class FakeModel:
+        sampling_rate = 24000
+
+        def create_voice_clone_prompt(self, ref_audio, ref_text=None):
+            calls["prompt"] += 1
+            return {"prompt_for": ref_audio}
+
+        def generate(self, **kw):
+            calls["generate"].append(kw)
+            return [[0.0, 0.0, 0.0]]
+
+    class FakeOmni:
+        @staticmethod
+        def from_pretrained(model, device_map=None, dtype=None):
+            return FakeModel()
+
+    omni = types.ModuleType("omnivoice")
+    omni.OmniVoice = FakeOmni
+    monkeypatch.setitem(sys.modules, "torch", torch)
+    monkeypatch.setitem(sys.modules, "omnivoice", omni)
+    monkeypatch.setattr(backends, "_write_samples", lambda samples, sr, out, fmt: str(out))
+    backends._model_cache.clear()
+    backends._prompt_cache.clear()
+
+    profile = _clone_profile(voices_dir, wav_factory)
+    cfg = OmniVoiceConfig(backend="local", voices_dir=voices_dir,
+                          local=LocalConfig(device="cpu", dtype="float32"))
+
+    for _ in range(3):
+        backends.synthesize("hello", str(tmp_path / "o.wav"), voice=profile, cfg=cfg)
+
+    assert calls["prompt"] == 1, "reference re-encoded per synth"
+    assert len(calls["generate"]) == 3
+    for kw in calls["generate"]:
+        assert "voice_clone_prompt" in kw
+        assert "ref_audio" not in kw, "raw reference still sent alongside the prompt"
+
+
+def test_clone_falls_back_when_prompt_precompute_is_unavailable(voices_dir, tmp_path,
+                                                                monkeypatch, wav_factory):
+    """An SDK without create_voice_clone_prompt (or one that raises) must still
+    synthesize — the cache is an optimization, never a requirement."""
+    import sys
+    import types
+
+    from ov_core.config import LocalConfig
+
+    torch = types.ModuleType("torch")
+    torch.float32 = "float32-dtype"
+    torch.cuda = types.SimpleNamespace(is_available=lambda: False)
+    torch.backends = types.SimpleNamespace(mps=types.SimpleNamespace(is_available=lambda: False))
+
+    captured = {}
+
+    class FakeModel:  # no create_voice_clone_prompt at all
+        sampling_rate = 24000
+
+        def generate(self, **kw):
+            captured.update(kw)
+            return [[0.0, 0.0, 0.0]]
+
+    class FakeOmni:
+        @staticmethod
+        def from_pretrained(model, device_map=None, dtype=None):
+            return FakeModel()
+
+    omni = types.ModuleType("omnivoice")
+    omni.OmniVoice = FakeOmni
+    monkeypatch.setitem(sys.modules, "torch", torch)
+    monkeypatch.setitem(sys.modules, "omnivoice", omni)
+    monkeypatch.setattr(backends, "_write_samples", lambda samples, sr, out, fmt: str(out))
+    backends._model_cache.clear()
+    backends._prompt_cache.clear()
+
+    profile = _clone_profile(voices_dir, wav_factory)
+    cfg = OmniVoiceConfig(backend="local", voices_dir=voices_dir,
+                          local=LocalConfig(device="cpu", dtype="float32"))
+    backends.synthesize("hello", str(tmp_path / "o.wav"), voice=profile, cfg=cfg)
+
+    assert "voice_clone_prompt" not in captured
+    assert captured.get("ref_audio") and captured.get("ref_text") is not None

@@ -232,7 +232,7 @@
         h(Field, { label: "Voice id (a-z0-9-_)" }, h(C.Input, { value: form.id, onChange: upd("id"), placeholder: "marvin" })),
         h(Field, { label: "Display name" }, h(C.Input, { value: form.name, onChange: upd("name"), placeholder: "Marvin" })),
         h(Field, { label: "Reference sample (.wav)" }, h("input", { type: "file", accept: "audio/wav,.wav", ref: fileRef, className: "ov-file" })),
-        h("p", { className: "ov-hint" }, "Use a short, clean clip (~10–30s). Long references are rejected — they degrade quality and can exhaust GPU memory."),
+        h("p", { className: "ov-hint" }, "Use a short, clean clip — 5–10s is the sweet spot. Reference length is the single biggest factor in how fast this voice will speak: measured here, a 9s reference reached the first word 3x sooner than a 35s one (and stopped stalling mid-reply). Long references also degrade quality and can exhaust GPU memory."),
         h(Field, { label: "Reference transcript (exact words spoken in the sample)" },
           h("textarea", { className: "ov-textarea", value: form.ref_text, onChange: upd("ref_text"), rows: 3 })),
         h(Field, { label: "Language" }, h(C.Input, { value: form.language, onChange: upd("language") })),
