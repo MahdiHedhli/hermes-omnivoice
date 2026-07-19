@@ -24,9 +24,11 @@ OmniVoice automatically — no per-surface wiring.
 | 🎚️ **One provider** | `tts.provider: omnivoice` routes all of Hermes' voice output through OmniVoice. |
 | 🎨 **Voice authoring UI** | A dashboard **Voices** tab to clone, design, preview, edit, and select voices — the gap Hermes doesn't fill. |
 | 🗣️ **Talk to your agent** | A **Talk** tab: speak (or type), the real Hermes agent answers, and the reply plays back out loud in your active voice. |
+| 🖼️ **Voice gallery** | A **Gallery** tab of 24 ready-made designed voices — browse by use case, add to your registry in one click. Ships bundled, so it works offline. |
 | 🧬 **Clone** | From a short reference `.wav` + transcript. |
 | 🗣️ **Design** | From attributes (`male, american accent, moderate pitch`), with a **clickable guide + validation**. |
 | ✂️ **Edit** | Change a voice's name, language, attributes, or transcript after the fact. |
+| ⚡ **~2× faster synthesis** | Tuned the diffusion step count (`num_step`) against ASR-verified output — same speech, roughly half the time. |
 | ✅ **Consent + hardening** | Confirmed consent, WAV validation, symlink rejection, `0600` writes, reference-length cap. |
 | 🔌 **Three backends** | `local` (in-process), `studio` (loopback server), `service` (LAN/tailnet node, bearer auth, ssh-loopback). |
 | 🖥️ **Model server included** | A small OpenAI-compatible `/v1/audio/speech` server — the same artifact from one host to a shared fleet. |
@@ -106,6 +108,29 @@ Run `hermes dashboard` and open the **Voices** tab. Each voice is a card with
 Preview / Edit / Set-active / Delete.
 
 ![The Voices tab](docs/images/voices-tab.png)
+
+### Start from the gallery (fastest path)
+
+The **Gallery** tab lists **24 ready-made designed voices** from the
+[OmniVoice gallery](https://github.com/debpalash/omnivoice-gallery) — The
+Librarian, The Storyteller, The Anchor, Captain Crusty … — grouped by use case
+(narration, conversational, characters, social, entertainment, advertisement,
+informative). **Add to my voices** drops one into your registry as a normal
+design voice you can then preview, edit, or set active.
+
+![The Gallery tab — 24 ready-made voices grouped by use case](docs/images/gallery-tab.png)
+
+The presets **ship inside the plugin**, so the tab needs no network. *Refresh
+from gallery* is the only outbound request the plugin ever makes and only fires
+when you click it (https-pinned to the CDN, size-capped, re-validated before
+caching).
+
+> Only text-only **presets** are offered. The gallery's schema also allows
+> recorded reference clips; importing third-party audio of real people would
+> route around the consent gate the clone path exists to enforce, so it's
+> deliberately out of scope. Every preset is checked against the attribute
+> vocabulary before it's offered, so a gallery entry can never become a voice
+> that fails at synthesis.
 
 ### Design a voice from attributes
 
@@ -195,6 +220,37 @@ See [`server/README.md`](server/README.md) for all options.
 
 ---
 
+## ⚡ Speed
+
+OmniVoice is a **diffusion** TTS model: it denoises each generation over
+`num_step` passes, and time scales roughly linearly with that count. Measured on
+Apple Silicon (MPS/float16), same phrase, transcript checked with ASR at every
+setting:
+
+| `num_step` | Synthesis | ASR check |
+|---|---|---|
+| 32 (SDK default) | 36.6 s | reference |
+| **16 (our default)** | **19.4 s** | **identical transcript** |
+| 8 | 11.4 s | starts dropping words |
+| 4 | 6.3 s | broken |
+
+16 is the verified sweet spot — the same speech in about half the time. Override
+per-taste with `num_step` under `tts.omnivoice.local`, the
+`HERMES_OMNIVOICE_NUM_STEP` env var, or `server/serve.py --num-step`.
+
+Two things that are *not* the lever, in case you're chasing them:
+
+- **Device.** `device: auto` already picks MPS on Apple Silicon, and MPS is
+  ~3.3× faster than CPU here (53 s → 16 s for the same phrase). There is **no
+  MLX build** of OmniVoice — it's pure PyTorch/`transformers` — so the step
+  count, not the runtime, is what you control.
+- **Slow voice replies ≠ slow synthesis.** Synthesis cost tracks *reply length*.
+  The Talk tab keeps replies to ~2 sentences and speaks them sentence-by-sentence
+  (synthesizing the next while the current plays), so you hear the first words in
+  one sentence's time instead of the whole reply's.
+
+---
+
 ## 🧪 Verify it actually speaks
 
 A valid WAV is not the same as intelligible speech. Check any voice with ASR:
@@ -230,19 +286,28 @@ Loopback is clean; non-loopback needs deliberate gating.
 | Preview shows **"SDK not installed"** / **server unreachable** | No model backend running. Start `server/serve.py` (studio/service) or `pip install omnivoice torch soundfile` (local). |
 | Static / garbage audio | Almost always an MPS OOM from a long reference — restart the server and use short refs. Confirm with `tools/qc.py`. |
 | Edited a voice / changed backend but the dashboard didn't notice | Backend route changes mount at startup — restart `hermes dashboard`. |
+| Voices sound right in the **Talk** tab but nowhere else | Setting a voice active only picks the OmniVoice voice; Hermes still speaks with whatever `tts.provider` says. **Set active** now also writes `tts.provider: omnivoice` — restart the gateway to apply it. The header shows which provider is really in use. |
+| **OmniVoice missing from the Settings voice-provider dropdown** | Needs a Hermes new enough to read `provides:` from plugin manifests; the provider still works when selected via `config.yaml` either way. |
+| Fresh server install **crashes/segfaults** loading the model | Unpinned deps. `server/requirements.txt` pins `omnivoice==0.1.5` + `torch==2.12.1`; the newer pair segfaults on MPS. Reinstall from the pinned file. |
 
 ---
 
 ## ✅ Status
 
-- **57 offline tests pass** (`cd omnivoice && pytest -q`).
+- **68 offline tests pass** (`cd omnivoice && pytest -q`).
 - **Live-tested on Hermes v0.18.0**: installs via `hermes plugins install`, shows
   in `hermes tools`, the Voices tab renders and previews play; real synthesis
   ASR-verified across cpu/mps; 10 back-to-back synths, 0 OOM after the memory fix.
   The **Talk** tab was verified end-to-end in-browser: transcript renders, the
   agent replies (with `--resume` continuity), and the reply plays in the active
-  voice.
+  voice. The **Gallery** tab was verified the same way — 24 cards across 7
+  groups, one-click add lands a real design voice in the registry, 0 page errors.
+- **Speed is measured, not asserted**: every `num_step` figure above came from
+  timed runs on this hardware with the output transcript checked by ASR.
 - Deferred by design: streaming `stream()` and cross-provider fallback.
+- Known sharp edge: previewing a gallery preset *before* adding it isn't offered
+  — over `studio`/`service` the wire format sends a server-side voice id, so an
+  unsaved voice can't be synthesized there. Add first, then preview.
 
 ---
 

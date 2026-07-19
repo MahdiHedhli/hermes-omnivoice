@@ -17,6 +17,11 @@ tts:
       device: auto             # auto | cpu | cuda | mps
       dtype: float16
       sample_rate: 24000
+      # Diffusion denoising steps — the main speed/quality dial. Measured on
+      # Apple Silicon (MPS/float16), same phrase: 32 -> 36.6s, 16 -> 19.4s,
+      # 8 -> 11.4s, 4 -> 6.3s. ASR-checked: 16 gives the same transcript as the
+      # SDK's 32 default; 8 starts dropping words; 4 is broken.
+      num_step: 16
 
     # backend: studio -> OmniVoice-Studio over HTTP, loopback only.
     # OpenAI-compatible: POST {url}{speech_path} with a JSON body. Selects a

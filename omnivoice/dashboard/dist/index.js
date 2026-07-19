@@ -172,8 +172,12 @@
           refreshing ? "Refreshing…" : "Refresh from gallery")
       ),
       order.map(function (k) {
+        // the gallery ships one sample line per use case, so show it once on the
+        // group instead of repeating the identical paragraph on every card
+        var script = (groups[k][0] || {}).sample_script;
         return h("div", { key: k, className: "ov-gallery-group" },
           h("h4", { className: "ov-gallery-title" }, k),
+          script ? h("p", { className: "ov-gallery-script" }, "“" + script + "”") : null,
           h("div", { className: "ov-grid" },
             groups[k].map(function (item) {
               return h(C.Card, { key: item.id, className: "ov-card" },
@@ -183,7 +187,6 @@
                     item.installed ? h(C.Badge, { className: "ov-active-badge" }, "added") : null),
                   h("div", { className: "ov-meta" },
                     h("span", { className: "ov-instruct" }, "“" + item.instruct + "”")),
-                  item.sample_script ? h("p", { className: "ov-gallery-script" }, item.sample_script) : null,
                   h("div", { className: "ov-row" },
                     h(C.Button, {
                       disabled: busyId === item.id || item.installed,

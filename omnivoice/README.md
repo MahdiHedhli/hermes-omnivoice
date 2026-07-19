@@ -45,6 +45,19 @@ stdlib.
 **Voices** tab. Clone from a `.wav` reference (with transcript + consent),
 design from an instruct string, preview any voice, and set the active one.
 
+The **Gallery** tab is the quickest start: 24 ready-made designed voices,
+grouped by use case, added to your registry in one click. They ship inside the
+plugin (`data/gallery.json`) so the tab works offline; *Refresh from gallery* is
+the only outbound call and only on click. Presets are re-validated against the
+attribute vocabulary before being offered, and installing one goes through the
+same `create_design()` path as the Design tab — same id rules, same validation,
+same consent record.
+
+Setting a voice active also writes `tts.provider: omnivoice` (a surgical
+one-line edit that preserves the rest of your config, comments included), so the
+voice applies to every Hermes surface rather than just this plugin's own tabs.
+A gateway restart applies it to running sessions.
+
 **From the CLI/registry**: voices live at
 `~/.hermes/voices/omnivoice/<id>/voice.yaml`. The active voice is recorded in
 `~/.hermes/voices/omnivoice/.active` and is what synthesis uses when no explicit
@@ -139,3 +152,11 @@ pytest -q          # runs without the OmniVoice SDK / torch / soundfile / Hermes
   chunked endpoint for time-to-first-audio.
 - **Fallback provider** on backend failure (e.g. `piper`) is a Phase 5 item; the
   provider currently raises on failure per the ABC contract.
+- **No preview before adding a gallery preset.** Over `studio`/`service` the
+  OpenAI-compatible body sends `voice: <id>` — a *server-side* id — so an
+  un-saved voice can't be synthesized there (it would work only on `local`).
+  Rather than ship a button that silently fails on the common setup, add the
+  voice first and preview it from the Voices tab.
+- **Gallery presets only.** The upstream gallery schema also allows recorded
+  reference clips; those are skipped on purpose, since pulling third-party audio
+  of real people would bypass the consent gate the clone path enforces.
