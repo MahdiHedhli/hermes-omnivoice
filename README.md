@@ -244,6 +244,14 @@ above 20 s and recommends 3–10 s — it's right.) Re-clone with a shorter clip
 rather than tuning anything else first. Design voices have no reference at all
 and are faster still.
 
+Already have a long-reference clone? `tools/trim_ref.py` cuts it down **on a
+real line boundary** — it word-aligns your true transcript against the audio,
+cuts at the end of the last complete line inside a 6–11 s window, and prints
+the exact transcript the cut contains for the re-clone. (A naive `-t 9` cut
+slices mid-word and leaves the transcript wrong; the aligned trim of the same
+voice scored **1.00** on ASR intelligibility where the 35 s original scored
+0.97.)
+
 ### Diffusion steps
 
 OmniVoice is a **diffusion** TTS model: it denoises each generation over
